@@ -307,7 +307,61 @@ int main(int argc, char* argv[])
     }
   }
 
- 
+  // ------------------------------------------------------------------------------------
+  // Extract the mesh data
+  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequanceOfsubdomains 
+  // - e2i
+  // - i2e
+  // - i2i
+  // - icoord
+  // - itT
+  // - map_t2l
+  // ------------------------------------------------------------------------------------
+
+  std::vector<std::vector<int>> e2i(gridManager.grid().size(0)); //element to indices
+  std::vector<std::set<int>> e2e(gridManager.grid().size(0));    //element to element
+  std::vector<std::set<int>> i2e(dof_size);                      //index to element, for the cell Filter
+  std::vector<std::set<int>> i2i(dof_size);                      //index to index
+  std::vector<std::vector<double>> icoord(dof_size);             //coordinates of each dofs
+  std::vector<int> i2T(dof_size);                                //index to tags
+  std::map<int, int> map_t2l;                                    //map: tag to lenth
+  std::map<int, int> map_sTtol;                                  //map: sequance of each tag to length
+  std::map<int,int> map_nT_oT;                                   //map: new Tag to original Tag
+
+  getInnerInterfaceDofsForeachSubdomain(boost::fusion::at_c<0>(u.data),  
+                                        GetGlobalCoordinate(),
+                                        material, 
+                                        e2i, 
+                                        i2e,
+                                        i2i,
+                                        icoord,
+                                        i2T,
+                                        map_t2l);
+
+  markedIndicesOnInterfacesForeachSubdomain(boost::fusion::at_c<0>(u.data),
+                                            GetGlobalCoordinate(), 
+                                            material,
+                                            icoord,
+                                            e2i,
+                                            e2e,
+                                            i2i);
+
+
+  for (int i = 0; i < i2i.size(); ++i)
+  {
+    std::set<int> s = i2i[i];
+    std::set<int>::iterator itr;
+
+    if(s.size()>1){
+      std::cout << i << " : ";
+      for (itr = s.begin(); itr != s.end(); itr++) 
+      {
+        std::cout << *itr << " ";
+      }
+      std::cout << "\n";  
+    }
+  }
+
 
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 

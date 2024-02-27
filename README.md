@@ -4,4 +4,4 @@
 	- SDC method
 	- gatting variable
 	- activation time
-
+    - Algebraic adaptivity

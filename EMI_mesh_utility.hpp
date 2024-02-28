@@ -43,6 +43,7 @@ struct GetGlobalCoordinate
  * \param icoord index to global coordinates
  * \param i2T index to Tag
  * \param map_t2l tag to length
+ * \param map_IGamma for each material, gives the all the global indices of the subdomain
  */
 
 template< class FSElement, class Function, class Material>
@@ -54,7 +55,8 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::vector<std::set<int>> & i2i,
                                            std::vector<std::vector<double>> & icoord,
                                            std::vector<int> & i2T,
-                                           std::map<int, int> & map_t2l  )
+                                           std::map<int, int> & map_t2l,
+                                           std::map<int,std::set<int>> & map_IGamma)
 {
 
   typedef typename FSElement::Space ImageSpace;
@@ -71,6 +73,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   
   std::map<int,int>::iterator it;
+  std::map<int,std::set<int>>::iterator it_igamma;
 
   // iterate over cells
   for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
@@ -117,7 +120,19 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
 
         for (int j = 0; j < x.size(); ++j){
           icoord[nIndex].push_back(x[j]);
-        }        
+        }
+
+        // adding all the igamma for matreial 
+        it_igamma = map_IGamma.find(material_var);
+        if(it_igamma!= map_IGamma.end()){
+          std::set<int> igamma = it_igamma->second;
+          igamma.insert(nIndex);
+          it_igamma->second = igamma;
+        }else{
+          std::set<int> igamma;
+          igamma.insert(nIndex);
+          map_IGamma[material_var] = igamma;
+        }
       }
     }
   }
@@ -141,7 +156,8 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                                  std::vector<std::vector<double>> & icoord,
                                  std::vector<std::vector<int>> & e2i, 
                                  std::vector<std::set<int>> & e2e,
-                                 std::vector<std::set<int>> & i2i) 
+                                 std::vector<std::set<int>> & i2i,
+                                 std::map<int,std::set<int>> & map_GammaGamma) 
 {
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
@@ -153,6 +169,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
   typename ImageSpace::Evaluator isfs(fse.space());
 
   auto const cend = fse.space().gridView().template end<0>();
+  std::map<int,std::set<int>>::iterator it_gamma;
 
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   std::vector<ValueType> fuvalue; // declare here to prevent reallocations
@@ -192,6 +209,18 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                 if(icoord[nIndex_c1][0]==icoord[nIndex_c2][0] and
                    icoord[nIndex_c1][1]==icoord[nIndex_c2][1] ){
                   s_index.insert(nIndex_c2);
+
+                  // adding all the gammagamma for matreial 
+                  it_gamma = map_GammaGamma.find(material_var);
+                  if(it_gamma!= map_GammaGamma.end()){
+                    std::set<int> gamma = it_gamma->second;
+                    gamma.insert(nIndex_c1);
+                    it_gamma->second = gamma;
+                  }else{
+                    std::set<int> gamma;
+                    gamma.insert(nIndex_c1);
+                    map_GammaGamma[material_var] = gamma;
+                  }
                   break;
                 }                
               }
@@ -200,6 +229,18 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                    icoord[nIndex_c1][1]==icoord[nIndex_c2][1] and
                    icoord[nIndex_c1][2]==icoord[nIndex_c2][2] ){
                   s_index.insert(nIndex_c2);
+
+                  // adding all the gammagamma for matreial 
+                  it_gamma = map_GammaGamma.find(material_var);
+                  if(it_gamma!= map_GammaGamma.end()){
+                    std::set<int> gamma = it_gamma->second;
+                    gamma.insert(nIndex_c1);
+                    it_gamma->second = gamma;
+                  }else{
+                    std::set<int> gamma;
+                    gamma.insert(nIndex_c1);
+                    map_GammaGamma[material_var] = gamma;
+                  }
                   break;
                 }                
               }

@@ -13,6 +13,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "EMI.hh"
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
 int main(int argc, char* argv[])
 {
   using namespace Kaskade::BDDC;
@@ -32,14 +36,14 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
-  // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -325,42 +329,16 @@ int main(int argc, char* argv[])
   std::vector<std::vector<double>> icoord(dof_size);             //coordinates of each dofs
   std::vector<int> i2T(dof_size);                                //index to tags
   std::map<int, int> map_t2l;                                    //map: tag to lenth
-  std::map<int, int> map_sTtol;                                  //map: sequance of each tag to length
-  std::map<int,int> map_nT_oT;                                   //map: new Tag to original Tag
+  std::map<int, int> map_sT2l;                                   //map: sequance of each tag to length
+  std::map<int,int> map_nT2oT;                                   //map: new Tag to original Tag
+ 
+  std::map<int,std::set<int>> map_II;                            // II
+  std::map<int,std::set<int>> map_IGamma;                        // IGamma
+  std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
 
-  getInnerInterfaceDofsForeachSubdomain(boost::fusion::at_c<0>(u.data),  
-                                        GetGlobalCoordinate(),
-                                        material, 
-                                        e2i, 
-                                        i2e,
-                                        i2i,
-                                        icoord,
-                                        i2T,
-                                        map_t2l);
-
-  markedIndicesOnInterfacesForeachSubdomain(boost::fusion::at_c<0>(u.data),
-                                            GetGlobalCoordinate(), 
-                                            material,
-                                            icoord,
-                                            e2i,
-                                            e2e,
-                                            i2i);
-
-
-  for (int i = 0; i < i2i.size(); ++i)
-  {
-    std::set<int> s = i2i[i];
-    std::set<int>::iterator itr;
-
-    if(s.size()>1){
-      std::cout << i << " : ";
-      for (itr = s.begin(); itr != s.end(); itr++) 
-      {
-        std::cout << *itr << " ";
-      }
-      std::cout << "\n";  
-    }
-  }
+  mesh_data_structure(boost::fusion::at_c<0>(u.data),  
+                      material, 
+                      e2i, i2e, e2e, i2i, icoord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma);
 
 
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;

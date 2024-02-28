@@ -46,6 +46,7 @@ using namespace Kaskade;
 
 #include "EMI_model.hh"
 #include "EMI_mesh_utility.hpp"
+#include "EMI_mesh_data.hpp"
 
 #include "EMI_CG_Jacobi.hpp"
 

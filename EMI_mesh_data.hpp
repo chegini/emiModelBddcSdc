@@ -14,7 +14,9 @@ void mesh_data_structure( FSElement& fse,
                           std::map<int, int> & map_sT2l,
                           std::map<int,std::set<int>> & map_II,
                           std::map<int,std::set<int>> & map_IGamma,
-                          std::map<int,std::set<int>> & map_GammaGamma)
+                          std::map<int,std::set<int>> & map_GammaGamma,
+                          std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,
+                          std::map<int,std::map<int,std::set<int>>> & map_GammaNbr)
 {
  	getInnerInterfaceDofsForeachSubdomain(fse,  
                                         GetGlobalCoordinate(),
@@ -34,7 +36,9 @@ void mesh_data_structure( FSElement& fse,
                                             e2i,
                                             e2e,
                                             i2i,
-                                            map_GammaGamma);
+                                            map_GammaGamma,
+                                            map_GammaGamma_W_Nbr,
+                                            map_GammaNbr);
 
 
 
@@ -69,24 +73,23 @@ void mesh_data_structure( FSElement& fse,
 
     map_II[IGamma.first] = I;
     if(false) std::cout << IGamma.first << ": " << IGamma.second.size() << ", "<<map_GammaGamma[IGamma.first].size() <<", " << I.size() << std::endl;
-    
   }
-
+  
   if(false)
   {
 		for (int i = 0; i < i2i.size(); ++i)
 		{
-		std::set<int> s = i2i[i];
-		std::set<int>::iterator itr;
+			std::set<int> s = i2i[i];
+			std::set<int>::iterator itr;
 
-		if(s.size()>1){
-		  std::cout << i << " : ";
-		  for (itr = s.begin(); itr != s.end(); itr++) 
-		  {
-		    std::cout << *itr << " ";
-		  }
-		  std::cout << "\n";  
-		}
+			if(s.size()>1){
+			  std::cout << i << " : ";
+			  for (itr = s.begin(); itr != s.end(); itr++) 
+			  {
+			    std::cout << *itr << " ";
+			  }
+			  std::cout << "\n";  
+			}
 		}
 
 		std::cout << "igamma"<< ":\n";
@@ -122,10 +125,35 @@ void mesh_data_structure( FSElement& fse,
 		std::cout << "\n";
 		}
 
+		std::cout << "gamma with nbr"<< ":\n";
+		for ( const auto &Gamma_W_Nbr : map_GammaGamma_W_Nbr ){
+			std::cout << Gamma_W_Nbr.first << ": ";
+			std::set<int>::iterator itr;
+			for (itr = Gamma_W_Nbr.second.begin(); itr != Gamma_W_Nbr.second.end(); itr++) 
+		  {
+		    std::cout << *itr << " ";
+		  }
+		  std::cout << "\n";
+		}	
+
+		std::cout << "nbr"<< ":\n";
+		for ( const auto &gammaNbr : map_GammaNbr ){
+			std::cout << gammaNbr.first << ":";
+			for ( const auto &nbr : gammaNbr.second ){
+				std::cout << nbr.first << " (";
+				std::set<int>::iterator itr;
+				for (itr = nbr.second.begin(); itr != nbr.second.end(); itr++) 
+			  {
+			    std::cout << *itr << " ";
+			  }
+			  std::cout << ") ";
+			}
+			std::cout << "\n";
+		}
 
 		std::cout << "t2l"<< ":\n";
 		for ( const auto &t2l : map_t2l ) {
-		std::cout << t2l.first << ": " << t2l.second << "\n";
+			std::cout << t2l.first << ": " << t2l.second << "\n";
 		}
   }
 }

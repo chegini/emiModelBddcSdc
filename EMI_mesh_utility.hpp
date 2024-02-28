@@ -157,7 +157,9 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                                  std::vector<std::vector<int>> & e2i, 
                                  std::vector<std::set<int>> & e2e,
                                  std::vector<std::set<int>> & i2i,
-                                 std::map<int,std::set<int>> & map_GammaGamma) 
+                                 std::map<int,std::set<int>> & map_GammaGamma,
+                                 std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,
+                                 std::map<int,std::map<int,std::set<int>>> & map_GammaNbr) 
 {
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
@@ -170,6 +172,10 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
 
   auto const cend = fse.space().gridView().template end<0>();
   std::map<int,std::set<int>>::iterator it_gamma;
+  std::map<int,std::set<int>>::iterator it_gammaNbr;
+
+  std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
+  std::map<int,std::set<int>>::iterator it_GammaNbr_i;
 
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   std::vector<ValueType> fuvalue; // declare here to prevent reallocations
@@ -196,6 +202,8 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
       if(intersection.neighbor()){
         int eNbrIndex = fse.space().gridView().indexSet().index(intersection.outside());  
         if(material.value(*ci,zero)!=material.value(intersection.outside(),zero)) {
+          
+          int material_nbr = material.value(intersection.outside(),zero);
 
           for (int i = 0; i < e2i[eIndex].size(); ++i)
           {
@@ -216,10 +224,48 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                     std::set<int> gamma = it_gamma->second;
                     gamma.insert(nIndex_c1);
                     it_gamma->second = gamma;
+
+                    // gamma + nbr
+                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
+                    std::set<int> gammaNbr = it_gammaNbr->second;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    it_gammaNbr->second = gammaNbr;
+
+                    // nbr
+                    it_GammaNbr = map_GammaNbr.find(material_var);
+                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
+                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
+                    if(it_GammaNbr_i!= gamma_nbr.end()){
+                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      it_GammaNbr_i->second = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }else{
+                      std::set<int> gamma_nbr_i;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      gamma_nbr[material_nbr] = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr; 
+                    }
+
                   }else{
                     std::set<int> gamma;
                     gamma.insert(nIndex_c1);
                     map_GammaGamma[material_var] = gamma;
+
+                    // gamma + nbr
+                    std::set<int> gammaNbr;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
+
+                    // nbr
+                    std::map<int,std::set<int>> gamma_nbr;
+                    std::set<int> gamma_nbr_value;
+                    gamma_nbr_value.insert(nIndex_c2);
+                    gamma_nbr[material_nbr] = gamma_nbr_value;
+                    map_GammaNbr[material_var] = gamma_nbr;
+
                   }
                   break;
                 }                
@@ -236,10 +282,48 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                     std::set<int> gamma = it_gamma->second;
                     gamma.insert(nIndex_c1);
                     it_gamma->second = gamma;
+
+                    // gamma + nbr
+                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
+                    std::set<int> gammaNbr = it_gammaNbr->second;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    it_gammaNbr->second = gammaNbr;
+
+                    // nbr
+                    it_GammaNbr = map_GammaNbr.find(material_var);
+                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
+                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
+                    if(it_GammaNbr_i!= gamma_nbr.end()){
+                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      it_GammaNbr_i->second = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }else{
+                      std::set<int> gamma_nbr_i;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      gamma_nbr[material_nbr] = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }
+
                   }else{
                     std::set<int> gamma;
                     gamma.insert(nIndex_c1);
                     map_GammaGamma[material_var] = gamma;
+
+                    // gamma +nbr
+                    std::set<int> gammaNbr;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
+
+                    // nbr
+                    std::map<int,std::set<int>> gamma_nbr;
+                    std::set<int> gamma_nbr_value;
+                    gamma_nbr_value.insert(nIndex_c2);
+                    gamma_nbr[material_nbr] = gamma_nbr_value;
+                    map_GammaNbr[material_var] = gamma_nbr;  
+
                   }
                   break;
                 }                

@@ -320,6 +320,10 @@ int main(int argc, char* argv[])
   // - icoord
   // - itT
   // - map_t2l
+  // - map_sT2l
+  // - map_II
+  // - map_IGamma
+  // - map_GammaGamma
   // ------------------------------------------------------------------------------------
 
   std::vector<std::vector<int>> e2i(gridManager.grid().size(0)); //element to indices
@@ -335,11 +339,29 @@ int main(int argc, char* argv[])
   std::map<int,std::set<int>> map_II;                            // II
   std::map<int,std::set<int>> map_IGamma;                        // IGamma
   std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
+  std::map<int,std::set<int>> map_GammaGamma_W_Nbr;              // GammaGamma with nbr
+  std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
+
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, 
-                      e2i, i2e, e2e, i2i, icoord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma);
+                      e2i, i2e, e2e, i2i, icoord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
+  int n_subdomains = map_t2l.size();
 
+  // ------------------------------------------------------------------------------------
+  // Extract the mesh data
+  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequanceOfsubdomains 
+  // - e2i
+  // - i2e
+  // - i2i
+  // - icoord
+  // - itT
+  // - map_t2l
+  // - map_sT2l
+  // - map_II
+  // - map_IGamma
+  // - map_GammaGamma
+  // ------------------------------------------------------------------------------------
 
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 

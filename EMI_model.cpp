@@ -434,6 +434,12 @@ int main(int argc, char* argv[])
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
   petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, rhs_vec_original,rhs_petsc_test);
+  // ------------------------------------------------------------------------------------ 
+  // compute rhs based on petsc structure
+  // ------------------------------------------------------------------------------------ 
+  std::vector<Vector> Fs_petcs;
+  petsc_structure_rhs_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+
 
   return 0;
 }

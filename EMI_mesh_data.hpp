@@ -674,4 +674,65 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
   }
 }
 
+
+template<class Vector>
+void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags, 
+                                std::vector<int> startingIndexOfTag,
+                                std::map<int,std::set<int>> map_II,
+                                std::map<int,std::set<int>> map_GammaGamma,
+                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                                Vector b_,
+                                std::map<int, int> map_indices,
+                                std::vector<std::vector<LocalDof>> sharedDofsAll,
+                                std::vector<Vector> &Fs)
+{
+
+  std::cout << " construct RHS for each subdomain based on petsc Sructure" <<std::endl;
+  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  {
+    int tag = sequenceOfTags[subIdx];
+    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+
+    Vector Fs_subIdx(b_.size()); 
+    double coef = 2;
+
+    for (int indx = 0; indx < Interior.size(); ++indx)
+    {
+      int pos = Interior[indx];
+      int pos_map = map_indices[pos];
+      Fs_subIdx[pos_map] = b_[pos];
+    }
+
+    for (int indx = 0; indx < interface.size(); ++indx)
+    {
+      int pos = interface[indx];
+      int pos_map = map_indices[pos];
+      // Fs_subIdx[pos_map] = coef*b_[pos];
+      int alpha  = sharedDofsAll[pos].size();
+      Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
+    }
+
+    for ( const auto &gamma_nbr : nbrs ) 
+    {
+      int tag = gamma_nbr.first;
+      std::set<int> nbr = gamma_nbr.second;
+      std::set<int>::iterator it;
+      std::vector<int> nbr_vec(nbr.begin(), nbr.end());
+
+      for (int j = 0; j < nbr_vec.size(); ++j)
+      {
+        int pos = nbr_vec[j];
+        int pos_map = map_indices[pos];
+        // Fs_subIdx[pos_map] = coef*b_[pos];
+        int alpha  = sharedDofsAll[pos].size();
+        Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
+      }
+    }
+
+    Fs.push_back(Fs_subIdx);
+  }
+}
+
 #endif

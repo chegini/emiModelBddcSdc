@@ -330,12 +330,13 @@ int main(int argc, char* argv[])
   std::vector<std::set<int>> e2e(gridManager.grid().size(0));    //element to element
   std::vector<std::set<int>> i2e(dof_size);                      //index to element, for the cell Filter
   std::vector<std::set<int>> i2i(dof_size);                      //index to index
+
   std::vector<std::vector<double>> icoord(dof_size);             //coordinates of each dofs
   std::vector<int> i2T(dof_size);                                //index to tags
   std::map<int, int> map_t2l;                                    //map: tag to lenth
   std::map<int, int> map_sT2l;                                   //map: sequance of each tag to length
   std::map<int,int> map_nT2oT;                                   //map: new Tag to original Tag
- 
+                              
   std::map<int,std::set<int>> map_II;                            // II
   std::map<int,std::set<int>> map_IGamma;                        // IGamma
   std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
@@ -349,18 +350,13 @@ int main(int argc, char* argv[])
   int n_subdomains = map_t2l.size();
 
   // ------------------------------------------------------------------------------------
-  // Extract the mesh data
-  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequanceOfsubdomains 
-  // - e2i
-  // - i2e
-  // - i2i
-  // - icoord
-  // - itT
-  // - map_t2l
-  // - map_sT2l
-  // - map_II
-  // - map_IGamma
-  // - map_GammaGamma
+  // compute the data petsc from the mesh data
+  // - local2Global
+  // - global2Local
+  // - globalIndices
+  // - map_indices
+  // - map_i2sub
+  // - i2iSet
   // ------------------------------------------------------------------------------------
   std::map<int,std::unordered_map<int, int>> local2Global;
   std::map<int,std::unordered_map<int, int>> global2Local;
@@ -371,6 +367,21 @@ int main(int argc, char* argv[])
   std::map<int, int> map_i2sub;
   map_kaskade2petcs(map_II, map_GammaGamma, map_indices, map_i2sub);
   
+  removeInnerIndices_i2i(i2i);
+  std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces
+  if(false)
+  {
+    std::set<std::set<int>>::iterator it;
+    for (it = i2iSet.begin(); it != i2iSet.end(); ++it) {
+      std::set<int> s = *it;
+      std::set<int>::iterator itr;
+      for (itr = s.begin(); itr != s.end(); ++itr) {
+        std::cout << *itr << " ";
+      }
+      std::cout <<std::endl;
+    }
+  }
+
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
   return 0;

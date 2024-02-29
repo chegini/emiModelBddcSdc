@@ -382,6 +382,8 @@ int main(int argc, char* argv[])
     }
   }
 
+  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
+  compute_sharedDofsKaskade(map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
   return 0;

@@ -458,4 +458,116 @@ void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
   }
 }
 
+void compute_sharedDofsKaskade( std::map<int, int> map_indices, 
+                                std::map<int,std::set<int>> map_II,
+                                std::map<int,std::set<int>> map_GammaGamma, 
+                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
+                                bool write_to_file,
+                                std::string matlab_dir,  
+                                std::vector<std::vector<LocalDof>> & sharedDofsKaskade)
+{
+  // construct the sequance of the submatrices in BDDC in kaskade
+  int n_subdomains = map_II.size();
+  std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
+  for ( const auto &II : map_II ) 
+  {
+    int tag =  II.first;
+    std::vector<int> I(map_II[tag].begin(),map_II[tag].end());
+    std::vector<int> gamma(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
+    std::map<int,std::set<int>> gamma_nbr_subdomain(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+    int size = I.size()+gamma.size();
+    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
+    {
+     size += gamma_nbr.second.size(); 
+    }
+
+
+    std::vector<int> vec_kaskadeIndex(size);
+    int count = 0;
+    for (int i = 0; i < I.size(); ++i){
+      vec_kaskadeIndex[count] = map_indices[I[i]]; 
+      count++;     
+    }
+
+    for (int i = 0; i < gamma.size(); ++i){
+      vec_kaskadeIndex[count] = map_indices[gamma[i]];    
+      count++;  
+    }
+    
+    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
+    {
+      int tag_nbr = gamma_nbr.first;
+      std::set<int> nbr = gamma_nbr.second;
+      std::set<int>::iterator it;
+
+      for (it = nbr.begin(); it != nbr.end(); it++)
+      {
+        vec_kaskadeIndex[count] = map_indices[*it]; 
+        count++; 
+      }
+    }
+
+    sequanceOfsubdomainsKaskade[tag] = vec_kaskadeIndex;
+  }
+   
+
+  typedef std::tuple<int,int,int> i3tuple;
+  std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
+  for ( const auto &II : map_II ) 
+  {
+    int tag =  II.first;
+    std::vector<int> tmp = sequanceOfsubdomainsKaskade[tag];
+
+    for (int i = 0; i < tmp.size(); ++i)
+    {
+      auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);
+      if (it != MapSharedDofsKaskadeTuple.end()) {  
+        std::vector<i3tuple>& values = it->second;
+        values.push_back(i3tuple(tag,i, tmp[i]));
+      }else{
+        MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(tag,i, tmp[i])};
+      }
+    }
+  }
+
+  std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
+  {
+    double precision = 16;
+    std::string fname = matlab_dir+"/sharedDofsKaskade.txt";
+    std::ofstream f(fname.c_str());
+    f.precision(precision);
+
+    for (const auto& entry : MapSharedDofsKaskadeTuple) 
+    {
+      int key = entry.first;
+      const std::vector<i3tuple>& values = entry.second;
+      {
+        std::vector<LocalDof> tmp;
+        for (const auto& value : values) {
+          tmp.push_back({std::get<0>(value),std::get<1>(value)});
+        }
+        sharedDofsKaskadeAll.push_back(tmp);
+      }
+
+      if(values.size()>1){
+        std::vector<LocalDof> tmp;
+        for (const auto& value : values) {
+          tmp.push_back({std::get<0>(value),std::get<1>(value)});
+        }
+        sharedDofsKaskade.push_back(tmp);
+      }
+
+      if(values.size()>1 and write_to_file){
+        f << key << "-> ";
+        for (const auto& value : values) {
+          f <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
+          // std::cout <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
+        }
+        f << "\n";
+        // std::cout <<"\n";
+      }
+    }
+  } 
+}
+
 #endif

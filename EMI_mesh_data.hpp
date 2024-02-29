@@ -397,4 +397,54 @@ void subdomain_indices( std::map<int,std::set<int>> & map_II,
 	}
 }
 
+void map_kaskade2petcs(std::map<int,std::set<int>> & map_II,
+                               std::map<int,std::set<int>> & map_GammaGamma,
+                               std::map<int, int> & map_indices,
+                               std::map<int, int> & map_i2sub)
+{
+  int counter = 0;
+	for ( const auto &II : map_II ) {
+		int tag =  II.first;
+   	
+   	std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
+   	std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
+
+    for (int i = 0; i < I_vec.size(); ++i)
+    {
+      map_indices[I_vec[i]] = counter;
+      map_i2sub[I_vec[i]] = tag;
+      counter++;
+    }
+
+    for (int i = 0; i < gamma_vec.size(); ++i)
+    {
+      map_indices[gamma_vec[i]] = counter;
+      map_i2sub[gamma_vec[i]] = tag;
+      counter++;
+    }
+  }
+
+  std::vector<int> sequanceIndices_petsc;
+  if(false){
+    for ( const auto &II : map_II ) {
+      int tag =  II.first;
+      std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
+      std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
+
+      for (int i = 0; i < I_vec.size(); ++i)
+      {
+        sequanceIndices_petsc.push_back(map_indices[I_vec[i]]);
+        std::cout <<I_vec[i] << " " << map_indices[I_vec[i]] << "\n" ;
+      }
+
+      for (int i = 0; i < gamma_vec.size(); ++i)
+      {
+        sequanceIndices_petsc.push_back(map_indices[gamma_vec[i]]);
+        std::cout <<gamma_vec[i] << " " << map_indices[gamma_vec[i]] << "\n" ;
+      }
+      std::cout << "\n" ;
+    }    
+  }
+
+}
 #endif

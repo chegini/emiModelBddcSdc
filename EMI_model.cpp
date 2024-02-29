@@ -367,8 +367,10 @@ int main(int argc, char* argv[])
   std::map<int,std::vector<int>> globalIndices;
   subdomain_indices( map_II, map_GammaGamma, map_GammaNbr, local2Global, global2Local, globalIndices);
 
-
-
+  std::map<int, int> map_indices;
+  std::map<int, int> map_i2sub;
+  map_kaskade2petcs(map_II, map_GammaGamma, map_indices, map_i2sub);
+  
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
   return 0;

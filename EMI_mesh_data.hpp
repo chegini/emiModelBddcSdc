@@ -569,5 +569,55 @@ void compute_sharedDofsKaskade( std::map<int, int> map_indices,
     }
   } 
 }
+template<class FSElement>
+void write_Dirichlet_and_coordinates( FSElement& fse, 
+                                      std::vector<std::vector<int>> e2i,
+                                      std::map<int, int> map_indices,
+                                      std::vector<std::vector<double>> icoord,
+                                      int dof_size,
+                                      int dim,
+                                      bool write_to_file,
+                                      std::string matlab_dir)
+{
 
+
+  std::set<int> dofsDirichlet;
+  markedIndicesForDirichlet(fse,
+                            GetGlobalCoordinate(), 
+                            e2i,
+                            dofsDirichlet);
+
+
+
+  if(write_to_file)
+  {
+    double precision = 16;
+    std::string fname = matlab_dir+"/DrichletNodes.m";
+    std::ofstream f(fname.c_str());
+    f.precision(precision);
+    std::set<int>::iterator it;
+    for (it = dofsDirichlet.begin(); it != dofsDirichlet.end(); ++it) {
+      f << map_indices[*it] << " ";
+    }
+    f << "\n";
+  }
+  
+  if(write_to_file)
+  {
+    std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
+    double precision = 16;
+    std::string fname = matlab_dir+"/coordinates.txt";
+    std::ofstream f(fname.c_str());
+    f.precision(precision);
+    for (int i = 0; i < icoord.size(); ++i)
+      indexCoordinates_petsc[map_indices[i]] = icoord[i];
+
+    for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
+      if(dim==2) 
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << " ";
+      if(dim==3) 
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
+    }
+  }
+}
 #endif

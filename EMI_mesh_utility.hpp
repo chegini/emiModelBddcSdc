@@ -340,4 +340,49 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
   }
 }
 
+template< class FSElement, class Function>
+void markedIndicesForDirichlet(FSElement& fse,  
+                                 Function const& fu, 
+                                 std::vector<std::vector<int>> & cell2Indice, 
+                                 std::set<int> & dofsDiriichlet )
+{
+  typedef typename FSElement::Space ImageSpace;
+  typedef typename ImageSpace::Grid Grid;
+
+  DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
+
+  fse.coefficients() = typename ImageSpace::Scalar(0.0);
+
+  typename ImageSpace::Evaluator isfs(fse.space());
+
+  auto const cend = fse.space().gridView().template end<0>();
+  //std::cout <<  " cend localCoordinate! *ci " <<std::endl;
+
+  using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
+  std::vector<ValueType> fuvalue; // declare here to prevent reallocations
+  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
+  {
+    auto cellIndex = fse.space().indexSet().index(*ci);
+    isfs.moveTo(*ci);
+
+    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+    globalValues.setSize(localCoordinate.size(),1);
+
+    using Cell = decltype(ci);
+    auto dof_u = fse.space().mapper().globalIndices(*ci);
+    int nrNodes = dof_u.size();
+
+    for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
+      if(!intersection.neighbor()){
+        for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
+        {
+          int index_c1 = cell2Indice[cellIndex][i];
+          dofsDiriichlet.insert(index_c1);
+        }
+      }
+    }
+  }
+}
+
+
 #endif

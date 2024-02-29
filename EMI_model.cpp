@@ -386,5 +386,9 @@ int main(int argc, char* argv[])
   compute_sharedDofsKaskade(map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
+  int mesh_dim = SPACEDIM==2? 2:3;
+  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), e2i, map_indices, icoord, dof_size, mesh_dim, write_to_file, matlab_dir);
+
+
   return 0;
 }

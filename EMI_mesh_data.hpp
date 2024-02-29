@@ -371,15 +371,17 @@ void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma,
 	}
 }
 
-void subdomain_indices( std::map<int,std::set<int>> & map_II,
+void subdomain_indices( std::vector<int> sequenceOfTags, 
+                        std::map<int,std::set<int>> & map_II,
                         std::map<int,std::set<int>> & map_GammaGamma,
                         std::map<int,std::map<int,std::set<int>>> & map_GammaNbr,
                         std::map<int,std::unordered_map<int, int>> & local2Global,
                         std::map<int,std::unordered_map<int, int>> & global2Local,
                         std::map<int,std::vector<int>> & globalIndices)
 {
-	for ( const auto &II : map_II ) {
-		int tag =  II.first;
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+		int tag =  sequenceOfTags[index];
 		std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
 		std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
@@ -397,14 +399,16 @@ void subdomain_indices( std::map<int,std::set<int>> & map_II,
 	}
 }
 
-void map_kaskade2petcs(std::map<int,std::set<int>> & map_II,
-                               std::map<int,std::set<int>> & map_GammaGamma,
-                               std::map<int, int> & map_indices,
-                               std::map<int, int> & map_i2sub)
+void map_kaskade2petcs(std::vector<int> sequenceOfTags, 
+                       std::map<int,std::set<int>> & map_II,
+                       std::map<int,std::set<int>> & map_GammaGamma,
+                       std::map<int, int> & map_indices,
+                       std::map<int, int> & map_i2sub)
 {
   int counter = 0;
-	for ( const auto &II : map_II ) {
-		int tag =  II.first;
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+    int tag =  sequenceOfTags[index];
    	
    	std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
    	std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
@@ -458,7 +462,8 @@ void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
   }
 }
 
-void compute_sharedDofsKaskade( std::map<int, int> map_indices, 
+void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags, 
+                                std::map<int, int> map_indices, 
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma, 
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
@@ -469,9 +474,9 @@ void compute_sharedDofsKaskade( std::map<int, int> map_indices,
   // construct the sequance of the submatrices in BDDC in kaskade
   int n_subdomains = map_II.size();
   std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
-  for ( const auto &II : map_II ) 
-  {
-    int tag =  II.first;
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+    int tag =  sequenceOfTags[index];
     std::vector<int> I(map_II[tag].begin(),map_II[tag].end());
     std::vector<int> gamma(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
     std::map<int,std::set<int>> gamma_nbr_subdomain(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
@@ -620,4 +625,53 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     }
   }
 }
+
+void computed_sequenceOfTags(std::map<int, int> map_t2l, std::vector<int> & sequenceOfTags, std::vector<int> & startingIndexOfTag, std::map<int,int> & map_nT2oT)
+{
+  int start = 0;
+  int index = 0;
+  int nTag = 0;
+  for ( const auto &t2l : map_t2l ) 
+  {
+    int tag =  t2l.first;
+    sequenceOfTags[index] = tag;
+    startingIndexOfTag[index] = start;
+    map_nT2oT[nTag] = tag;
+
+    start+=map_t2l[tag];
+    index++;
+    nTag++;
+  }
+}
+
+template<class Vector>
+void petsc_structure_rhs( std::vector<int> sequenceOfTags, 
+                          std::vector<int> startingIndexOfTag,
+                          std::map<int,std::set<int>> map_II,
+                          std::map<int,std::set<int>> map_GammaGamma, 
+                          Vector b_,
+                          Vector &bs_)
+{
+  bs_ *= 0;
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+    int tag =  sequenceOfTags[index];
+    std::cout << "tag " << tag <<std::endl;
+    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+
+
+    int x = startingIndexOfTag[index];
+    for (int i = 0; i < Interior.size(); ++i)
+    {
+      bs_[i+x] = b_[Interior[i]];
+    }
+
+    for (int i = 0; i < interface.size(); ++i)
+    {
+      bs_[i+x+Interior.size()] = b_[interface[i]];
+    }
+  }
+}
+
 #endif

@@ -258,9 +258,9 @@ int main(int argc, char* argv[])
   auto du(u);
   du *= 0;
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
-  auto rhs = assembler.rhs();
+  auto rhs_oiginal = assembler.rhs();
   Vector rhs_vec_original(nDofs);
-  rhs.write(rhs_vec_original.begin());
+  rhs_oiginal.write(rhs_vec_original.begin());
 
 
   // ------------------------------------------------------------------------------------
@@ -349,6 +349,10 @@ int main(int argc, char* argv[])
                       e2i, i2e, e2e, i2i, icoord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
   int n_subdomains = map_t2l.size();
 
+  std::vector<int> sequenceOfTags(n_subdomains);
+  std::vector<int> startingIndexOfTag(n_subdomains);
+
+  computed_sequenceOfTags(map_t2l, sequenceOfTags, startingIndexOfTag, map_nT2oT);
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -361,11 +365,11 @@ int main(int argc, char* argv[])
   std::map<int,std::unordered_map<int, int>> local2Global;
   std::map<int,std::unordered_map<int, int>> global2Local;
   std::map<int,std::vector<int>> globalIndices;
-  subdomain_indices( map_II, map_GammaGamma, map_GammaNbr, local2Global, global2Local, globalIndices);
+  subdomain_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaNbr, local2Global, global2Local, globalIndices);
 
   std::map<int, int> map_indices;
   std::map<int, int> map_i2sub;
-  map_kaskade2petcs(map_II, map_GammaGamma, map_indices, map_i2sub);
+  map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma, map_indices, map_i2sub);
   
   removeInnerIndices_i2i(i2i);
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces
@@ -383,12 +387,53 @@ int main(int argc, char* argv[])
   }
 
   std::vector<std::vector<LocalDof>> sharedDofsKaskade;
-  compute_sharedDofsKaskade(map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
+  compute_sharedDofsKaskade(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
   int mesh_dim = SPACEDIM==2? 2:3;
   write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), e2i, map_indices, icoord, dof_size, mesh_dim, write_to_file, matlab_dir);
 
+  // ------------------------------------------------------------------------------------
+  // - i2iSet
+  // ------------------------------------------------------------------------------------
+  assembler.assemble(SemiLinearization(eq,u,u,du),options.assemblyThreads);
+  AssembledGalerkinOperator<Assembler> Ass(assembler); 
+  // ------------------------------------------------------------------------------------
+  // construct mass and stiffness matrix from semi-implicit structure
+  // ------------------------------------------------------------------------------------
+  Matrix A_;
+  Matrix M_;
+  Matrix K_;
+
+  A_ = assembler.template get<Matrix>(false);
+  assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
+  auto rhs = assembler.rhs();
+  // writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+
+  F.Mass_stiff(1);
+  SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
+  eqM.setTau(0);
+  assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX, options.assemblyThreads);  
+  M_ = assembler.template get<Matrix>(false);
+  // writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
+
+  // get stiffness 
+  F.Mass_stiff(0);
+  SemiImplicitEulerStep<Functional>  eqK(&F,options.dt);
+  eqK.setTau(1);
+  assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
+  K_ = assembler.template get<Matrix>(false);
+  K_*=(-options.dt);
+  // writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
+  
+  // ------------------------------------------------------------------------------------ 
+  // compute rhs based on petsc structure
+  // ------------------------------------------------------------------------------------ 
+  Vector rhs_vec_test(nDofs);
+  rhs.write(rhs_vec_test.begin());
+  Vector rhs_petsc_test(nDofs);
+  rhs.write(rhs_petsc_test.begin());
+  petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, rhs_vec_original,rhs_petsc_test);
 
   return 0;
 }

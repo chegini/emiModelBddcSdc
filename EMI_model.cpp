@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
   std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
   std::map<int,std::set<int>> map_GammaGamma_W_Nbr;              // GammaGamma with nbr
   std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
-
+  std::map<int,std::vector<int>> sequanceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, 
@@ -352,7 +352,8 @@ int main(int argc, char* argv[])
   std::vector<int> sequenceOfTags(n_subdomains);
   std::vector<int> startingIndexOfTag(n_subdomains);
 
-  computed_sequenceOfTags(map_t2l, sequenceOfTags, startingIndexOfTag, map_nT2oT);
+  computed_sequenceOfTags(map_t2l,map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequanceOfsubdomains);
+
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -435,11 +436,42 @@ int main(int argc, char* argv[])
   rhs.write(rhs_petsc_test.begin());
   petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, rhs_vec_original,rhs_petsc_test);
   // ------------------------------------------------------------------------------------ 
-  // compute rhs based on petsc structure
+  // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
   std::vector<Vector> Fs_petcs;
   petsc_structure_rhs_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
-
-
+  std::vector<Matrix> subMatrices;
+  std::vector<Matrix> subMatrices_M;
+  std::vector<Matrix> subMatrices_K;
+  // ------------------------------------------------------------------------------------ 
+  // compute rhs based on petsc structure
+  // ------------------------------------------------------------------------------------
+  std::vector<Vector> weights; 
+  construct_submatrices_petsc(map_nT2oT,
+                              gridManager,
+                              F,
+                              variableSetDesc, 
+                              spaces,
+                              gridManager.grid(), 
+                              u,
+                              dt,
+                              sequenceOfTags, 
+                              startingIndexOfTag,
+                              map_II,
+                              map_GammaGamma,
+                              map_GammaNbr,
+                              sequanceOfsubdomains,
+                              map_indices, 
+                              A_,K_,M_,
+                              rhs_petsc_test,
+                              nDofs,
+                              options.assemblyThreads,
+                              write_to_file,
+                              matlab_dir,
+                              Fs_petcs,
+                              weights,
+                              subMatrices,
+                              subMatrices_M,
+                              subMatrices_K);
   return 0;
 }

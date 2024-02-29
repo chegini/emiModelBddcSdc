@@ -19,52 +19,52 @@ typedef pair<int, int> row_col;
 #include <fstream>
 #include <vector>
 
-struct vec {
-    size_t N;
-    std::vector<double> data;
+// struct vec {
+//     size_t N;
+//     std::vector<double> data;
 
-    vec(size_t N) : N(N), data(N) {};
+//     vec(size_t N) : N(N), data(N) {};
 
-    vec(std::ifstream &in) {
-        in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
-        data.resize(N);
-        in.read(reinterpret_cast<char*>(data.data()), N * sizeof(double));
-    }
+//     vec(std::ifstream &in) {
+//         in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
+//         data.resize(N);
+//         in.read(reinterpret_cast<char*>(data.data()), N * sizeof(double));
+//     }
 
-    void write(std::ofstream &out) {
-        out.write(reinterpret_cast<char*>(&N), sizeof(size_t));
-        out.write(reinterpret_cast<char*>(data.data()), N * sizeof(double));
-    }
-};
+//     void write(std::ofstream &out) {
+//         out.write(reinterpret_cast<char*>(&N), sizeof(size_t));
+//         out.write(reinterpret_cast<char*>(data.data()), N * sizeof(double));
+//     }
+// };
 
-struct csr_matrix {
-    size_t N, nnz;
-    std::vector<size_t> row_ptrs;
-    std::vector<size_t> col_idxs;
-    std::vector<double> values;
+// struct csr_matrix {
+//     size_t N, nnz;
+//     std::vector<size_t> row_ptrs;
+//     std::vector<size_t> col_idxs;
+//     std::vector<double> values;
 
-    csr_matrix(size_t N, size_t nnz) : N(N), nnz(nnz), row_ptrs(N + 1, 0), col_idxs(nnz), values(nnz)
-    {}
+//     csr_matrix(size_t N, size_t nnz) : N(N), nnz(nnz), row_ptrs(N + 1, 0), col_idxs(nnz), values(nnz)
+//     {}
 
-    csr_matrix(std::ifstream &in) {
-        in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
-        in.read(reinterpret_cast<char*>(&nnz), sizeof(size_t));
-        row_ptrs.resize(N + 1);
-        col_idxs.resize(nnz);
-        values.resize(nnz);
-        in.read(reinterpret_cast<char*>(row_ptrs.data()), (N + 1) * sizeof(size_t));
-        in.read(reinterpret_cast<char*>(col_idxs.data()), nnz * sizeof(size_t));
-        in.read(reinterpret_cast<char*>(values.data()), nnz * sizeof(double));
-    }
+//     csr_matrix(std::ifstream &in) {
+//         in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
+//         in.read(reinterpret_cast<char*>(&nnz), sizeof(size_t));
+//         row_ptrs.resize(N + 1);
+//         col_idxs.resize(nnz);
+//         values.resize(nnz);
+//         in.read(reinterpret_cast<char*>(row_ptrs.data()), (N + 1) * sizeof(size_t));
+//         in.read(reinterpret_cast<char*>(col_idxs.data()), nnz * sizeof(size_t));
+//         in.read(reinterpret_cast<char*>(values.data()), nnz * sizeof(double));
+//     }
 
-    void write(std::ofstream &out) {
-        out.write(reinterpret_cast<char*>(&N), sizeof(size_t));
-        out.write(reinterpret_cast<char*>(&nnz), sizeof(size_t));
-        out.write(reinterpret_cast<char*>(row_ptrs.data()), (N + 1) * sizeof(size_t));
-        out.write(reinterpret_cast<char*>(col_idxs.data()), nnz * sizeof(size_t));
-        out.write(reinterpret_cast<char*>(values.data()), nnz * sizeof(double));
-    }
-};
+//     void write(std::ofstream &out) {
+//         out.write(reinterpret_cast<char*>(&N), sizeof(size_t));
+//         out.write(reinterpret_cast<char*>(&nnz), sizeof(size_t));
+//         out.write(reinterpret_cast<char*>(row_ptrs.data()), (N + 1) * sizeof(size_t));
+//         out.write(reinterpret_cast<char*>(col_idxs.data()), nnz * sizeof(size_t));
+//         out.write(reinterpret_cast<char*>(values.data()), nnz * sizeof(double));
+//     }
+// };
 
 template <class Entry, class Index, class VEntry>
 void writeToMatlabPath(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVector<VEntry> const& b, std::string const& basename, std::string const& path, bool gen_rhs, int precision=16)
@@ -626,7 +626,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
   }
 }
 
-void computed_sequenceOfTags(std::map<int, int> map_t2l, std::vector<int> & sequenceOfTags, std::vector<int> & startingIndexOfTag, std::map<int,int> & map_nT2oT)
+void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::vector<int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequanceOfsubdomains)
 {
   int start = 0;
   int index = 0;
@@ -642,6 +642,19 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::vector<int> & sequ
     index++;
     nTag++;
   }
+
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+    int tag =  sequenceOfTags[index];
+    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+    std::vector<int> sequanceOfsubdomains_subIndex;
+    for ( const auto &gamma_nbr : nbrs ) {
+      sequanceOfsubdomains_subIndex.push_back(gamma_nbr.first);
+    }
+
+    sequanceOfsubdomains[tag] = sequanceOfsubdomains_subIndex;
+  } 
+
 }
 
 template<class Vector>
@@ -733,6 +746,379 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
 
     Fs.push_back(Fs_subIdx);
   }
+}
+
+// ------------------------------------------------------------------------------------
+// construct submatrices
+// ------------------------------------------------------------------------------------
+template<class Matrix_, class Matrix>
+void insertMatrixBlock(Matrix_ A_block, double coef, int x, int y, Matrix &As_)
+{
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      double val = *ca;
+      As_[k+x][l+y] = val*coef; 
+    }
+  }
+}
+
+template<class Matrix, class Matrix_>
+void insertMatrixBlock(Matrix A_block, int x, int y, Matrix_ &As_)
+{
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      As_[k+x][l+y] = *ca; 
+    }
+  }
+}
+
+template<class Matrix, class Matrix_>
+void insertMatrixBlockNbr(Matrix A_block, double coef, int x, int y, Matrix_ &As_)
+{  
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      As_[k+x][l+y] = coef*(*ca); 
+      As_[l+y][k+x] = coef*(*ca); 
+    }
+  }
+}
+
+template<class Matrix, class Matrix_>
+void insertMatrixBlockNbr(Matrix A_block, int x, int y, Matrix_ &As_)
+{
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      As_[k+x][l+y] = *ca; 
+      As_[l+y][k+x] = *ca; 
+    }
+  }
+}
+
+template<class Matrix>
+void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags, 
+                                std::vector<int> startingIndexOfTag,
+                                std::map<int,std::vector<int>> sequanceOfsubdomains,
+                                std::map<int,std::set<int>> map_II,
+                                std::map<int,std::set<int>> map_GammaGamma,
+                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                                Matrix A_,
+                                Matrix M_,
+                                std::vector<Matrix> massSubmatrices_subIndx,
+                                int subIdx,
+                                Matrix &Ms)
+{
+  int tag = sequenceOfTags[subIdx];
+  std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+  std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+  std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+  
+  
+  int start = startingIndexOfTag[subIdx];
+  double coef = 0.5;
+  auto K_GAMMAGAMMA_block = M_(Interface,Interface);
+  insertMatrixBlock(K_GAMMAGAMMA_block, coef, start+Interior.size(), start+Interior.size(), Ms);
+
+
+  std::vector<int> sequanceOfsubdomains_subIdx(sequanceOfsubdomains[subIdx].begin(), sequanceOfsubdomains[subIdx].end());
+  for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
+  {
+    int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
+    std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
+    std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
+ 
+    int x = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
+    int y = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
+
+    Matrix massSubmatrices_nbr = massSubmatrices_subIndx[nbr];
+    auto K_GAMMAGAMMA_nbr_nbr_block = massSubmatrices_nbr(Interface_nbr,Interface_nbr);
+    insertMatrixBlock(K_GAMMAGAMMA_nbr_nbr_block, coef, x, y, Ms);
+  }
+
+  // cross blocks on column for subIdx 
+  for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
+  {
+    int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
+    std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
+    std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
+
+    int x = startingIndexOfTag[subIdx] + Interior.size();
+    int y = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
+
+    auto K_GAMMAGAMMA_nbr_block = A_(Interface,Interface_nbr);
+    insertMatrixBlockNbr(K_GAMMAGAMMA_nbr_block, coef, x, y, Ms);
+  }
+}
+
+template<class Matrix, class Matrix_>
+void exctract_petsc_stiffness_blocks( std::vector<int> sequenceOfTags, 
+                                      std::vector<int> startingIndexOfTag,
+                                      std::map<int,std::set<int>> map_II,
+                                      std::map<int,std::set<int>> map_GammaGamma,
+                                      Matrix A_,
+                                      Matrix K_,
+                                      int subIdx,
+                                      Matrix_ &Ks_)
+{
+  int tag = sequenceOfTags[subIdx];
+  std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+  std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+
+  int start = startingIndexOfTag[tag];
+  auto A_II_block = A_(Interior,Interior);
+  insertMatrixBlock(A_II_block, start, start, Ks_);
+
+  auto A_IGAMMA_block = A_(Interior,Interface);
+  insertMatrixBlock(A_IGAMMA_block, start, start+Interior.size(), Ks_);
+
+  auto A_GAMMAI_block = A_(Interface,Interior);
+  insertMatrixBlock(A_GAMMAI_block, start+Interior.size(), start, Ks_);
+
+  auto K_GAMMAGAMMA_block = K_(Interface,Interface);
+  insertMatrixBlock(K_GAMMAGAMMA_block, start+Interior.size(), start+Interior.size(), Ks_);
+}
+
+// -------------------------------------------------------------------------------------
+// reorder matrix A with respect to petsc structure
+// -------------------------------------------------------------------------------------
+template<class Matrix>
+void petsc_structure_Matrix(std::vector<int> sequenceOfTags, 
+                            std::vector<int> startingIndexOfTag,
+                            std::map<int,std::set<int>> map_II,
+                            std::map<int,std::set<int>> map_GammaGamma,
+                            Matrix A_,
+                            Matrix &As_)
+{ 
+  for (int subIdx = 0; subIdx < map_II.size(); ++subIdx)
+  {
+    int tag = sequenceOfTags[subIdx];
+    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+
+    int x = startingIndexOfTag[tag];
+    int y = startingIndexOfTag[tag];
+
+    auto A_Interior_block = A_(Interior,Interior);
+    insertMatrixBlock(A_Interior_block, x, y, As_);
+
+    auto A_Interior_Interface_block = A_(Interior,interface);
+    insertMatrixBlock(A_Interior_Interface_block, x, y+Interior.size(), As_);
+
+    auto A_Interface_Interior_block = A_(interface,Interior);
+    insertMatrixBlock(A_Interface_Interior_block, x+Interior.size(), y, As_);
+   
+    auto A_Interface_Interface_block = A_(interface,interface);
+    insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
+
+    for (int nbr = 0; nbr < map_II.size(); ++nbr)
+    {
+      int tag_nbr = sequenceOfTags[nbr];
+      if(tag!=tag_nbr){
+        std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
+        std::vector<int> interface_nbr(map_GammaGamma[tag_nbr].begin(), map_GammaGamma[tag_nbr].end());
+
+        x = startingIndexOfTag[tag] + Interior.size();
+        y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
+        auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
+        insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
+      }
+    }
+  }
+}
+
+template<class Grid, class Functional, class VariableSet, class Spaces, class Matrix, class Vector>
+typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int> map_nT2oT,
+                                                          GridManager<Grid>& gridManager,
+                                                          Functional& F,
+                                                          VariableSet const& variableSet, 
+                                                          Spaces const& spaces,
+                                                          Grid const& grid, 
+                                                          typename VariableSet::VariableSet u,
+                                                          double  dt,
+                                                          std::vector<int> sequenceOfTags, 
+                                                          std::vector<int> startingIndexOfTag,
+                                                          std::map<int,std::set<int>> map_II,
+                                                          std::map<int,std::set<int>> map_GammaGamma,
+                                                          std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                                                          std::map<int,std::vector<int>> sequanceOfsubdomains,
+                                                          std::map<int, int> map_indices, 
+                                                          Matrix A_,
+                                                          Matrix K_,
+                                                          Matrix M_,
+                                                          Vector rhs_petsc_test,
+                                                          int nDofs,
+                                                          int assemblyThreads,
+                                                          bool write_to_file,
+                                                          std::string matlab_dir,
+                                                          std::vector<Vector> &Fs_petcs,
+                                                          std::vector<Vector> &weights,
+                                                          std::vector<Matrix> &subMatrices,
+                                                          std::vector<Matrix> &subMatrices_M,
+                                                          std::vector<Matrix> &subMatrices_K)
+{
+
+
+  // ------------------------------------------------------------------------------------ 
+  // construct sparsity patterns
+  // ------------------------------------------------------------------------------------ 
+  NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
+  int counter_elements = 0;
+  for (int k=0; k<A_.N(); ++k)
+  {
+    auto row  = A_[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      int row_indx = map_indices[k];
+      int col_indx = map_indices[l];
+      counter_elements++;
+      creator.addElement(row_indx,col_indx);  
+    }
+  }
+
+  // ------------------------------------------------------------------------------------ 
+  // construct submatrices
+  // ------------------------------------------------------------------------------------ 
+  std::vector<Matrix> Ms;// for debugging
+  std::vector<Matrix> Ks;// for debugging
+  Matrix M_sum(creator);// for debugging
+  Matrix K_sum(creator);// for debugging
+
+  typedef SemiLinearizationAtInner<SemiImplicitEulerStep<Functional> >  SemiLinearization;
+  typedef VariationalFunctionalAssembler<SemiLinearization> Assembler;
+  Assembler assembler(spaces);
+
+  // ------------------------------------------------------------------------------------
+  // construct mass and stiffness matrix from semi-implicit structure
+  // ------------------------------------------------------------------------------------  
+  auto du(u);
+  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  {
+
+    int tag = sequenceOfTags[subIdx]; 
+    du *= 0;
+    std::vector<Matrix> massSubmatrices_nbr;
+    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+
+    F.Mass_stiff(1);
+    F.set_mass_submatrix(true);
+    SemiImplicitEulerStep<Functional>  eqM(&F,dt);
+    eqM.setTau(0);
+
+    for ( const auto & gamma_nbr: nbrs ){
+      int row = gamma_nbr.first;
+      int col = subIdx;
+
+      std::string path = std::to_string(col) + "_" + std::to_string(row);
+
+      F.set_row_col_subdomain(map_nT2oT[row],map_nT2oT[col]);
+      assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
+      Matrix sub_M_ = assembler.template get<Matrix>(false);
+      // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
+      massSubmatrices_nbr.push_back(sub_M_);
+    }
+
+
+    Matrix subMatrix(creator);
+    std::string path = std::to_string(subIdx+1);
+
+    Vector Fs_petcs_sub =  Fs_petcs[subIdx];
+
+    // construct mass blocks
+    Matrix M_sub(creator);
+    exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, sequanceOfsubdomains,
+                               map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,subIdx, M_sub);
+    Ms.push_back(M_sub);
+    // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);
+    M_sum+=M_sub;
+    
+    // -------------------------------------
+    // added mass blocks to subMatrix
+    // -------------------------------------
+    subMatrix+=M_sub;
+
+
+    // construct stiffness + mass on the current subdomain blocks
+    Matrix K_sub(creator);
+    exctract_petsc_stiffness_blocks(sequenceOfTags, startingIndexOfTag, map_II,map_GammaGamma, A_,K_,subIdx,K_sub);
+    Ks.push_back(K_sub);
+    // writeToMatlab(K_sub,rhs_petsc_test,"K_petsc_"+path);
+    K_sum+=K_sub;
+
+    // -------------------------------------
+    // added stiffness blocks to subMatrix
+    // -------------------------------------
+    subMatrix+=K_sub;
+
+    subMatrices.push_back(subMatrix);
+    subMatrices_M.push_back(M_sub);
+    subMatrices_K.push_back(K_sub);
+    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+  }
+
+  // writeToMatlab(M_sum,rhs_petsc_test,"M_sum");
+  // writeToMatlab(K_sum,rhs_petsc_test,"K_sum");
+
+  M_sum+=K_sum; 
+  // writeToMatlabPath(M_sum,rhs_petsc_test,"sum_submatrices",matlab_dir);
+
+  Matrix A_petsc(creator);
+  petsc_structure_Matrix(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, A_, A_petsc);  
+  // if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"A_petsc",matlab_dir);
+  if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
+
+  // -------------------------------------
+  // compute the weight for each subdomain to update the rhs
+  // -------------------------------------
+  // - we need to go through the interfaces  
+  //  - of the current and their neighbors   
+  // - update the rhs for each subdomain
+  // - generate the submatrices with the writeToMatlabPath again
+  // -------------------------------------
+  // then 
+  // -------------------------------------
+  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  {
+    // std::cout << "============================" <<std::endl;
+    // std::cout << "subIdx, weights " << subIdx <<std::endl;
+    // std::cout << "============================" <<std::endl;
+    std::string path = std::to_string(subIdx+1);
+    Matrix subMatrix(creator);
+    subMatrix = subMatrices[subIdx];
+    Vector Fs_petcs_sub =  rhs_petsc_test;
+    Vector weights_sub(subMatrix.N()); 
+    // optimize it by iterating only on the interfaces
+    for (int k = 0; k < subMatrix.N(); ++k)
+    {
+      double subvalue = subMatrix[k][k];
+      double originalvalue = A_petsc[k][k];
+      double weight = (subvalue/originalvalue);
+      Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
+      weights_sub[k] = weight;
+      // std::cout << k << " : "<< weight <<std::endl;
+    }
+    // std::cout << "============================" <<std::endl;
+    Fs_petcs[subIdx] = Fs_petcs_sub;
+    weights.push_back(weights_sub);
+    // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
+  }
+
+  return u;
 }
 
 #endif

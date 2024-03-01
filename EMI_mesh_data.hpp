@@ -1121,4 +1121,59 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
   return u;
 }
 
+void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
+                                              std::map<int,std::set<int>> map_II,
+                                              std::map<int,std::set<int>> map_GammaGamma,
+                                              std::map<int,std::set<int>> map_GammaGamma_W_Nbr,
+                                              std::map<int, int> map_indices, 
+                                              std::string matlab_dir)
+{
+  double precision = 16;
+  for (int i = 0; i < sequenceOfTags.size(); ++i)
+  {
+    int tag = sequenceOfTags[i]; 
+    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+
+    std::string Ii = matlab_dir+"/BDDC_I"+ std::to_string(i+1) + ".txt";
+    std::ofstream Iii(Ii.c_str());
+    Iii.precision(precision);
+
+    for (int j = 0; j < Interior.size(); ++j)
+    {
+      Iii << map_indices[Interior[j]]+1 << " ";   
+    }
+  }
+
+
+  std::string gammaAll = matlab_dir+"/BDDC_Gamma.txt";
+  std::ofstream GammaAll(gammaAll.c_str());
+  GammaAll.precision(precision);
+
+  for (int i = 0; i < sequenceOfTags.size(); ++i)
+  {
+    int tag = sequenceOfTags[i];
+    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+    std::vector<int> gamma_W_Nbr(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end());
+
+    std::string gammai = matlab_dir+"/BDDC_Gamma"+ std::to_string(i+1) + ".txt";
+    std::ofstream Gammaii(gammai.c_str());
+    Gammaii.precision(precision);
+
+    std::string gammai_w_nbr = matlab_dir+"/BDDC_Gamma_w_nbr"+ std::to_string(i+1) + ".txt";
+    std::ofstream Gammaii_w_nbr(gammai_w_nbr.c_str());
+    Gammaii_w_nbr.precision(precision);
+
+    for (int j = 0; j < gamma_W_Nbr.size(); ++j)
+    {
+      Gammaii_w_nbr << map_indices[gamma_W_Nbr[j]]+1 << " "; 
+    }
+
+    for (int j = 0; j < interface.size(); ++j)
+    {
+      Gammaii << map_indices[interface[j]]+1 << " "; 
+      GammaAll << map_indices[interface[j]]+1 << " ";   
+    }
+  }
+}
+
 #endif

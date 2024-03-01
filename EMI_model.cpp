@@ -473,5 +473,9 @@ int main(int argc, char* argv[])
                               subMatrices,
                               subMatrices_M,
                               subMatrices_K);
+
+
+  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+
   return 0;
 }

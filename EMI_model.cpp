@@ -476,6 +476,39 @@ int main(int argc, char* argv[])
 
 
   if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+  
+  // ------------------------------------------------------------------------------------ 
+  // compute submatrices and rhs based on Kaskade structure
+  // ------------------------------------------------------------------------------------
+  std::vector<Matrix> As;
+  std::vector<Matrix> Ms;
+  std::vector<Matrix> Ks;
+  std::vector<Vector> Fs;
+  construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
+              sequanceOfsubdomains, map_indices, 
+              rhs_petsc_test, 
+              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 
+
+  Vector rhs_vec_test_new(nDofs);
+  rhs.write(rhs_vec_test_new.begin());
+
+  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequanceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
+ 
+ if(write_to_file){
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+      std::string path = std::to_string(subIdx+1);
+      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+    }  
+  }
+  if(write_to_file){
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+      std::string path = std::to_string(subIdx+1);
+      writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
+      writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
+    }  
+  } 
   return 0;
 }

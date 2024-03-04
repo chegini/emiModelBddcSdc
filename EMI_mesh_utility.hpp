@@ -53,7 +53,8 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::vector<std::vector<int>> & e2i, 
                                            std::vector<std::set<int>> & i2e,
                                            std::vector<std::set<int>> & i2i,
-                                           std::vector<std::vector<double>> & icoord,
+                                          // std::vector<std::vector<double>> & icoord,
+                                           std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::vector<int> & i2T,
                                            std::map<int, int> & map_t2l,
                                            std::map<int,std::set<int>> & map_IGamma)
@@ -61,6 +62,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
 
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
+  std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
 
   DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
 
@@ -96,6 +98,10 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
     for (int i = 0; i < isfs.globalIndices().size(); ++i) 
     {
       int nIndex = isfs.globalIndices()[i];
+      std::pair<int,int> pairs;
+      pairs.first = nIndex;
+      pairs.second = material_var;
+
       e2i[eIndex].push_back(nIndex); // e2n
       std::set<int> s_index = i2i[nIndex];
       s_index.insert(nIndex);
@@ -107,7 +113,8 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
 
       auto x = fu.value(*ci,localCoordinate[i]);
 
-      if(icoord[nIndex].size()==0){
+      it_coord = coord.find(pairs);
+      if (it_coord == coord.end()){
         i2T[nIndex] = material_var;
         // count the number of dof for each subdomain
         it = map_t2l.find(material_var);
@@ -119,7 +126,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
         }
 
         for (int j = 0; j < x.size(); ++j){
-          icoord[nIndex].push_back(x[j]);
+          coord[pairs].push_back(x[j]);
         }
 
         // adding all the igamma for matreial 
@@ -153,7 +160,8 @@ template< class FSElement, class Function, class Material>
 void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,  
                                  Function const& fu, 
                                  Material const & material, 
-                                 std::vector<std::vector<double>> & icoord,
+                                 std::map<std::pair<int, int>, std::vector<double>> & coord,
+                                 // std::vector<std::vector<double>> & icoord,
                                  std::vector<std::vector<int>> & e2i, 
                                  std::vector<std::set<int>> & e2e,
                                  std::vector<std::set<int>> & i2i,
@@ -163,6 +171,8 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
 {
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
+
+  std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
 
   DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
 
@@ -208,14 +218,20 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
           for (int i = 0; i < e2i[eIndex].size(); ++i)
           {
             int nIndex_c1 = e2i[eIndex][i];
+            std::pair<int,int> pairs;
+            pairs.first = nIndex_c1;
+            pairs.second = material_var;
+
             std::set<int> s_index = i2i[nIndex_c1];
             for (int j = 0; j < e2i[eNbrIndex].size(); ++j)
             {
               int nIndex_c2 = e2i[eNbrIndex][j];
-
+              std::pair<int,int> pairs_nbr;
+              pairs_nbr.first = nIndex_c2;
+              pairs_nbr.second = material_nbr;
               if(ImageSpace::dim==2){
-                if(icoord[nIndex_c1][0]==icoord[nIndex_c2][0] and
-                   icoord[nIndex_c1][1]==icoord[nIndex_c2][1] ){
+                if(coord[pairs][0]==coord[pairs_nbr][0] and
+                   coord[pairs][1]==coord[pairs_nbr][1] ){
                   s_index.insert(nIndex_c2);
 
                   // adding all the gammagamma for matreial 
@@ -271,9 +287,9 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                 }                
               }
               else if(ImageSpace::dim==3){
-                if(icoord[nIndex_c1][0]==icoord[nIndex_c2][0] and
-                   icoord[nIndex_c1][1]==icoord[nIndex_c2][1] and
-                   icoord[nIndex_c1][2]==icoord[nIndex_c2][2] ){
+                if(coord[pairs][0]==coord[pairs_nbr][0] and
+                   coord[pairs][1]==coord[pairs_nbr][1] and
+                   coord[pairs][2]==coord[pairs_nbr][2] ){
                   s_index.insert(nIndex_c2);
 
                   // adding all the gammagamma for matreial 

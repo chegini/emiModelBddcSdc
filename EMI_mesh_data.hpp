@@ -252,7 +252,6 @@ void mesh_data_structure( FSElement& fse,
                           std::vector<std::set<int>> & e2e,
                           std::vector<std::set<int>> & i2i,
                           std::map<std::pair<int, int>, std::vector<double>> & coord,
-                          // std::vector<std::vector<double>> & icoord,
                           std::vector<int>& i2T,
                           std::map<int, int> & map_t2l,
                           std::map<int, int> & map_sT2l,
@@ -700,7 +699,7 @@ template<class FSElement>
 void write_Dirichlet_and_coordinates( FSElement& fse, 
                                       std::vector<std::vector<int>> e2i,
                                       std::map<int, int> map_indices,
-                                      std::vector<std::vector<double>> icoord,
+                                      std::map<std::pair<int, int>, std::vector<double>> & coord,
                                       int dof_size,
                                       int dim,
                                       bool write_to_file,
@@ -729,17 +728,22 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     f << "\n";
   }
   
-  std::cout << "coordinates"<<std::endl;
   if(write_to_file)
   {
-    std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
+    std::vector<std::vector<double>> indexCoordinates_petsc(coord.size());
+    for ( const auto &coord_pair : coord ) 
+    {
+      int index = coord_pair.first.first;
+      int tag = coord_pair.first.second;
+      std::vector<double> indexCoordinates = coord_pair.second;
+      indexCoordinates_petsc[map_indices[index]] = indexCoordinates;
+    }
+
     double precision = 16;
     std::string fname = matlab_dir+"/coordinates.txt";
     std::ofstream f(fname.c_str());
     f.precision(precision);
-    for (int i = 0; i < icoord.size(); ++i)
-      indexCoordinates_petsc[map_indices[i]] = icoord[i];
-
+    
     for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
       if(dim==2) 
         f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << " ";
@@ -747,6 +751,36 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
         f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
     }
   }
+
+  // int count = 0;
+  // for ( const auto &coord_pair : coord ) 
+  // {
+  //   int index = coord_pair.first.first;
+  //   int tag = coord_pair.first.second;
+  //   std::vector<double> indexCoordinates = coord_pair.second;
+  //   if(dim==2) std::cout <<count << "("<< index << "," << tag << ") = " << indexCoordinates[0] << "," << indexCoordinates[1] <<std::endl;
+  //   if(dim==3) std::cout <<count << "("<< index << "," << tag << ") = " << indexCoordinates[0] << "," << indexCoordinates[1] <<"," <<indexCoordinates[2] <<std::endl;
+  //   count++;
+  // }
+
+  // std::cout << "coordinates"<<std::endl;
+  // if(write_to_file)
+  // {
+  //   std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
+  //   double precision = 16;
+  //   std::string fname = matlab_dir+"/coordinates.txt";
+  //   std::ofstream f(fname.c_str());
+  //   f.precision(precision);
+  //   for (int i = 0; i < coord.size(); ++i)
+  //     indexCoordinates_petsc[map_indices[i]] = icoord[i];
+
+  //   for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
+  //     if(dim==2) 
+  //       f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << " ";
+  //     if(dim==3) 
+  //       f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
+  //   }
+  // }
 }
 
 void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequenceOfsubdomains)

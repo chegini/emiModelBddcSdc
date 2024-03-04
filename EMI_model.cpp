@@ -40,14 +40,22 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/twoCells3d_mesh_new.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular_new.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular_new.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited_new.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/tenCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
@@ -274,7 +282,7 @@ int main(int argc, char* argv[])
 
   // ------------------------------------------------------------------------------------
   // Extract the mesh data
-  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequanceOfsubdomains 
+  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequenceOfsubdomains 
   // - e2i
   // - i2e
   // - i2i
@@ -303,7 +311,7 @@ int main(int argc, char* argv[])
   std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
   std::map<int,std::set<int>> map_GammaGamma_W_Nbr;              // GammaGamma with nbr
   std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
-  std::map<int,std::vector<int>> sequanceOfsubdomains;           // sequence of neighboring tags for each subdomain
+  std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, 
@@ -313,8 +321,23 @@ int main(int argc, char* argv[])
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
 
-  computed_sequenceOfTags(map_t2l,map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequanceOfsubdomains);
+  computed_sequenceOfTags(map_t2l,map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequenceOfsubdomains);
+  std::cout <<"==========================\n";
+  std::cout <<"sequenceOfsubdomains\n";
+  std::cout <<"==========================\n";
+  for (int i = 0; i < sequenceOfTags.size(); ++i)
+  {
+    int tag = sequenceOfTags[i];
+    std::vector<int> vec_nbr = sequenceOfsubdomains[tag];
 
+    std::cout << tag<<": ";
+    for (int nbr = 0; nbr < vec_nbr.size(); ++nbr)
+    {
+      std::cout << vec_nbr[nbr]<<" ";
+    }
+    std::cout <<"\n";
+  }
+  std::cout <<"==========================\n";
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -335,8 +358,10 @@ int main(int argc, char* argv[])
   
   removeInnerIndices_i2i(i2i);
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces
+
   if(false)
   {
+    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
     std::set<std::set<int>>::iterator it;
     for (it = i2iSet.begin(); it != i2iSet.end(); ++it) {
       std::set<int> s = *it;
@@ -346,6 +371,7 @@ int main(int argc, char* argv[])
       }
       std::cout <<std::endl;
     }
+    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
   }
 
   std::vector<std::vector<LocalDof>> sharedDofsKaskade;
@@ -354,7 +380,7 @@ int main(int argc, char* argv[])
 
   int mesh_dim = SPACEDIM==2? 2:3;
   write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), e2i, map_indices, icoord, dof_size, mesh_dim, write_to_file, matlab_dir);
-
+  std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
   // ------------------------------------------------------------------------------------
   // - i2iSet
   // ------------------------------------------------------------------------------------
@@ -396,18 +422,19 @@ int main(int argc, char* argv[])
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
   petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, rhs_vec_original,rhs_petsc_test);
+  std::cout << "petsc_structure_rhs!!!!!\n\n\n\n" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
   std::vector<Vector> Fs_petcs;
   petsc_structure_rhs_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
-  std::vector<Matrix> subMatrices;
-  std::vector<Matrix> subMatrices_M;
-  std::vector<Matrix> subMatrices_K;
+  std::cout << "petsc_structure_rhs_petsc!!!!!\n\n\n\n" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
-
+  std::vector<Matrix> subMatrices;
+  std::vector<Matrix> subMatrices_M;
+  std::vector<Matrix> subMatrices_K;
   std::vector<Vector> weights; 
   construct_submatrices_petsc(map_nT2oT,
                               gridManager,
@@ -422,7 +449,7 @@ int main(int argc, char* argv[])
                               map_II,
                               map_GammaGamma,
                               map_GammaNbr,
-                              sequanceOfsubdomains,
+                              sequenceOfsubdomains,
                               map_indices, 
                               A_,K_,M_,
                               rhs_petsc_test,
@@ -436,9 +463,9 @@ int main(int argc, char* argv[])
                               subMatrices_M,
                               subMatrices_K);
 
-
+  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
   if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
- //  return 0;
+  return 0;
  //  // ------------------------------------------------------------------------------------ 
  //  // compute submatrices and rhs based on Kaskade structure
  //  // ------------------------------------------------------------------------------------
@@ -447,7 +474,7 @@ int main(int argc, char* argv[])
  //  std::vector<Matrix> Ks;
  //  std::vector<Vector> Fs;
  //  construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
- //              sequanceOfsubdomains, map_indices, 
+ //              sequenceOfsubdomains, map_indices, 
  //              rhs_petsc_test, 
  //              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 
@@ -455,7 +482,7 @@ int main(int argc, char* argv[])
  //  Vector rhs_vec_test_new(nDofs);
  //  rhs.write(rhs_vec_test_new.begin());
 
- //  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequanceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
+ //  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequenceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
  
  // if(write_to_file){
  //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
@@ -570,7 +597,7 @@ int main(int argc, char* argv[])
       //                           map_II,
       //                           map_GammaGamma,
       //                           map_GammaNbr,
-      //                           sequanceOfsubdomains,
+      //                           sequenceOfsubdomains,
       //                           weights,
       //                           Fs,
       //                           cg_solver,

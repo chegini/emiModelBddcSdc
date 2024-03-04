@@ -363,6 +363,7 @@ void markedIndicesForDirichlet(FSElement& fse,
   for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
   {
     auto cellIndex = fse.space().indexSet().index(*ci);
+    std::cout << cellIndex <<std::endl;
     isfs.moveTo(*ci);
 
     auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
@@ -376,6 +377,7 @@ void markedIndicesForDirichlet(FSElement& fse,
       if(!intersection.neighbor()){
         for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
         {
+
           int index_c1 = cell2Indice[cellIndex][i];
           dofsDiriichlet.insert(index_c1);
         }

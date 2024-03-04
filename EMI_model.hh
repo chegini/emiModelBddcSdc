@@ -424,6 +424,7 @@ public:
       if(F.mass_submatrix){
         if((row == col) and (cellDomain==F.row_submatrix) and (neighbourDomain==F.col_submatrix)  )
         {
+          // std::cout << " F.row "<< F.row_submatrix << " F.col" << F.col_submatrix <<std::endl;
           Scalar sign = centerCell? 1: -1;
 
           // Compute mass matrix

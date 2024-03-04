@@ -115,7 +115,7 @@ void writeToMatlabPath(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVector<V
 
   int nnz = 0;
   nnz = A.nonzeroes();
-  std::cout << "number of nonzero: " << nnz <<std::endl;
+  // std::cout << "number of nonzero: " << nnz <<std::endl;
 
   csr_matrix A_binary(b.N(), 0);
   int count = 0;
@@ -714,7 +714,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
                             dofsDirichlet);
 
 
-
+  std::cout << "DrichletNodes"<<std::endl;
   if(write_to_file)
   {
     double precision = 16;
@@ -728,6 +728,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     f << "\n";
   }
   
+  std::cout << "coordinates"<<std::endl;
   if(write_to_file)
   {
     std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
@@ -747,7 +748,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
   }
 }
 
-void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequanceOfsubdomains)
+void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequenceOfsubdomains)
 {
   int start = 0;
   int index = 0;
@@ -768,12 +769,14 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<i
   { 
     int tag =  sequenceOfTags[index];
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-    std::vector<int> sequanceOfsubdomains_subIndex;
+    std::vector<int> sequenceOfsubdomains_subIndex;
+    std::cout << "tag: " << tag << ": ";
     for ( const auto &gamma_nbr : nbrs ) {
-      sequanceOfsubdomains_subIndex.push_back(gamma_nbr.first);
+      std::cout << gamma_nbr.first << " ";
+      sequenceOfsubdomains_subIndex.push_back(gamma_nbr.first);
     }
-
-    sequanceOfsubdomains[tag] = sequanceOfsubdomains_subIndex;
+    std::cout << "\n";
+    sequenceOfsubdomains[tag] = sequenceOfsubdomains_subIndex;
   } 
 
 }
@@ -935,7 +938,7 @@ void insertMatrixBlockNbr(Matrix A_block, int x, int y, Matrix_ &As_)
 template<class Matrix>
 void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags, 
                                 std::map<int,int> startingIndexOfTag,
-                                std::map<int,std::vector<int>> sequanceOfsubdomains,
+                                std::map<int,std::vector<int>> sequenceOfsubdomains,
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma,
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
@@ -945,23 +948,27 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
                                 int subIdx,
                                 Matrix &Ms)
 {
-
+  std::cout << "=========================== "<<std::endl;
   int tag = sequenceOfTags[subIdx];
   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
   std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
   std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-  
-  
+
   int start = startingIndexOfTag[tag];
+  std::cout << "tag: "<< tag << " start: " << start << std::endl;
+
   double coef = 0.5;
-  auto K_GAMMAGAMMA_block = M_(Interface,Interface);
-  insertMatrixBlock(K_GAMMAGAMMA_block, coef, start+Interior.size(), start+Interior.size(), Ms);
+  auto M_GAMMAGAMMA_block = M_(Interface,Interface);
+  insertMatrixBlock(M_GAMMAGAMMA_block, coef, start+Interior.size(), start+Interior.size(), Ms);
 
 
-  std::vector<int> sequanceOfsubdomains_subIdx(sequanceOfsubdomains[subIdx].begin(), sequanceOfsubdomains[subIdx].end());
+  std::vector<int> sequanceOfsubdomains_subIdx(sequenceOfsubdomains[tag].begin(), sequenceOfsubdomains[tag].end());
+
+  std::cout << "cross blocks: " << sequanceOfsubdomains_subIdx.size() <<std::endl;
   for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
   {
     int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
+    std::cout << "nbr " << nbr_Indx <<std::endl;
     std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
     std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
  
@@ -973,19 +980,22 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
     insertMatrixBlock(K_GAMMAGAMMA_nbr_nbr_block, coef, x, y, Ms);
   }
 
+   std::cout << "cross blocks: A_" << sequanceOfsubdomains_subIdx.size() <<std::endl;
   // cross blocks on column for subIdx 
   for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
   {
     int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
+    std::cout << "nbr " << nbr_Indx <<std::endl;
     std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
     std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
 
-    int x = startingIndexOfTag[subIdx] + Interior.size();
+    int x = startingIndexOfTag[tag] + Interior.size();
     int y = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
 
     auto K_GAMMAGAMMA_nbr_block = A_(Interface,Interface_nbr);
     insertMatrixBlockNbr(K_GAMMAGAMMA_nbr_block, coef, x, y, Ms);
   }
+  std::cout << "=========================== "<<std::endl;
 }
 
 template<class Matrix, class Matrix_>
@@ -1078,7 +1088,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
                                                           std::map<int,std::set<int>> map_II,
                                                           std::map<int,std::set<int>> map_GammaGamma,
                                                           std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
-                                                          std::map<int,std::vector<int>> sequanceOfsubdomains,
+                                                          std::map<int,std::vector<int>> sequenceOfsubdomains,
                                                           std::map<int, int> map_indices, 
                                                           Matrix A_,
                                                           Matrix K_,
@@ -1147,13 +1157,14 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
       int col = tag;
       std::string path = std::to_string(col) + "_" + std::to_string(row);
 
-      F.set_row_col_subdomain(map_nT2oT[row],map_nT2oT[col]);
+      // F.set_row_col_subdomain(map_nT2oT[row],map_nT2oT[col]);
+      F.set_row_col_subdomain(row,col);
       assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
       Matrix sub_M_ = assembler.template get<Matrix>(false);
       // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
       massSubmatrices_nbr[row] = sub_M_;
     }
-
+    // std::cout << "==========================================="<<std::endl;
     Matrix subMatrix(creator);
     std::string path = std::to_string(subIdx+1);
 
@@ -1161,7 +1172,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
 
     // construct mass blocks
     Matrix M_sub(creator);
-    exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, sequanceOfsubdomains,
+    exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, sequenceOfsubdomains,
                                map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,subIdx, M_sub);
     Ms.push_back(M_sub);
     // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);

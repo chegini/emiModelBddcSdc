@@ -69,6 +69,127 @@ typedef pair<int, int> row_col;
 template <class Entry, class Index, class VEntry>
 void writeToMatlabPath(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVector<VEntry> const& b, std::string const& basename, std::string const& path, bool gen_rhs, int precision=16)
 {
+  std::string fname = path+"/"+basename + ".m";
+  std::ofstream f(fname.c_str());
+  f.precision(precision);
+
+  // Write vector.
+  f << "function [A,b] = " << basename << '\n'
+  << " b = [\n";
+  for (size_t i=0; i<b.N(); ++i)
+    f << b[i] << std::endl;
+  f << "];\n";
+  
+  // ------------------------------------
+  // create random vecotr of size 100
+  vec b_binary(b.N());
+  for (size_t i = 0; i < b.N(); i++) {
+      b_binary.data[i] = b[i];
+  }
+  // ------------------------------------
+
+  // ------------------------------------
+
+
+  // write matrix in triplet format
+  f << "data = [\n";
+  int n = Entry::rows;
+  int m = Entry::cols;
+
+
+  for (auto row = A.begin(); row!=A.end(); ++row)
+  {
+    for (int i=0; i<n; ++i)
+    {
+      auto ridx = row.index()*n + i;
+      for (auto col=row.begin(); col!=row.end(); ++col)
+      {
+        for (int j=0; j<m; ++j)
+        {  
+          auto cidx = col.index()*m + j;
+          f << ridx+1 << ' ' << cidx+1 << ' ' << (*col)[i][j] << std::endl;
+        }
+      }
+    }
+  }
+
+  int nnz = 0;
+  nnz = A.nonzeroes();
+  std::cout << "number of nonzero: " << nnz <<std::endl;
+
+  csr_matrix A_binary(b.N(), 0);
+  int count = 0;
+  for (auto row = A.begin(); row!=A.end(); ++row)
+  {
+    for (int i=0; i<n; ++i)
+    {
+      auto ridx = row.index()*n + i;
+      for (auto col=row.begin(); col!=row.end(); ++col)
+      {
+        for (int j=0; j<m; ++j)
+        {
+          auto val = (*col)[i][j];
+          if (val != 0.0) {
+            auto cidx = col.index()*m + j;
+            A_binary.col_idxs.emplace_back(cidx);
+            A_binary.values.emplace_back(val);
+            count++;
+          }
+        }
+      }
+      A_binary.row_ptrs[ridx+1] = count;
+    }
+  }
+  A_binary.nnz = count;
+  f << "];\nA = sparse(data(:,1),data(:,2),data(:,3)," << n*A.N() << "," << m*A.M() << ");\n";
+  // write the vector and matrix to disk
+  std::string fname_vec = path+"/"+basename+"_vec.bin";
+  std::string fname_A = path+"/"+basename+"_A.bin";
+  std::ofstream out(fname_vec.c_str(), std::ios::binary);
+  b_binary.write(out);
+  out.close();
+
+  out.open(fname_A.c_str(), std::ios::binary);
+  A_binary.write(out);
+  out.close();
+
+  // read the vector and matrix from disk
+  std::ifstream in(fname_vec.c_str(), std::ios::binary);
+  vec b2(in);
+  in.close();
+
+  in.open(fname_A.c_str(), std::ios::binary);
+  csr_matrix A2(in);
+  in.close();
+
+  // // compare the original and read vector and matrix
+  // for (size_t i = 0; i < A.N(); i++) {
+  //   if (b_binary.data[i] != b2.data[i]) {
+  //       std::cerr << "Error: b.data[" << i << "] = " << b2.data[i] << " != " << b_binary.data[i] << std::endl;
+  //   }
+  // }
+
+  // if (A_binary.N != A2.N || A_binary.nnz != A2.nnz) {
+  //   std::cerr << "Error: A.N = " << A2.N << " != " << A_binary.N << " or A.nnz = " << A2.nnz << " != " << A_binary.nnz << std::endl;
+  // }
+
+  // for (size_t i = 0; i < A_binary.N + 1; i++) {
+  //   if (A_binary.row_ptrs[i] != A2.row_ptrs[i]) {
+  //     std::cerr << "Error: A.row_ptrs[" << i << "] = " << A2.row_ptrs[i] << " != " << A_binary.row_ptrs[i] << std::endl;
+  //   }
+  // }
+
+  // for (size_t i = 0; i < A_binary.nnz; i++) {
+  //   if (A_binary.col_idxs[i] != A2.col_idxs[i] || A_binary.values[i] != A2.values[i]) {
+  //     std::cerr << "Error: A.col_idxs[" << i << "] = " << A2.col_idxs[i] << " != " << A_binary.col_idxs[i] << " or A.values[" << i << "] = " << A2.values[i] << " != " << A_binary.values[i] << std::endl;
+  //   }
+  // }
+}
+
+
+template <class Entry, class Index, class VEntry>
+void writeToMatlabPath_final(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVector<VEntry> const& b, std::string const& basename, std::string const& path, bool gen_rhs, int precision=16)
+{
   vec b_binary(b.N());
   if(gen_rhs)
   {
@@ -171,13 +292,13 @@ void mesh_data_structure( FSElement& fse,
     for (it = map_t2l.begin(); it != map_t2l.end(); it++)
     {
       map_sT2l[n_count] = it->second; 
-      if(false){
-	    std::cout 	<< "pre( "<<it->first    // string (key)
+      if(true){
+	    std::cout 	<< "pre( "<<it->first    // tag
 					<< ':'
-					<< it->second << " ) -> "   // string's value 
-					<< "next( "<< n_count    // string (key)
+					<< it->second << " ) -> "   // length of dosf for this tag 
+					<< "next( "<< n_count    // new tag
 					<< ':'
-					<< it->second << " ) "   // string's value 
+					<< it->second << " ) "   // length of dosf for this tag 
 					<< std::endl;      	
       } 
       n_count++;
@@ -194,7 +315,7 @@ void mesh_data_structure( FSElement& fse,
                         std::inserter(I, I.end()));
 
     map_II[IGamma.first] = I;
-    if(false) std::cout << IGamma.first << ": " << IGamma.second.size() << ", "<<map_GammaGamma[IGamma.first].size() <<", " << I.size() << std::endl;
+    if(true) std::cout <<"tag: " <<  IGamma.first << " inner + gamma: " << IGamma.second.size() << " , gamma: "<<map_GammaGamma[IGamma.first].size() <<" , inner: " << I.size() << std::endl;
   }
   
   if(false)
@@ -428,7 +549,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
     }
   }
 
-  std::vector<int> sequanceIndices_petsc;
+  std::vector<int> sequenceIndices_petsc;
   if(false){
     for ( const auto &II : map_II ) {
       int tag =  II.first;
@@ -437,13 +558,13 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
 
       for (int i = 0; i < I_vec.size(); ++i)
       {
-        sequanceIndices_petsc.push_back(map_indices[I_vec[i]]);
+        sequenceIndices_petsc.push_back(map_indices[I_vec[i]]);
         std::cout <<I_vec[i] << " " << map_indices[I_vec[i]] << "\n" ;
       }
 
       for (int i = 0; i < gamma_vec.size(); ++i)
       {
-        sequanceIndices_petsc.push_back(map_indices[gamma_vec[i]]);
+        sequenceIndices_petsc.push_back(map_indices[gamma_vec[i]]);
         std::cout <<gamma_vec[i] << " " << map_indices[gamma_vec[i]] << "\n" ;
       }
       std::cout << "\n" ;
@@ -626,7 +747,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
   }
 }
 
-void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::vector<int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequanceOfsubdomains)
+void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequanceOfsubdomains)
 {
   int start = 0;
   int index = 0;
@@ -635,7 +756,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<i
   {
     int tag =  t2l.first;
     sequenceOfTags[index] = tag;
-    startingIndexOfTag[index] = start;
+    startingIndexOfTag[tag] = start;
     map_nT2oT[nTag] = tag;
 
     start+=map_t2l[tag];
@@ -659,7 +780,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<i
 
 template<class Vector>
 void petsc_structure_rhs( std::vector<int> sequenceOfTags, 
-                          std::vector<int> startingIndexOfTag,
+                          std::map<int,int> startingIndexOfTag,
                           std::map<int,std::set<int>> map_II,
                           std::map<int,std::set<int>> map_GammaGamma, 
                           Vector b_,
@@ -674,7 +795,7 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
     std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
 
 
-    int x = startingIndexOfTag[index];
+    int x = startingIndexOfTag[tag];
     for (int i = 0; i < Interior.size(); ++i)
     {
       bs_[i+x] = b_[Interior[i]];
@@ -690,7 +811,7 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
 
 template<class Vector>
 void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags, 
-                                std::vector<int> startingIndexOfTag,
+                                std::map<int,int> startingIndexOfTag,
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma,
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
@@ -709,7 +830,7 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
 
     Vector Fs_subIdx(b_.size()); 
-    double coef = 2;
+    double coef = 0.5;
 
     for (int indx = 0; indx < Interior.size(); ++indx)
     {
@@ -722,9 +843,9 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
     {
       int pos = interface[indx];
       int pos_map = map_indices[pos];
-      // Fs_subIdx[pos_map] = coef*b_[pos];
-      int alpha  = sharedDofsAll[pos].size();
-      Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
+      Fs_subIdx[pos_map] = coef*b_[pos];
+      // int alpha  = sharedDofsAll[pos].size();
+      // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
     }
 
     for ( const auto &gamma_nbr : nbrs ) 
@@ -738,9 +859,9 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
       {
         int pos = nbr_vec[j];
         int pos_map = map_indices[pos];
-        // Fs_subIdx[pos_map] = coef*b_[pos];
-        int alpha  = sharedDofsAll[pos].size();
-        Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
+        Fs_subIdx[pos_map] = coef*b_[pos];
+        // int alpha  = sharedDofsAll[pos].size();
+        // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
       }
     }
 
@@ -761,6 +882,7 @@ void insertMatrixBlock(Matrix_ A_block, double coef, int x, int y, Matrix &As_)
     {
       int const l = ca.index();
       double val = *ca;
+      // std::cout << "k+x:  "<< k+x << " l+y:  "<< l+y << std::endl;
       As_[k+x][l+y] = val*coef; 
     }
   }
@@ -812,24 +934,25 @@ void insertMatrixBlockNbr(Matrix A_block, int x, int y, Matrix_ &As_)
 
 template<class Matrix>
 void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags, 
-                                std::vector<int> startingIndexOfTag,
+                                std::map<int,int> startingIndexOfTag,
                                 std::map<int,std::vector<int>> sequanceOfsubdomains,
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma,
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
                                 Matrix A_,
                                 Matrix M_,
-                                std::vector<Matrix> massSubmatrices_subIndx,
+                                std::map<int,Matrix> massSubmatrices_subIndx,
                                 int subIdx,
                                 Matrix &Ms)
 {
+
   int tag = sequenceOfTags[subIdx];
   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
   std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
   std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
   
   
-  int start = startingIndexOfTag[subIdx];
+  int start = startingIndexOfTag[tag];
   double coef = 0.5;
   auto K_GAMMAGAMMA_block = M_(Interface,Interface);
   insertMatrixBlock(K_GAMMAGAMMA_block, coef, start+Interior.size(), start+Interior.size(), Ms);
@@ -845,7 +968,7 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
     int x = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
     int y = startingIndexOfTag[nbr_Indx] + Interior_nbr.size();
 
-    Matrix massSubmatrices_nbr = massSubmatrices_subIndx[nbr];
+    Matrix massSubmatrices_nbr = massSubmatrices_subIndx[nbr_Indx];
     auto K_GAMMAGAMMA_nbr_nbr_block = massSubmatrices_nbr(Interface_nbr,Interface_nbr);
     insertMatrixBlock(K_GAMMAGAMMA_nbr_nbr_block, coef, x, y, Ms);
   }
@@ -867,7 +990,7 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
 
 template<class Matrix, class Matrix_>
 void exctract_petsc_stiffness_blocks( std::vector<int> sequenceOfTags, 
-                                      std::vector<int> startingIndexOfTag,
+                                      std::map<int,int> startingIndexOfTag,
                                       std::map<int,std::set<int>> map_II,
                                       std::map<int,std::set<int>> map_GammaGamma,
                                       Matrix A_,
@@ -898,7 +1021,7 @@ void exctract_petsc_stiffness_blocks( std::vector<int> sequenceOfTags,
 // -------------------------------------------------------------------------------------
 template<class Matrix>
 void petsc_structure_Matrix(std::vector<int> sequenceOfTags, 
-                            std::vector<int> startingIndexOfTag,
+                            std::map<int,int> startingIndexOfTag,
                             std::map<int,std::set<int>> map_II,
                             std::map<int,std::set<int>> map_GammaGamma,
                             Matrix A_,
@@ -951,7 +1074,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
                                                           typename VariableSet::VariableSet u,
                                                           double  dt,
                                                           std::vector<int> sequenceOfTags, 
-                                                          std::vector<int> startingIndexOfTag,
+                                                          std::map<int,int> startingIndexOfTag,
                                                           std::map<int,std::set<int>> map_II,
                                                           std::map<int,std::set<int>> map_GammaGamma,
                                                           std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
@@ -1009,10 +1132,9 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
   auto du(u);
   for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
   {
-
     int tag = sequenceOfTags[subIdx]; 
     du *= 0;
-    std::vector<Matrix> massSubmatrices_nbr;
+    std::map<int,Matrix> massSubmatrices_nbr;
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
 
     F.Mass_stiff(1);
@@ -1022,17 +1144,15 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
 
     for ( const auto & gamma_nbr: nbrs ){
       int row = gamma_nbr.first;
-      int col = subIdx;
-
+      int col = tag;
       std::string path = std::to_string(col) + "_" + std::to_string(row);
 
       F.set_row_col_subdomain(map_nT2oT[row],map_nT2oT[col]);
       assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
       Matrix sub_M_ = assembler.template get<Matrix>(false);
       // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
-      massSubmatrices_nbr.push_back(sub_M_);
+      massSubmatrices_nbr[row] = sub_M_;
     }
-
 
     Matrix subMatrix(creator);
     std::string path = std::to_string(subIdx+1);
@@ -1178,7 +1298,7 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
 
 template<class Matrix, class Vector>
 void construct_As(std::vector<int> sequenceOfTags, 
-                  std::vector<int> startingIndexOfTag,
+                  std::map<int,int> startingIndexOfTag,
                   std::map<int,std::set<int>> map_II,
                   std::map<int,std::set<int>> map_GammaGamma,
                   std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
@@ -1375,7 +1495,7 @@ void construct_As(std::vector<int> sequenceOfTags,
 
 template<class Vector>
 void construct_Fs(std::vector<int> sequenceOfTags, 
-                  std::vector<int> startingIndexOfTag,
+                  std::map<int,int> startingIndexOfTag,
                   std::map<int,std::set<int>> map_II,
                   std::map<int,std::set<int>> map_GammaGamma,
                   std::map<int,std::map<int,std::set<int>>> map_GammaNbr,

@@ -36,14 +36,22 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
-  ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/tenCells3d_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -72,7 +80,7 @@ int main(int argc, char* argv[])
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
-  ("write_to_file",            write_to_file,                       false,"write to matlab file")  
+  ("write_to_file",            write_to_file,                       true,"write to matlab file")  
   ("maxSteps",                 options.maxSteps,                    10,  "max number of time steps")
   ("vtk",                      options.writeVTK,                    1,  "write VTK output files 0=none, 1=time steps 2=sweeps")
   ("T_",                       options.T,                           0.01,  "final time[ms]")
@@ -250,7 +258,9 @@ int main(int argc, char* argv[])
   // initila the data
   // ------------------------------------------------------------------------------------
   F.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
-
+  uAll = component<0>(u);
+  writeVTK(uAll,out+"/initialTest",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
   dt = options.dt;
   SemiImplicitEulerStep<Functional>  eq(&F,dt);
   double const tau = dt;
@@ -261,55 +271,6 @@ int main(int argc, char* argv[])
   auto rhs_oiginal = assembler.rhs();
   Vector rhs_vec_original(nDofs);
   rhs_oiginal.write(rhs_vec_original.begin());
-
-
-  // ------------------------------------------------------------------------------------
-  // semi implicit + CG methods
-  // ------------------------------------------------------------------------------------
-  {
-    if(run_implicit_CG){
-      Vector sol_semi(nDofs);
-      Functional F_semi( material,
-                  gridManager.grid(),
-                  spaces,
-                  penalty,
-                  sigma_i,
-                  sigma_e,
-                  C_m,  
-                  R,
-                  R_extra);
-      F_semi.extracellular_materials(arr_extra_set);
-      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
-      timer.start("linearly semi implicit method");
-      std::cout << "---------------------------------------------" << std::endl;
-      std::cout << "semi implict approach" << std::endl;
-      std::cout << "---------------------------------------------" << std::endl;
-
-
-      uAll = component<0>(u);
-      u = semiImplicit_CG_Jacobi( gridManager,
-                                  F_semi,
-                                  variableSetDesc,
-                                  spaces,
-                                  gridManager.grid(),
-                                  options,
-                                  out,
-                                  cg_semi, 
-                                  direct,
-                                  u,
-                                  uAll,
-                                  sol_semi
-                                  );  
-      timer.stop("linearly semi implicit method");
-
-      {
-        Vector sol_semi_to_petsc(sol_semi);
-        sol_semi_to_petsc = 0;
-        // petsc_structure_rhs(dof_set,II, GammaGamma, sol_semi, n_subdomains,sol_semi_to_petsc);
-        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
-      }
-    }
-  }
 
   // ------------------------------------------------------------------------------------
   // Extract the mesh data
@@ -350,7 +311,7 @@ int main(int argc, char* argv[])
   int n_subdomains = map_t2l.size();
 
   std::vector<int> sequenceOfTags(n_subdomains);
-  std::vector<int> startingIndexOfTag(n_subdomains);
+  std::map<int,int> startingIndexOfTag;
 
   computed_sequenceOfTags(map_t2l,map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequanceOfsubdomains);
 
@@ -446,6 +407,7 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
+
   std::vector<Vector> weights; 
   construct_submatrices_petsc(map_nT2oT,
                               gridManager,
@@ -476,39 +438,152 @@ int main(int argc, char* argv[])
 
 
   if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
-  
-  // ------------------------------------------------------------------------------------ 
-  // compute submatrices and rhs based on Kaskade structure
-  // ------------------------------------------------------------------------------------
-  std::vector<Matrix> As;
-  std::vector<Matrix> Ms;
-  std::vector<Matrix> Ks;
-  std::vector<Vector> Fs;
-  construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
-              sequanceOfsubdomains, map_indices, 
-              rhs_petsc_test, 
-              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
+ //  return 0;
+ //  // ------------------------------------------------------------------------------------ 
+ //  // compute submatrices and rhs based on Kaskade structure
+ //  // ------------------------------------------------------------------------------------
+ //  std::vector<Matrix> As;
+ //  std::vector<Matrix> Ms;
+ //  std::vector<Matrix> Ks;
+ //  std::vector<Vector> Fs;
+ //  construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
+ //              sequanceOfsubdomains, map_indices, 
+ //              rhs_petsc_test, 
+ //              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 
 
-  Vector rhs_vec_test_new(nDofs);
-  rhs.write(rhs_vec_test_new.begin());
+ //  Vector rhs_vec_test_new(nDofs);
+ //  rhs.write(rhs_vec_test_new.begin());
 
-  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequanceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
+ //  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequanceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
  
- if(write_to_file){
-    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+ // if(write_to_file){
+ //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+ //    {
+ //      std::string path = std::to_string(subIdx+1);
+ //      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+ //    }  
+ //  }
+ //  if(write_to_file){
+ //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+ //    {
+ //      std::string path = std::to_string(subIdx+1);
+ //      writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
+ //      writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
+ //    }  
+ //  } 
+
+
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG){
+      Vector sol_semi(nDofs);
+      Functional F_semi( material,
+                  gridManager.grid(),
+                  spaces,
+                  penalty,
+                  sigma_i,
+                  sigma_e,
+                  C_m,  
+                  R,
+                  R_extra);
+      F_semi.extracellular_materials(arr_extra_set);
+      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+      writeVTK(uAll,out+"/initialSemiF",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+      timer.start("linearly semi implicit method");
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implict approach" << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+
+
+      uAll = component<0>(u);
+      u = semiImplicit_CG_Jacobi( gridManager,
+                                  F_semi,
+                                  variableSetDesc,
+                                  spaces,
+                                  gridManager.grid(),
+                                  options,
+                                  out,
+                                  cg_semi, 
+                                  direct,
+                                  u,
+                                  uAll,
+                                  sol_semi
+                                  );  
+      timer.stop("linearly semi implicit method");
+
+      {
+        Vector sol_semi_to_petsc(sol_semi);
+        sol_semi_to_petsc = 0;
+        petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, sol_semi,sol_semi_to_petsc);
+        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_BDDC)
     {
-      std::string path = std::to_string(subIdx+1);
-      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with CG + BDDC                  " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC(nDofs);
+      Functional F_BDDC(  material,
+                          gridManager.grid(),
+                          spaces,
+                          penalty,
+                          sigma_i,
+                          sigma_e,
+                          C_m,  
+                          R,
+                          R_extra);
+      F_BDDC.extracellular_materials(arr_extra_set);
+      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      // u = semiImplicit_CG_BDDC( gridManager,
+      //                           F_BDDC,
+      //                           variableSetDesc,
+      //                           spaces,
+      //                           gridManager.grid(),
+      //                           options,
+      //                           out,
+      //                           cg_semi, 
+      //                           direct,
+      //                           u,
+      //                           uAll,
+      //                           sol_BDDC,
+      //                           sharedDofsKaskade,
+      //                           interfaceTypes,
+      //                           n_subdomains,
+      //                           As,
+      //                           map_IGamma,
+      //                           sequenceOfTags, 
+      //                           startingIndexOfTag,
+      //                           map_II,
+      //                           map_GammaGamma,
+      //                           map_GammaNbr,
+      //                           sequanceOfsubdomains,
+      //                           weights,
+      //                           Fs,
+      //                           cg_solver,
+      //                           iter_cg_with_bddc,
+      //                           local2Global,
+      //                           global2Local,
+      //                           tol,
+      //                           map_t2l,
+      //                           map_indices,
+      //                           BDDC_verbose
+      //                           );    
     }  
   }
-  if(write_to_file){
-    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-    {
-      std::string path = std::to_string(subIdx+1);
-      writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
-      writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
-    }  
-  } 
+
   return 0;
 }

@@ -49,13 +49,13 @@ using namespace Kaskade;
 #include "EMI_mesh_data.hpp"
 
 #include "EMI_CG_Jacobi.hpp"
-
+#include "EMI_CG_BDDC.hpp"
 
 using namespace std;
 
 
 #ifndef SPACEDIM
-#define SPACEDIM 2
+#define SPACEDIM 3
 #endif
 
 template <typename Material>

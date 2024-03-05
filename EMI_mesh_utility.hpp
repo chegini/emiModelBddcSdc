@@ -53,7 +53,6 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::vector<std::vector<int>> & e2i, 
                                            std::vector<std::set<int>> & i2e,
                                            std::vector<std::set<int>> & i2i,
-                                          // std::vector<std::vector<double>> & icoord,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::vector<int> & i2T,
                                            std::map<int, int> & map_t2l,
@@ -356,11 +355,12 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
   }
 }
 
-template< class FSElement, class Function>
+template< class FSElement, class Function, class Material>
 void markedIndicesForDirichlet(FSElement& fse,  
                                  Function const& fu, 
+                                 Material const & material,
                                  std::vector<std::vector<int>> & cell2Indice, 
-                                 std::set<int> & dofsDiriichlet )
+                                 std::set<std::pair<int,int>> & dofsDiriichlet )
 {
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
@@ -379,7 +379,6 @@ void markedIndicesForDirichlet(FSElement& fse,
   for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
   {
     auto cellIndex = fse.space().indexSet().index(*ci);
-    std::cout << cellIndex <<std::endl;
     isfs.moveTo(*ci);
 
     auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
@@ -389,13 +388,19 @@ void markedIndicesForDirichlet(FSElement& fse,
     auto dof_u = fse.space().mapper().globalIndices(*ci);
     int nrNodes = dof_u.size();
 
+    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+    int material_var = material.value(*ci,zero);
+
     for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
       if(!intersection.neighbor()){
         for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
         {
-
           int index_c1 = cell2Indice[cellIndex][i];
-          dofsDiriichlet.insert(index_c1);
+          std::pair<int,int> pairs;
+          pairs.first = index_c1;
+          pairs.second = material_var;
+
+          dofsDiriichlet.insert(pairs);
         }
       }
     }

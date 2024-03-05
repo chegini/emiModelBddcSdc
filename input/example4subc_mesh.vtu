@@ -49,10 +49,10 @@
       </Cells>
       <CellData Scalars="domain">
         <DataArray type="UInt8" Name="domain" NumberOfComponents="1" format="ascii">
-        1 1 0 0 
-        0 3 3 0 
-        1 2 2 1 
-        2 2 3 3 
+        0 0 0 0 
+        0 30 30 0 
+        0 20 20 0 
+        20 20 30 30 
         </DataArray>
       </CellData>
       <PointData>

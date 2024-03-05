@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
@@ -277,9 +277,6 @@ int main(int argc, char* argv[])
   du *= 0;
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs_oiginal = assembler.rhs();
-  Vector rhs_vec_original(nDofs);
-  rhs_oiginal.write(rhs_vec_original.begin());
-
   // ------------------------------------------------------------------------------------
   // Extract the mesh data
   // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequenceOfsubdomains 
@@ -352,7 +349,7 @@ int main(int argc, char* argv[])
   std::map<int,std::vector<int>> globalIndices;
   subdomain_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaNbr, local2Global, global2Local, globalIndices);
 
-  std::map<int, int> map_indices;
+  std::map<std::pair<int, int>, int> map_indices;
   std::map<int, int> map_i2sub;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma, map_indices, map_i2sub);
   
@@ -379,7 +376,7 @@ int main(int argc, char* argv[])
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
 
   int mesh_dim = SPACEDIM==2? 2:3;
-  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), e2i, map_indices, coord, dof_size, mesh_dim, write_to_file, matlab_dir);
+  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord, dof_size, mesh_dim, write_to_file, matlab_dir);
   std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
   // ------------------------------------------------------------------------------------
   // - i2iSet
@@ -416,7 +413,11 @@ int main(int argc, char* argv[])
   
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
-  // ------------------------------------------------------------------------------------ 
+  // ------------------------------------------------------------------------------------
+  nDofs =  coord.size();
+  Vector rhs_vec_original(nDofs);
+  rhs_oiginal.write(rhs_vec_original.begin());
+  std::cout << "coord.size(): " << coord.size() << " nDofs :" << nDofs << std::endl;
   Vector rhs_vec_test(nDofs);
   rhs.write(rhs_vec_test.begin());
   Vector rhs_petsc_test(nDofs);
@@ -427,7 +428,7 @@ int main(int argc, char* argv[])
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
   std::vector<Vector> Fs_petcs;
-  petsc_structure_rhs_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
   std::cout << "petsc_structure_rhs_petsc!!!!!\n\n\n\n" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -436,43 +437,43 @@ int main(int argc, char* argv[])
   std::vector<Matrix> subMatrices_M;
   std::vector<Matrix> subMatrices_K;
   std::vector<Vector> weights; 
-  construct_submatrices_petsc(map_nT2oT,
-                              gridManager,
-                              F,
-                              variableSetDesc, 
-                              spaces,
-                              gridManager.grid(), 
-                              u,
-                              dt,
-                              sequenceOfTags, 
-                              startingIndexOfTag,
-                              map_II,
-                              map_GammaGamma,
-                              map_GammaNbr,
-                              sequenceOfsubdomains,
-                              map_indices, 
-                              A_,K_,M_,
-                              rhs_petsc_test,
-                              nDofs,
-                              options.assemblyThreads,
-                              write_to_file,
-                              matlab_dir,
-                              Fs_petcs,
-                              weights,
-                              subMatrices,
-                              subMatrices_M,
-                              subMatrices_K);
+  // construct_submatrices_petsc(map_nT2oT,
+  //                             gridManager,
+  //                             F,
+  //                             variableSetDesc, 
+  //                             spaces,
+  //                             gridManager.grid(), 
+  //                             u,
+  //                             dt,
+  //                             sequenceOfTags, 
+  //                             startingIndexOfTag,
+  //                             map_II,
+  //                             map_GammaGamma,
+  //                             map_GammaNbr,
+  //                             sequenceOfsubdomains,
+  //                             map_indices, 
+  //                             A_,K_,M_,
+  //                             rhs_petsc_test,
+  //                             nDofs,
+  //                             options.assemblyThreads,
+  //                             write_to_file,
+  //                             matlab_dir,
+  //                             Fs_petcs,
+  //                             weights,
+  //                             subMatrices,
+  //                             subMatrices_M,
+  //                             subMatrices_K);
 
-  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
-  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+  // std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
+  // if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
   // return 0;
-  // ------------------------------------------------------------------------------------ 
-  // compute submatrices and rhs based on Kaskade structure
-  // ------------------------------------------------------------------------------------
-  std::vector<Matrix> As;
-  std::vector<Matrix> Ms;
-  std::vector<Matrix> Ks;
-  std::vector<Vector> Fs;
+  // // ------------------------------------------------------------------------------------ 
+  // // compute submatrices and rhs based on Kaskade structure
+  // // ------------------------------------------------------------------------------------
+  // std::vector<Matrix> As;
+  // std::vector<Matrix> Ms;
+  // std::vector<Matrix> Ks;
+  // std::vector<Vector> Fs;
   // construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
   //             sequenceOfsubdomains, map_indices, 
   //             rhs_petsc_test, 
@@ -546,7 +547,7 @@ int main(int argc, char* argv[])
       {
         Vector sol_semi_to_petsc(sol_semi);
         sol_semi_to_petsc = 0;
-        petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, sol_semi,sol_semi_to_petsc);
+        //petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, sol_semi,sol_semi_to_petsc);
         if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
       }
     }

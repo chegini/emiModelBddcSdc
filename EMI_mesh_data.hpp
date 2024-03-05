@@ -523,7 +523,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
 void map_kaskade2petcs(std::vector<int> sequenceOfTags, 
                        std::map<int,std::set<int>> & map_II,
                        std::map<int,std::set<int>> & map_GammaGamma,
-                       std::map<int, int> & map_indices,
+                       std::map<std::pair<int, int>, int> & map_indices,
                        std::map<int, int> & map_i2sub)
 {
   int counter = 0;
@@ -536,39 +536,56 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
 
     for (int i = 0; i < I_vec.size(); ++i)
     {
-      map_indices[I_vec[i]] = counter;
+
+      std::pair<int,int> pairs;
+      pairs.first = I_vec[i];
+      pairs.second = tag;
+
+      map_indices[pairs] = counter;
       map_i2sub[I_vec[i]] = tag;
       counter++;
     }
 
     for (int i = 0; i < gamma_vec.size(); ++i)
     {
-      map_indices[gamma_vec[i]] = counter;
+      std::pair<int,int> pairs;
+      pairs.first = gamma_vec[i];
+      pairs.second = tag;
+
+      map_indices[pairs] = counter;
       map_i2sub[gamma_vec[i]] = tag;
       counter++;
     }
   }
 
   std::vector<int> sequenceIndices_petsc;
-  if(false){
+  if(true){
     for ( const auto &II : map_II ) {
       int tag =  II.first;
       std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
       std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
-
+      std::cout << "=====================================" <<std::endl;
+      std::cout << "tag:" << tag <<std::endl;
       for (int i = 0; i < I_vec.size(); ++i)
       {
-        sequenceIndices_petsc.push_back(map_indices[I_vec[i]]);
-        std::cout <<I_vec[i] << " " << map_indices[I_vec[i]] << "\n" ;
+        std::pair<int,int> pairs;
+        pairs.first = I_vec[i];
+        pairs.second = tag;
+        sequenceIndices_petsc.push_back(map_indices[pairs]);
+        std::cout <<I_vec[i] << " " << map_indices[pairs] << "\n" ;
       }
 
       for (int i = 0; i < gamma_vec.size(); ++i)
       {
-        sequenceIndices_petsc.push_back(map_indices[gamma_vec[i]]);
-        std::cout <<gamma_vec[i] << " " << map_indices[gamma_vec[i]] << "\n" ;
+        std::pair<int,int> pairs;
+        pairs.first = gamma_vec[i];
+        pairs.second = tag;
+        sequenceIndices_petsc.push_back(map_indices[pairs]);
+        std::cout <<gamma_vec[i] << " " << map_indices[pairs] << "\n" ;
       }
       std::cout << "\n" ;
-    }    
+    }
+    std::cout << "=====================================" <<std::endl;    
   }
 }
 
@@ -584,7 +601,7 @@ void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
 }
 
 void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags, 
-                                std::map<int, int> map_indices, 
+                                std::map<std::pair<int, int>, int> map_indices, 
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma, 
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
@@ -611,12 +628,20 @@ void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags,
     std::vector<int> vec_kaskadeIndex(size);
     int count = 0;
     for (int i = 0; i < I.size(); ++i){
-      vec_kaskadeIndex[count] = map_indices[I[i]]; 
+      std::pair<int,int> pairs;
+      pairs.first = I[i];
+      pairs.second = tag;
+
+      vec_kaskadeIndex[count] = map_indices[pairs]; 
       count++;     
     }
 
     for (int i = 0; i < gamma.size(); ++i){
-      vec_kaskadeIndex[count] = map_indices[gamma[i]];    
+      std::pair<int,int> pairs;
+      pairs.first = gamma[i];
+      pairs.second = tag;
+
+      vec_kaskadeIndex[count] = map_indices[pairs];    
       count++;  
     }
     
@@ -628,7 +653,11 @@ void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags,
 
       for (it = nbr.begin(); it != nbr.end(); it++)
       {
-        vec_kaskadeIndex[count] = map_indices[*it]; 
+        std::pair<int,int> pairs;
+        pairs.first = *it;
+        pairs.second = tag_nbr;
+
+        vec_kaskadeIndex[count] = map_indices[pairs]; 
         count++; 
       }
     }
@@ -695,10 +724,12 @@ void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags,
     }
   } 
 }
-template<class FSElement>
+
+template<class FSElement, class Material>
 void write_Dirichlet_and_coordinates( FSElement& fse, 
+                                      Material const & material, 
                                       std::vector<std::vector<int>> e2i,
-                                      std::map<int, int> map_indices,
+                                      std::map<std::pair<int, int>, int> map_indices,
                                       std::map<std::pair<int, int>, std::vector<double>> & coord,
                                       int dof_size,
                                       int dim,
@@ -707,9 +738,10 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
 {
 
 
-  std::set<int> dofsDirichlet;
+  std::set<std::pair<int,int>> dofsDirichlet;
   markedIndicesForDirichlet(fse,
                             GetGlobalCoordinate(), 
+                            material,
                             e2i,
                             dofsDirichlet);
 
@@ -721,13 +753,14 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     std::string fname = matlab_dir+"/DrichletNodes.m";
     std::ofstream f(fname.c_str());
     f.precision(precision);
-    std::set<int>::iterator it;
+    std::set<std::pair<int,int>>::iterator it;
     for (it = dofsDirichlet.begin(); it != dofsDirichlet.end(); ++it) {
       f << map_indices[*it] << " ";
     }
     f << "\n";
   }
   
+  std::cout << "coordinates"<<std::endl;
   if(write_to_file)
   {
     std::vector<std::vector<double>> indexCoordinates_petsc(coord.size());
@@ -736,7 +769,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
       int index = coord_pair.first.first;
       int tag = coord_pair.first.second;
       std::vector<double> indexCoordinates = coord_pair.second;
-      indexCoordinates_petsc[map_indices[index]] = indexCoordinates;
+      indexCoordinates_petsc[map_indices[coord_pair.first]] = indexCoordinates; // need to use map_indices based on the index and tag
     }
 
     double precision = 16;
@@ -751,36 +784,6 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
         f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
     }
   }
-
-  // int count = 0;
-  // for ( const auto &coord_pair : coord ) 
-  // {
-  //   int index = coord_pair.first.first;
-  //   int tag = coord_pair.first.second;
-  //   std::vector<double> indexCoordinates = coord_pair.second;
-  //   if(dim==2) std::cout <<count << "("<< index << "," << tag << ") = " << indexCoordinates[0] << "," << indexCoordinates[1] <<std::endl;
-  //   if(dim==3) std::cout <<count << "("<< index << "," << tag << ") = " << indexCoordinates[0] << "," << indexCoordinates[1] <<"," <<indexCoordinates[2] <<std::endl;
-  //   count++;
-  // }
-
-  // std::cout << "coordinates"<<std::endl;
-  // if(write_to_file)
-  // {
-  //   std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
-  //   double precision = 16;
-  //   std::string fname = matlab_dir+"/coordinates.txt";
-  //   std::ofstream f(fname.c_str());
-  //   f.precision(precision);
-  //   for (int i = 0; i < coord.size(); ++i)
-  //     indexCoordinates_petsc[map_indices[i]] = icoord[i];
-
-  //   for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
-  //     if(dim==2) 
-  //       f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << " ";
-  //     if(dim==3) 
-  //       f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
-  //   }
-  // }
 }
 
 void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequenceOfsubdomains)
@@ -848,13 +851,13 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
 
 
 template<class Vector>
-void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags, 
+void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags, 
                                 std::map<int,int> startingIndexOfTag,
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma,
                                 std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
                                 Vector b_,
-                                std::map<int, int> map_indices,
+                                std::map<std::pair<int,int>, int> map_indices,
                                 std::vector<std::vector<LocalDof>> sharedDofsAll,
                                 std::vector<Vector> &Fs)
 {
@@ -873,14 +876,21 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
     for (int indx = 0; indx < Interior.size(); ++indx)
     {
       int pos = Interior[indx];
-      int pos_map = map_indices[pos];
+      std::pair<int,int> pairs;
+      pairs.first = pos;
+      pairs.second = tag;
+
+      int pos_map = map_indices[pairs];
       Fs_subIdx[pos_map] = b_[pos];
     }
 
     for (int indx = 0; indx < interface.size(); ++indx)
     {
       int pos = interface[indx];
-      int pos_map = map_indices[pos];
+      std::pair<int,int> pairs;
+      pairs.first = pos;
+      pairs.second = tag;
+      int pos_map = map_indices[pairs];
       Fs_subIdx[pos_map] = coef*b_[pos];
       // int alpha  = sharedDofsAll[pos].size();
       // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
@@ -896,7 +906,10 @@ void petsc_structure_rhs_petsc( std::vector<int> sequenceOfTags,
       for (int j = 0; j < nbr_vec.size(); ++j)
       {
         int pos = nbr_vec[j];
-        int pos_map = map_indices[pos];
+        std::pair<int,int> pairs;
+        pairs.first = pos;
+        pairs.second = tag;
+        int pos_map = map_indices[pairs];
         Fs_subIdx[pos_map] = coef*b_[pos];
         // int alpha  = sharedDofsAll[pos].size();
         // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];

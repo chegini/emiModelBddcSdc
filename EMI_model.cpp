@@ -295,6 +295,7 @@ int main(int argc, char* argv[])
   std::vector<std::vector<int>> e2i(gridManager.grid().size(0)); //element to indices
   std::vector<std::set<int>> e2e(gridManager.grid().size(0));    //element to element
   std::vector<std::set<int>> i2e(dof_size);                      //index to element, for the cell Filter
+  std::vector<std::set<int>> i2t(dof_size);                      //index to tags
   std::vector<std::set<int>> i2i(dof_size);                      //index to index
 
   std::map<std::pair<int, int>, std::vector<double>> coord;     //coordinates of each dofs
@@ -312,7 +313,7 @@ int main(int argc, char* argv[])
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, 
-                      e2i, i2e, e2e, i2i, coord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
+                      e2i, i2e, i2t, e2e, i2i, coord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
   int n_subdomains = map_t2l.size();
 
   std::vector<int> sequenceOfTags(n_subdomains);
@@ -437,32 +438,34 @@ int main(int argc, char* argv[])
   std::vector<Matrix> subMatrices_M;
   std::vector<Matrix> subMatrices_K;
   std::vector<Vector> weights; 
-  // construct_submatrices_petsc(map_nT2oT,
-  //                             gridManager,
-  //                             F,
-  //                             variableSetDesc, 
-  //                             spaces,
-  //                             gridManager.grid(), 
-  //                             u,
-  //                             dt,
-  //                             sequenceOfTags, 
-  //                             startingIndexOfTag,
-  //                             map_II,
-  //                             map_GammaGamma,
-  //                             map_GammaNbr,
-  //                             sequenceOfsubdomains,
-  //                             map_indices, 
-  //                             A_,K_,M_,
-  //                             rhs_petsc_test,
-  //                             nDofs,
-  //                             options.assemblyThreads,
-  //                             write_to_file,
-  //                             matlab_dir,
-  //                             Fs_petcs,
-  //                             weights,
-  //                             subMatrices,
-  //                             subMatrices_M,
-  //                             subMatrices_K);
+  std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
+  construct_submatrices_petsc(map_nT2oT,
+                              gridManager,
+                              F,
+                              variableSetDesc, 
+                              spaces,
+                              gridManager.grid(), 
+                              u,
+                              dt,
+                              sequenceOfTags, 
+                              startingIndexOfTag,
+                              map_II,
+                              map_GammaGamma,
+                              map_GammaNbr,
+                              sequenceOfsubdomains,
+                              map_indices, 
+                              i2t,
+                              A_,K_,M_,
+                              rhs_petsc_test,
+                              nDofs,
+                              options.assemblyThreads,
+                              write_to_file,
+                              matlab_dir,
+                              Fs_petcs,
+                              weights,
+                              subMatrices,
+                              subMatrices_M,
+                              subMatrices_K);
 
   // std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
   // if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);

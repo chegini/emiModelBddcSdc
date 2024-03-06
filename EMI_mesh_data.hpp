@@ -249,6 +249,7 @@ void mesh_data_structure( FSElement& fse,
                           Material const & material, 
                           std::vector<std::vector<int>> & e2i,
                           std::vector<std::set<int>> & i2e,
+                          std::vector<std::set<int>> & i2t,
                           std::vector<std::set<int>> & e2e,
                           std::vector<std::set<int>> & i2i,
                           std::map<std::pair<int, int>, std::vector<double>> & coord,
@@ -266,6 +267,7 @@ void mesh_data_structure( FSElement& fse,
                                         material, 
                                         e2i, 
                                         i2e,
+                                        i2t,
                                         i2i,
                                         coord,
                                         i2T,
@@ -317,7 +319,22 @@ void mesh_data_structure( FSElement& fse,
     map_II[IGamma.first] = I;
     if(true) std::cout <<"tag: " <<  IGamma.first << " inner + gamma: " << IGamma.second.size() << " , gamma: "<<map_GammaGamma[IGamma.first].size() <<" , inner: " << I.size() << std::endl;
   }
-  
+  std::cout << " index to tags " <<std::endl;
+  for (int i = 0; i < i2t.size(); ++i)
+  {
+    std::set<int> s = i2t[i];
+    std::set<int>::iterator itr;
+
+    if(s.size()>1){
+      std::cout << i << " : ";
+      for (itr = s.begin(); itr != s.end(); itr++) 
+      {
+        std::cout << *itr << " ";
+      }
+      std::cout << "\n";  
+    }
+  }
+  std::cout << " ===================== " <<std::endl;
   if(false)
   {
 		for (int i = 0; i < i2i.size(); ++i)
@@ -962,8 +979,11 @@ void insertMatrixBlockNbr(Matrix A_block, double coef, int x, int y, Matrix_ &As
     for (auto ca=row.begin(); ca!=row.end(); ++ca)
     {
       int const l = ca.index();
-      As_[k+x][l+y] = coef*(*ca); 
-      As_[l+y][k+x] = coef*(*ca); 
+      //if(*ca!=0.0)
+      {
+        As_[k+x][l+y] = coef*(*ca); 
+        As_[l+y][k+x] = coef*(*ca); 
+      }
     }
   }
 }
@@ -996,7 +1016,6 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
                                 int subIdx,
                                 Matrix &Ms)
 {
-  std::cout << "=========================== "<<std::endl;
   int tag = sequenceOfTags[subIdx];
   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
   std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
@@ -1033,7 +1052,7 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
   for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
   {
     int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
-    std::cout << "nbr " << nbr_Indx <<std::endl;
+    std::cout << "nbr: " << nbr_Indx <<std::endl;
     std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
     std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
 
@@ -1137,7 +1156,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
                                                           std::map<int,std::set<int>> map_GammaGamma,
                                                           std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
                                                           std::map<int,std::vector<int>> sequenceOfsubdomains,
-                                                          std::map<int, int> map_indices, 
+                                                          std::map<std::pair<int,int>, int> map_indices,
+                                                          std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
                                                           Matrix K_,
                                                           Matrix M_,
@@ -1152,23 +1172,315 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
                                                           std::vector<Matrix> &subMatrices_M,
                                                           std::vector<Matrix> &subMatrices_K)
 {
-
-
   // ------------------------------------------------------------------------------------ 
   // construct sparsity patterns
   // ------------------------------------------------------------------------------------ 
   NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
   int counter_elements = 0;
-  for (int k=0; k<A_.N(); ++k)
+  int count_row = 0;
+  for (int r=0; r<A_.N(); ++r)
   {
-    auto row  = A_[k];
+    auto row  = A_[r];
     for (auto ca=row.begin(); ca!=row.end(); ++ca)
     {
-      int const l = ca.index();
-      int row_indx = map_indices[k];
-      int col_indx = map_indices[l];
-      counter_elements++;
-      creator.addElement(row_indx,col_indx);  
+      int const c = ca.index();
+      std::vector<int> tags_r(i2t[r].begin(), i2t[r].end());
+      std::vector<int> tags_c(i2t[c].begin(), i2t[c].end());
+
+      if(tags_r.size()==2 and tags_c.size()==2){
+        std::pair<int,int> pairs_r1;
+        pairs_r1.first = r;
+        pairs_r1.second = tags_r[0];
+
+        std::pair<int,int> pairs_c1;
+        pairs_c1.first = c;
+        pairs_c1.second = tags_c[0];
+
+        int row_indx = map_indices[pairs_r1];
+        int col_indx = map_indices[pairs_c1];
+
+        if(r==2 and c ==9){
+          std::cout <<"(tags_r.size()==2 and tags_c.size()==2)" <<"\n";
+        }
+        creator.addElement(row_indx,col_indx); 
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
+
+
+        std::pair<int,int> pairs_r2;
+        pairs_r2.first = r;
+        pairs_r2.second = tags_r[1];
+
+        std::pair<int,int> pairs_c2;
+        pairs_c2.first = c;
+        pairs_c2.second = tags_c[1];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx); 
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n"; 
+
+        std::pair<int,int> pairs_r3;
+        pairs_r3.first = r;
+        pairs_r3.second = tags_r[0];
+
+        std::pair<int,int> pairs_c3;
+        pairs_c3.first = c;
+        pairs_c3.second = tags_c[1];
+
+        row_indx = map_indices[pairs_r3];
+        col_indx = map_indices[pairs_c3];
+        creator.addElement(row_indx,col_indx); 
+        creator.addElement(col_indx,row_indx);
+
+        std::pair<int,int> pairs_r4;
+        pairs_r4.first = r;
+        pairs_r4.second = tags_r[1];
+
+        std::pair<int,int> pairs_c4;
+        pairs_c4.first = c;
+        pairs_c4.second = tags_c[0];
+
+        row_indx = map_indices[pairs_r4];
+        col_indx = map_indices[pairs_c4];
+        creator.addElement(row_indx,col_indx); 
+        creator.addElement(col_indx,row_indx);
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"(tags_r.size()==2 and tags_c.size()==2)" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+      }else if(tags_r.size()==1 and tags_c.size()==1){ // other subdomains either inner or myocytes
+        std::pair<int,int> pairs_r1;
+        pairs_r1.first = r;
+        pairs_r1.second = tags_r[0];
+
+        std::pair<int,int> pairs_c1;
+        pairs_c1.first = c;
+        pairs_c1.second = tags_c[0];
+
+        int row_indx = map_indices[pairs_r1];
+        int col_indx = map_indices[pairs_c1];
+
+        // if(r==2 and c ==9){
+        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        // }
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+
+        std::pair<int,int> pairs_r2;
+        pairs_r2.first = r;
+        pairs_r2.second = tags_r[0];
+
+        std::pair<int,int> pairs_c2;
+        pairs_c2.first = c;
+        pairs_c2.second = tags_c[0];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        // --------------------------------------------------------------------------------------------------------
+
+        pairs_r1.first = r;
+        pairs_r1.second = tags_c[0];
+
+        pairs_c1.first = c;
+        pairs_c1.second = tags_r[0];
+
+        row_indx = map_indices[pairs_r1];
+        col_indx = map_indices[pairs_c1];
+
+        // if(r==2 and c ==9){
+        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        // }
+
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+        pairs_r2.first = r;
+        pairs_r2.second = tags_c[0];
+
+        pairs_c2.first = c;
+        pairs_c2.second = tags_r[0];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+        // --------------------------------------------------------------------------------------------------------
+
+        pairs_r1.first = r;
+        pairs_r1.second = tags_c[0];
+
+        pairs_c1.first = c;
+        pairs_c1.second = tags_r[0];
+
+        row_indx = map_indices[pairs_r1];
+        col_indx = map_indices[pairs_c1];
+
+        // if(r==2 and c ==9){
+        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        // }
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+        pairs_r2.first = r;
+        pairs_r2.second = tags_c[0];
+
+        pairs_c2.first = c;
+        pairs_c2.second = tags_r[0];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+        // --------------------------------------------------------------------------------------------------------
+        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
+      }else if(tags_c.size()!=1 and tags_r.size()==1){ // row is inner
+        std::pair<int,int> pairs_r1;
+        pairs_r1.first = r;
+        pairs_r1.second = tags_c[0];
+
+        std::pair<int,int> pairs_c1;
+        pairs_c1.first = c;
+        pairs_c1.second = tags_c[0];
+
+        // if(r==2 and c ==9){
+        //   std::cout <<"tags_c.size()!=1 and tags_r.size()==1" <<"\n";
+        // }
+
+        int row_indx = map_indices[pairs_r1];
+        int col_indx = map_indices[pairs_c1];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_c.size()!=1 and tags_r.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+        std::pair<int,int> pairs_r2;
+        pairs_r2.first = r;
+        pairs_r2.second = tags_c[1];
+
+        std::pair<int,int> pairs_c2;
+        pairs_c2.first = c;
+        pairs_c2.second = tags_c[1];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx); 
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_c.size()!=1 and tags_r.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+
+
+        std::pair<int,int> pairs_r3;
+        pairs_r3.first = r;
+        pairs_r3.second = tags_r[0];
+
+        std::pair<int,int> pairs_c3;
+        pairs_c3.first = c;
+        pairs_c3.second = tags_c[0];
+
+        row_indx = map_indices[pairs_r3];
+        col_indx = map_indices[pairs_c3];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx); 
+
+
+        std::pair<int,int> pairs_r4;
+        pairs_r4.first = r;
+        pairs_r4.second = tags_r[0];
+
+        std::pair<int,int> pairs_c4;
+        pairs_c4.first = c;
+        pairs_c4.second = tags_c[1];
+
+        row_indx = map_indices[pairs_r4];
+        col_indx = map_indices[pairs_c4];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx); 
+
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
+      }else if(tags_r.size()!=1 and tags_c.size()==1){ // row is interface
+        std::pair<int,int> pairs_r1;
+        pairs_r1.first = r;
+        pairs_r1.second = tags_r[0];
+
+        std::pair<int,int> pairs_c1;
+        pairs_c1.first = c;
+        pairs_c1.second = tags_r[0];
+
+        int row_indx = map_indices[pairs_r1];
+        int col_indx = map_indices[pairs_c1];
+
+        // if(r==2 and c ==9){
+        //   std::cout <<"tags_r.size()!=1 and tags_c.size()==1" <<"\n";
+        // }
+
+        creator.addElement(row_indx,col_indx); 
+        creator.addElement(col_indx,row_indx);
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()!=1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+        std::pair<int,int> pairs_r2;
+        pairs_r2.first = r;
+        pairs_r2.second = tags_r[1];
+
+        std::pair<int,int> pairs_c2;
+        pairs_c2.first = c;
+        pairs_c2.second = tags_r[1];
+
+        row_indx = map_indices[pairs_r2];
+        col_indx = map_indices[pairs_c2];
+
+        creator.addElement(row_indx,col_indx);
+        creator.addElement(col_indx,row_indx); 
+        //std::cout <<row_indx << ", " << col_indx <<"\n";
+        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
+
+        if(row_indx==5 and col_indx ==8){
+          std::cout <<"tags_r.size()!=1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
+        }
+      }
     }
   }
 

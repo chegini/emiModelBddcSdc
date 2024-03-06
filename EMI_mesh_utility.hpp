@@ -52,6 +52,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            Material const & material, 
                                            std::vector<std::vector<int>> & e2i, 
                                            std::vector<std::set<int>> & i2e,
+                                           std::vector<std::set<int>> & i2t,
                                            std::vector<std::set<int>> & i2i,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::vector<int> & i2T,
@@ -109,6 +110,10 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
       std::set<int> cell_indices = i2e[nIndex];
       cell_indices.insert(eIndex);
       i2e[nIndex] = cell_indices;
+
+      std::set<int> tags = i2t[nIndex];
+      tags.insert(material_var);
+      i2t[nIndex] = tags;
 
       auto x = fu.value(*ci,localCoordinate[i]);
 

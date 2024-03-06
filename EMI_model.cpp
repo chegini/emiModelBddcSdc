@@ -468,18 +468,18 @@ int main(int argc, char* argv[])
                               subMatrices_M,
                               subMatrices_K);
 
-  // std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
-  // if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
-  // return 0;
-  // // ------------------------------------------------------------------------------------ 
-  // // compute submatrices and rhs based on Kaskade structure
-  // // ------------------------------------------------------------------------------------
-  // std::vector<Matrix> As;
-  // std::vector<Matrix> Ms;
-  // std::vector<Matrix> Ks;
-  // std::vector<Vector> Fs;
+  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
+  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+
+  // ------------------------------------------------------------------------------------ 
+  // compute submatrices and rhs based on Kaskade structure
+  // ------------------------------------------------------------------------------------
+  std::vector<Matrix> As;
+  std::vector<Matrix> Ms;
+  std::vector<Matrix> Ks;
+  std::vector<Vector> Fs;
   // construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
-  //             sequenceOfsubdomains, map_indices, 
+  //             sequenceOfsubdomains, map_indices, i2t,
   //             rhs_petsc_test, 
   //             subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 

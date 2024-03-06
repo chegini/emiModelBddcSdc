@@ -1031,11 +1031,9 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
 
   std::vector<int> sequanceOfsubdomains_subIdx(sequenceOfsubdomains[tag].begin(), sequenceOfsubdomains[tag].end());
 
-  std::cout << "cross blocks: " << sequanceOfsubdomains_subIdx.size() <<std::endl;
   for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
   {
     int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
-    std::cout << "nbr " << nbr_Indx <<std::endl;
     std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
     std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
  
@@ -1047,12 +1045,10 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
     insertMatrixBlock(K_GAMMAGAMMA_nbr_nbr_block, coef, x, y, Ms);
   }
 
-   std::cout << "cross blocks: A_" << sequanceOfsubdomains_subIdx.size() <<std::endl;
   // cross blocks on column for subIdx 
   for (int nbr = 0; nbr < sequanceOfsubdomains_subIdx.size(); ++nbr)
   {
     int nbr_Indx = sequanceOfsubdomains_subIdx[nbr];
-    std::cout << "nbr: " << nbr_Indx <<std::endl;
     std::vector<int> Interior_nbr(map_II[nbr_Indx].begin(), map_II[nbr_Indx].end());
     std::vector<int> Interface_nbr(map_GammaGamma[nbr_Indx].begin(), map_GammaGamma[nbr_Indx].end());
 
@@ -1062,7 +1058,6 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
     auto K_GAMMAGAMMA_nbr_block = A_(Interface,Interface_nbr);
     insertMatrixBlockNbr(K_GAMMAGAMMA_nbr_block, coef, x, y, Ms);
   }
-  std::cout << "=========================== "<<std::endl;
 }
 
 template<class Matrix, class Matrix_>
@@ -1097,7 +1092,8 @@ void exctract_petsc_stiffness_blocks( std::vector<int> sequenceOfTags,
 // reorder matrix A with respect to petsc structure
 // -------------------------------------------------------------------------------------
 template<class Matrix>
-void petsc_structure_Matrix(std::vector<int> sequenceOfTags, 
+void petsc_structure_Matrix(std::vector<int> arr_extra, 
+                            std::vector<int> sequenceOfTags, 
                             std::map<int,int> startingIndexOfTag,
                             std::map<int,std::set<int>> map_II,
                             std::map<int,std::set<int>> map_GammaGamma,
@@ -1125,10 +1121,19 @@ void petsc_structure_Matrix(std::vector<int> sequenceOfTags,
     auto A_Interface_Interface_block = A_(interface,interface);
     insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
 
-    for (int nbr = 0; nbr < map_II.size(); ++nbr)
+    for (int nbr = 0; nbr < sequenceOfTags.size(); ++nbr)
     {
       int tag_nbr = sequenceOfTags[nbr];
-      if(tag!=tag_nbr){
+
+      // bool extra_interface = true;
+      // if(std::find(arr_extra.begin(), arr_extra.end(), tag_nbr) != arr_extra.end() and
+      //    std::find(arr_extra.begin(), arr_extra.end(), tag) != arr_extra.end() ) 
+      //   extra_interface = false;
+
+      // if(extra_interface)
+      {
+        // std::cout<< "(" << tag << ","<<tag_nbr << ")" << "inner: "<< map_II[tag_nbr].size() << " gamma: " << map_GammaGamma[tag_nbr].size()<<std::endl;
+
         std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
         std::vector<int> interface_nbr(map_GammaGamma[tag_nbr].begin(), map_GammaGamma[tag_nbr].end());
 
@@ -1142,7 +1147,8 @@ void petsc_structure_Matrix(std::vector<int> sequenceOfTags,
 }
 
 template<class Grid, class Functional, class VariableSet, class Spaces, class Matrix, class Vector>
-typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int> map_nT2oT,
+typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int> arr_extra_set, 
+                                                          std::map<int,int> map_nT2oT,
                                                           GridManager<Grid>& gridManager,
                                                           Functional& F,
                                                           VariableSet const& variableSet, 
@@ -1511,20 +1517,18 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
     F.set_mass_submatrix(true);
     SemiImplicitEulerStep<Functional>  eqM(&F,dt);
     eqM.setTau(0);
-
     for ( const auto & gamma_nbr: nbrs ){
       int row = gamma_nbr.first;
       int col = tag;
       std::string path = std::to_string(col) + "_" + std::to_string(row);
 
-      // F.set_row_col_subdomain(map_nT2oT[row],map_nT2oT[col]);
       F.set_row_col_subdomain(row,col);
       assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
       Matrix sub_M_ = assembler.template get<Matrix>(false);
       // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
       massSubmatrices_nbr[row] = sub_M_;
     }
-    // std::cout << "==========================================="<<std::endl;
+
     Matrix subMatrix(creator);
     std::string path = std::to_string(subIdx+1);
 
@@ -1542,7 +1546,6 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
     // added mass blocks to subMatrix
     // -------------------------------------
     subMatrix+=M_sub;
-
 
     // construct stiffness + mass on the current subdomain blocks
     Matrix K_sub(creator);
@@ -1569,7 +1572,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
   // writeToMatlabPath(M_sum,rhs_petsc_test,"sum_submatrices",matlab_dir);
 
   Matrix A_petsc(creator);
-  petsc_structure_Matrix(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, A_, A_petsc);  
+  petsc_structure_Matrix(arr_extra_set,sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, A_, A_petsc);  
   // if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"A_petsc",matlab_dir);
   if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
@@ -1583,6 +1586,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::map<int,int
   // -------------------------------------
   // then 
   // -------------------------------------
+
   for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
   {
     // std::cout << "============================" <<std::endl;

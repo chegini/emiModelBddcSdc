@@ -394,7 +394,7 @@ int main(int argc, char* argv[])
   A_ = assembler.template get<Matrix>(false);
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs = assembler.rhs();
-  // writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+  writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
 
   F.Mass_stiff(1);
   SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
@@ -439,7 +439,8 @@ int main(int argc, char* argv[])
   std::vector<Matrix> subMatrices_K;
   std::vector<Vector> weights; 
   std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
-  construct_submatrices_petsc(map_nT2oT,
+  construct_submatrices_petsc(arr_extra_set,
+                              map_nT2oT,
                               gridManager,
                               F,
                               variableSetDesc, 

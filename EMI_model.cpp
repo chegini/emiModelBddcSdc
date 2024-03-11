@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
   std::vector<std::set<int>> i2i(dof_size);                      //index to index
 
   std::map<std::pair<int, int>, std::vector<double>> coord;     //coordinates of each dofs
-  std::vector<int> i2T(dof_size);                                //index to tags
+  std::vector<int> i2Tag(dof_size);                                //index to tags
   std::map<int, int> map_t2l;                                    //map: tag to lenth
   std::map<int, int> map_sT2l;                                   //map: sequance of each tag to length
   std::map<int,int> map_nT2oT;                                   //map: new Tag to original Tag
@@ -312,10 +312,10 @@ int main(int argc, char* argv[])
   std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
-                      material, 
-                      e2i, i2e, i2t, e2e, i2i, coord, i2T, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
+                      material, arr_extra_set,
+                      e2i, i2e, i2t, e2e, i2i, coord, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
   int n_subdomains = map_t2l.size();
-
+  return 0;
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
   std::cout << "coord.size() "<< coord.size() <<std::endl;

@@ -56,7 +56,6 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::vector<std::set<int>> & i2i,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::vector<int> & i2T,
-                                           std::map<int, int> & map_t2l,
                                            std::map<int,std::set<int>> & map_IGamma)
 {
 
@@ -120,14 +119,14 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
       it_coord = coord.find(pairs);
       if (it_coord == coord.end()){
         i2T[nIndex] = material_var;
-        // count the number of dof for each subdomain
-        it = map_t2l.find(material_var);
-        if (map_t2l[material_var]!=0){
-          int old = it->second;
-          it->second = old+1;
-        }else{
-          map_t2l[material_var] = 1;
-        }
+        // // count the number of dof for each subdomain
+        // it = map_t2l.find(material_var);
+        // if (map_t2l[material_var]!=0){
+        //   int old = it->second;
+        //   it->second = old+1;
+        // }else{
+        //   map_t2l[material_var] = 1;
+        // }
 
         for (int j = 0; j < x.size(); ++j){
           coord[pairs].push_back(x[j]);

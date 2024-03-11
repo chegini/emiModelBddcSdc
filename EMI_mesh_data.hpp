@@ -247,20 +247,21 @@ void writeToMatlabPath_final(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVe
 template< class FSElement, class Material>
 void mesh_data_structure( FSElement& fse,  
                           Material const & material, 
-                          std::vector<std::vector<int>> & e2i,
-                          std::vector<std::set<int>> & i2e,
-                          std::vector<std::set<int>> & i2t,
-                          std::vector<std::set<int>> & e2e,
-                          std::vector<std::set<int>> & i2i,
-                          std::map<std::pair<int, int>, std::vector<double>> & coord,
-                          std::vector<int>& i2T,
-                          std::map<int, int> & map_t2l,
-                          std::map<int, int> & map_sT2l,
-                          std::map<int,std::set<int>> & map_II,
-                          std::map<int,std::set<int>> & map_IGamma,
-                          std::map<int,std::set<int>> & map_GammaGamma,
-                          std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,
-                          std::map<int,std::map<int,std::set<int>>> & map_GammaNbr)
+                          std::vector<int> arr_extra,  
+                          std::vector<std::vector<int>> & e2i,                         
+                          std::vector<std::set<int>> & i2e,                            
+                          std::vector<std::set<int>> & i2t,                            
+                          std::vector<std::set<int>> & e2e,                             
+                          std::vector<std::set<int>> & i2i,                             
+                          std::map<std::pair<int, int>, std::vector<double>> & coord,   
+                          std::vector<int>& i2Tag,                                      
+                          std::map<int, int> & map_t2l,                                
+                          std::map<int, int> & map_sT2l,                               
+                          std::map<int,std::set<int>> & map_II,                         
+                          std::map<int,std::set<int>> & map_IGamma,                    
+                          std::map<int,std::set<int>> & map_GammaGamma,                 
+                          std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,           
+                          std::map<int,std::map<int,std::set<int>>> & map_GammaNbr)     
 {
  	getInnerInterfaceDofsForeachSubdomain(fse,  
                                         GetGlobalCoordinate(),
@@ -270,8 +271,7 @@ void mesh_data_structure( FSElement& fse,
                                         i2t,
                                         i2i,
                                         coord,
-                                        i2T,
-                                        map_t2l,
+                                        i2Tag,
                                         map_IGamma);
 
   markedIndicesOnInterfacesForeachSubdomain(fse,
@@ -287,26 +287,6 @@ void mesh_data_structure( FSElement& fse,
 
 
 
-  int n_count = 0;
-  {
-    std::map<int, int>::iterator it;
-
-    for (it = map_t2l.begin(); it != map_t2l.end(); it++)
-    {
-      map_sT2l[n_count] = it->second; 
-      if(true){
-	    std::cout 	<< "pre( "<<it->first    // tag
-					<< ':'
-					<< it->second << " ) -> "   // length of dosf for this tag 
-					<< "next( "<< n_count    // new tag
-					<< ':'
-					<< it->second << " ) "   // length of dosf for this tag 
-					<< std::endl;      	
-      } 
-      n_count++;
-    }
-  }
-
   for ( const auto &IGamma : map_IGamma ) {
     std::vector<int> igamma(IGamma.second.begin(), IGamma.second.end());
     std::vector<int> gamma(map_GammaGamma[IGamma.first].begin(), map_GammaGamma[IGamma.first].end());
@@ -317,26 +297,102 @@ void mesh_data_structure( FSElement& fse,
                         std::inserter(I, I.end()));
 
     map_II[IGamma.first] = I;
-    if(true) std::cout <<"tag: " <<  IGamma.first << " inner + gamma: " << IGamma.second.size() << " , gamma: "<<map_GammaGamma[IGamma.first].size() <<" , inner: " << I.size() << std::endl;
+    // if(true) std::cout <<"tag: " <<  IGamma.first << " inner + gamma: " << IGamma.second.size() << " , gamma: "<<map_GammaGamma[IGamma.first].size() <<" , inner: " << I.size() << std::endl;
   }
-  std::cout << " index to tags " <<std::endl;
+
+
+  // REMOVE THE INTERFACES FROM ONE OF THE EXTERNAL, 
+  // IT MEANS ONLY ONE EXTRA CELLULAR SUBDOMAIN WILL HAVE THE DOFS ON THE COMMON INTERFACES BETWEEN DIFFERENT EXTRACELLULAR SUBDOMAINS
+
+  std::cout << " remove teh extra cellular interfaces " <<std::endl;
   for (int i = 0; i < i2t.size(); ++i)
   {
     std::set<int> s = i2t[i];
+    std::set<int> s_ii = i2i[i];
     std::set<int>::iterator itr;
+    std::set<int>::iterator itr_s_ii;
+    std::set<int>::iterator itr_g_nbr;
 
     if(s.size()>1){
-      std::cout << i << " : ";
+      int count = 0;
       for (itr = s.begin(); itr != s.end(); itr++) 
       {
-        std::cout << *itr << " ";
+        if(count==0) {
+          i2Tag[i] = *itr;
+        }
+        if(count>0){
+          map_IGamma[*itr].erase(i);
+          map_GammaGamma[*itr].erase(i);
+          
+
+          for (itr_s_ii = s_ii.begin(); itr_s_ii != s_ii.end(); itr_s_ii++) 
+          {
+            itr_g_nbr = map_GammaGamma_W_Nbr[*itr].find(*itr_s_ii);
+            if(itr_g_nbr!=map_GammaGamma_W_Nbr[*itr].end())
+              map_GammaGamma_W_Nbr[*itr].erase(*itr_s_ii);
+          }
+        }
+        count++;
       }
-      std::cout << "\n";  
+    }else{
+      std::vector<int> v(s.begin(),s.end());
+      i2Tag[i] = v[0];
     }
   }
-  std::cout << " ===================== " <<std::endl;
+
+
+
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+  std::set<int>::iterator itr_extra;
+  for ( const auto &gammaNbr : map_GammaNbr ){
+    itr_extra = arr_extra_set.find(gammaNbr.first);
+    if(itr_extra!=arr_extra_set.end())
+    {
+      for ( const auto &nbr : gammaNbr.second )
+      {
+        itr_extra = arr_extra_set.find(nbr.first);
+        if(itr_extra!=arr_extra_set.end())
+        {
+          map_GammaNbr[gammaNbr.first].erase(nbr.first);
+        }
+      }
+    }  
+  }
+
+  {
+    std::map<int,std::set<int>>::iterator it;
+    for (it=map_IGamma.begin(); it!=map_IGamma.end(); ++it){
+      map_t2l[it->first] = it->second.size();
+    }
+  }
+
+  int n_count = 0;
+  {
+    std::map<int, int>::iterator it;
+
+    for (it = map_t2l.begin(); it != map_t2l.end(); it++)
+    {
+      map_sT2l[n_count] = it->second; 
+      if(false){
+      std::cout   << "pre( "<<it->first    // tag
+          << ':'
+          << it->second << " ) -> "   // length of dosf for this tag 
+          << "next( "<< n_count    // new tag
+          << ':'
+          << it->second << " ) "   // length of dosf for this tag 
+          << std::endl;       
+      } 
+      n_count++;
+    }
+  }
+
   if(false)
   {
+    for (int i = 0; i < i2Tag.size(); ++i)
+    {
+        std::cout << i << " -> " <<i2Tag[i]<< std::endl;
+    }
+
 		for (int i = 0; i < i2i.size(); ++i)
 		{
 			std::set<int> s = i2i[i];

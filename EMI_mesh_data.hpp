@@ -424,7 +424,6 @@ void mesh_data_structure( FSElement& fse,
 }
 
 void local2GlobalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, 
-															std::map<int,std::set<int>> gamma_nbr_subdomain,
                               std::unordered_map<int, int> &local2Global_subdomain)
 {
   int index = 0;
@@ -440,21 +439,20 @@ void local2GlobalMapSubdomain(std::vector<int> I, std::vector<int>  gamma,
     index++;  
   }
 
-	for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
-		int tag = gamma_nbr.first;
-		std::set<int> nbr = gamma_nbr.second;
-		std::set<int>::iterator it;
+	// for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
+	// 	int tag = gamma_nbr.first;
+	// 	std::set<int> nbr = gamma_nbr.second;
+	// 	std::set<int>::iterator it;
 
-    for (it = nbr.begin(); it != nbr.end(); it++)
-    {
-    	local2Global_subdomain.insert(pair<int, int>(index,*it)); 
-      index++; 
-    }
-	}
+  //   for (it = nbr.begin(); it != nbr.end(); it++)
+  //   {
+  //   	local2Global_subdomain.insert(pair<int, int>(index,*it)); 
+  //     index++; 
+  //   }
+	// }
 }
 
 void global2LocalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, 
-															std::map<int,std::set<int>> gamma_nbr_subdomain,
                               std::unordered_map<int, int> &global2Local_subdomain)
 {
   int index = 0;
@@ -470,21 +468,20 @@ void global2LocalMapSubdomain(std::vector<int> I, std::vector<int>  gamma,
     index++;  
   }
 
-	for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
-		int tag = gamma_nbr.first;
-		std::set<int> nbr = gamma_nbr.second;
-		std::set<int>::iterator it;
+	// for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
+	// 	int tag = gamma_nbr.first;
+	// 	std::set<int> nbr = gamma_nbr.second;
+	// 	std::set<int>::iterator it;
 
-    for (it = nbr.begin(); it != nbr.end(); it++)
-    {
-    	global2Local_subdomain.insert(pair<int, int>(index,*it)); 
-      index++; 
-    }
-	}
+  //   for (it = nbr.begin(); it != nbr.end(); it++)
+  //   {
+  //   	global2Local_subdomain.insert(pair<int, int>(index,*it)); 
+  //     index++; 
+  //   }
+	// }
 }
 
 void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma, 
-														std::map<int,std::set<int>> gamma_nbr_subdomain,
                             std::vector<int> & globalIndices_subdomain)
 {
   int index = 0;
@@ -500,24 +497,24 @@ void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma,
     index++;  
   }
 
-	for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
-		int tag = gamma_nbr.first;
-		std::set<int> nbr = gamma_nbr.second;
-		std::set<int>::iterator it;
-		std::vector<int> nbr_vec(nbr.begin(), nbr.end());
+	// for ( const auto &gamma_nbr : gamma_nbr_subdomain ) {
+	// 	int tag = gamma_nbr.first;
+	// 	std::set<int> nbr = gamma_nbr.second;
+	// 	std::set<int>::iterator it;
+	// 	std::vector<int> nbr_vec(nbr.begin(), nbr.end());
 
-		for (int j = 0; j < nbr_vec.size(); ++j)
-    {
-      globalIndices_subdomain.push_back(nbr_vec[j]);
-      index++; 
-    }
-	}
+	// 	for (int j = 0; j < nbr_vec.size(); ++j)
+  //   {
+  //     globalIndices_subdomain.push_back(nbr_vec[j]);
+  //     index++; 
+  //   }
+	// }
 }
+
 
 void subdomain_indices( std::vector<int> sequenceOfTags, 
                         std::map<int,std::set<int>> & map_II,
-                        std::map<int,std::set<int>> & map_GammaGamma,
-                        std::map<int,std::map<int,std::set<int>>> & map_GammaNbr,
+                        std::map<int,std::set<int>> & map_GammaGamma_W_Nbr, 
                         std::map<int,std::unordered_map<int, int>> & local2Global,
                         std::map<int,std::unordered_map<int, int>> & global2Local,
                         std::map<int,std::vector<int>> & globalIndices)
@@ -526,19 +523,28 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
   { 
 		int tag =  sequenceOfTags[index];
 		std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-		std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+		std::vector<int> Interface(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end());
 
     std::unordered_map<int, int> local2Global_subIdx;
     std::unordered_map<int, int> global2Local_subIdx;
     std::vector<int> globalIndices_subIdx;
 
-    local2GlobalMapSubdomain(Interior,Interface,nbrs,local2Global_subIdx);
-    global2LocalMapSubdomain(Interior,Interface,nbrs,global2Local_subIdx);
-    globalIndicesSubdomain(Interior,Interface,nbrs,globalIndices_subIdx);
+    local2GlobalMapSubdomain(Interior,Interface,local2Global_subIdx);
+    global2LocalMapSubdomain(Interior,Interface,global2Local_subIdx);
+    globalIndicesSubdomain(Interior,Interface,globalIndices_subIdx);
     local2Global[tag] = local2Global_subIdx;
     global2Local[tag] = global2Local_subIdx;
     globalIndices[tag] = globalIndices_subIdx;
+
+    if(true){
+      std::cout <<" size of globalIndices_subIdx " << globalIndices_subIdx.size() << std::endl; 
+      for (int i = 0; i < globalIndices_subIdx.size(); ++i)
+      {
+        std::cout << globalIndices_subIdx[i] << " ";
+      }
+      std::cout << "\n";
+      std::cout <<"============================================================================="  << std::endl; 
+    } 
 	}
 }
 
@@ -581,7 +587,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
   }
 
   std::vector<int> sequenceIndices_petsc;
-  if(true){
+  if(false){
     for ( const auto &II : map_II ) {
       int tag =  II.first;
       std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
@@ -659,6 +665,134 @@ void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags,
     }
 
     for (int i = 0; i < gamma.size(); ++i){
+      std::pair<int,int> pairs;
+      pairs.first = gamma[i];
+      pairs.second = tag;
+
+      vec_kaskadeIndex[count] = map_indices[pairs];    
+      count++;  
+    }
+    
+    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
+    {
+      int tag_nbr = gamma_nbr.first;
+      std::set<int> nbr = gamma_nbr.second;
+      std::set<int>::iterator it;
+
+      for (it = nbr.begin(); it != nbr.end(); it++)
+      {
+        std::pair<int,int> pairs;
+        pairs.first = *it;
+        pairs.second = tag_nbr;
+
+        vec_kaskadeIndex[count] = map_indices[pairs]; 
+        count++; 
+      }
+    }
+
+    sequanceOfsubdomainsKaskade[tag] = vec_kaskadeIndex;
+  }
+   
+
+  typedef std::tuple<int,int,int> i3tuple;
+  std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
+  for ( const auto &II : map_II ) 
+  {
+    int tag =  II.first;
+    std::vector<int> tmp = sequanceOfsubdomainsKaskade[tag];
+
+    for (int i = 0; i < tmp.size(); ++i)
+    {
+      auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);
+      if (it != MapSharedDofsKaskadeTuple.end()) {  
+        std::vector<i3tuple>& values = it->second;
+        values.push_back(i3tuple(tag,i, tmp[i]));
+      }else{
+        MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(tag,i, tmp[i])};
+      }
+    }
+  }
+
+  std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
+  {
+    double precision = 16;
+    std::string fname = matlab_dir+"/sharedDofsKaskade.txt";
+    std::ofstream f(fname.c_str());
+    f.precision(precision);
+
+    for (const auto& entry : MapSharedDofsKaskadeTuple) 
+    {
+      int key = entry.first;
+      const std::vector<i3tuple>& values = entry.second;
+      {
+        std::vector<LocalDof> tmp;
+        for (const auto& value : values) {
+          tmp.push_back({std::get<0>(value),std::get<1>(value)});
+        }
+        sharedDofsKaskadeAll.push_back(tmp);
+      }
+
+      if(values.size()>1){
+        std::vector<LocalDof> tmp;
+        for (const auto& value : values) {
+          tmp.push_back({std::get<0>(value),std::get<1>(value)});
+        }
+        sharedDofsKaskade.push_back(tmp);
+      }
+
+      if(values.size()>1 and write_to_file){
+        f << key << "-> ";
+        std::cout << key << "-> ";
+        for (const auto& value : values) {
+          f <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
+         std::cout <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
+        }
+        f << "\n";
+        std::cout <<"\n";
+      }
+    }
+  } 
+}
+
+void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags, 
+                                std::map<std::pair<int, int>, int> map_indices, 
+                                std::map<int,std::set<int>> map_II,
+                                std::map<int,std::set<int>> map_GammaGamma, 
+                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
+                                bool write_to_file,
+                                std::string matlab_dir,  
+                                std::vector<std::vector<LocalDof>> & sharedDofsKaskade)
+{
+  // construct the sequance of the submatrices in BDDC in kaskade
+  int n_subdomains = map_II.size();
+  std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
+  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  { 
+    int tag =  sequenceOfTags[index];
+    std::vector<int> I(map_II[tag].begin(),map_II[tag].end());
+    std::vector<int> gamma(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
+    std::map<int,std::set<int>> gamma_nbr_subdomain(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+    int size = I.size()+gamma.size();
+    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
+    {
+     size += gamma_nbr.second.size(); 
+    }
+
+
+    std::vector<int> vec_kaskadeIndex(size);
+    int count = 0;
+    for (int i = 0; i < I.size(); ++i)
+    {
+      std::pair<int,int> pairs;
+      pairs.first = I[i];
+      pairs.second = tag;
+
+      vec_kaskadeIndex[count] = map_indices[pairs]; 
+      count++;     
+    }
+
+    for (int i = 0; i < gamma.size(); ++i)
+    {
       std::pair<int,int> pairs;
       pairs.first = gamma[i];
       pairs.second = tag;

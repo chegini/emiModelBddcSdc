@@ -259,9 +259,12 @@ void mesh_data_structure( FSElement& fse,
                           std::map<int, int> & map_sT2l,                               
                           std::map<int,std::set<int>> & map_II,                         
                           std::map<int,std::set<int>> & map_IGamma,                    
-                          std::map<int,std::set<int>> & map_GammaGamma,                 
+                          std::map<int,std::set<int>> & map_GammaGamma,
+                          std::map<int,std::set<int>> & map_IGamma_noDuplicate,
+                          std::map<int,std::set<int>> & map_GammaGamma_noDuplicate,                 
                           std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,           
-                          std::map<int,std::map<int,std::set<int>>> & map_GammaNbr)     
+                          std::map<int,std::map<int,std::set<int>>> & map_GammaNbr,
+                          std::set<int> & interface_extra_dofs)     
 {
  	getInnerInterfaceDofsForeachSubdomain(fse,  
                                         GetGlobalCoordinate(),
@@ -287,16 +290,25 @@ void mesh_data_structure( FSElement& fse,
 
 
 
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+
   for ( const auto &IGamma : map_IGamma ) {
+    int tag = IGamma.first;
     std::vector<int> igamma(IGamma.second.begin(), IGamma.second.end());
-    std::vector<int> gamma(map_GammaGamma[IGamma.first].begin(), map_GammaGamma[IGamma.first].end());
+    std::vector<int> gamma(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
 
     std::set<int> I;
     std::set_difference(IGamma.second.begin(), IGamma.second.end(), 
-                        map_GammaGamma[IGamma.first].begin(), map_GammaGamma[IGamma.first].end(),
+                        map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
                         std::inserter(I, I.end()));
 
     map_II[IGamma.first] = I;
+  
+    // auto it_extra = std::find(arr_extra.begin(), arr_extra.end(), tag);
+    // if (it_extra == arr_extra.end()) {  
+    //   // std::cout << "~~~~~ ~~~~~ ~~~~~ " << tag << std::endl;
+    //   map_GammaGamma_noDuplicate[tag] = map_GammaGamma[tag];
+    // }
     // if(true) std::cout <<"tag: " <<  IGamma.first << " inner + gamma: " << IGamma.second.size() << " , gamma: "<<map_GammaGamma[IGamma.first].size() <<" , inner: " << I.size() << std::endl;
   }
 
@@ -305,6 +317,50 @@ void mesh_data_structure( FSElement& fse,
     std::map<int,std::set<int>>::iterator it;
     for (it=map_IGamma.begin(); it!=map_IGamma.end(); ++it){
       map_t2l[it->first] = it->second.size();
+    }
+  }
+
+
+  // REMOVE THE INTERFACES FROM ONE OF THE EXTERNAL, 
+  // IT MEANS ONLY ONE EXTRA CELLULAR SUBDOMAIN WILL HAVE THE DOFS ON THE COMMON INTERFACES BETWEEN DIFFERENT EXTRACELLULAR SUBDOMAINS
+
+  std::cout << " remove teh extracellular interfaces " <<std::endl;
+  map_IGamma_noDuplicate = map_IGamma;
+  map_GammaGamma_noDuplicate = map_GammaGamma;
+  for (int i = 0; i < i2t.size(); ++i)
+  {
+    std::set<int> s = i2t[i];
+    std::set<int> s_ii = i2i[i];
+    std::set<int>::iterator itr;
+    std::set<int>::iterator itr_s_ii;
+    std::set<int>::iterator itr_g_nbr;
+
+    if(s.size()>1){
+      int count = 0;
+      for (itr = s.begin(); itr != s.end(); itr++) 
+      {
+        if(count==0) {
+          i2Tag[i] = *itr;
+          interface_extra_dofs.insert(i);
+        }
+        if(count>0){
+          map_IGamma_noDuplicate[*itr].erase(i);
+          map_GammaGamma_noDuplicate[*itr].erase(i);
+          
+        
+          
+          // for (itr_s_ii = s_ii.begin(); itr_s_ii != s_ii.end(); itr_s_ii++) 
+          // {
+          //   itr_g_nbr = map_GammaGamma_W_Nbr[*itr].find(*itr_s_ii);
+          //   if(itr_g_nbr!=map_GammaGamma_W_Nbr[*itr].end())
+          //     map_GammaGamma_W_Nbr[*itr].erase(*itr_s_ii);
+          // }
+        }
+        count++;
+      }
+    }else{
+      std::vector<int> v(s.begin(),s.end());
+      i2Tag[i] = v[0];
     }
   }
 
@@ -357,6 +413,15 @@ void mesh_data_structure( FSElement& fse,
 			}
 		}
 
+    std::cout << "interface_extra_dofs" << interface_extra_dofs.size()<< ":\n";
+    {
+    std::set<int>::iterator it;
+    for (it = interface_extra_dofs.begin(); it != interface_extra_dofs.end(); ++it) {
+       std::cout << *it << " ";
+    }
+    std::cout << "\n";
+    }
+  
 		std::cout << "igamma"<< ":\n";
 		for ( const auto &IGamma : map_IGamma ) {
 		std::cout << IGamma.first << ": ";
@@ -368,6 +433,17 @@ void mesh_data_structure( FSElement& fse,
 		std::cout << "\n";
 		}
 
+    std::cout << "igamma_noDuplicate"<< ":\n";
+    for ( const auto &IGamma : map_IGamma_noDuplicate ) {
+    std::cout << IGamma.first << ": ";
+
+    std::set<int>::iterator it;
+    for (it = IGamma.second.begin(); it != IGamma.second.end(); ++it) {
+       std::cout << *it << " ";
+    }
+    std::cout << "\n";
+    }
+
 		std::cout << "gamma"<< ":\n";
 		for ( const auto &GammaGamma : map_GammaGamma ) {
 		std::cout << GammaGamma.first << ": ";
@@ -378,6 +454,17 @@ void mesh_data_structure( FSElement& fse,
 		}
 		std::cout << "\n";
 		}
+
+    std::cout << "map_GammaGamma_noDuplicate"<< ":\n";
+    for ( const auto &GammaGamma : map_GammaGamma_noDuplicate ) {
+    std::cout << GammaGamma.first << ": ";
+
+    std::set<int>::iterator it;
+    for (it = GammaGamma.second.begin(); it != GammaGamma.second.end(); ++it) {
+       std::cout << *it << " ";
+    }
+    std::cout << "\n";
+    }
 
 		std::cout << "I"<< ":\n";
 		for ( const auto &II : map_II ) {
@@ -550,9 +637,8 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
 
 void map_kaskade2petcs(std::vector<int> sequenceOfTags, 
                        std::map<int,std::set<int>> & map_II,
-                       std::map<int,std::set<int>> & map_GammaGamma,
-                       std::map<std::pair<int, int>, int> & map_indices,
-                       std::map<int, int> & map_i2sub)
+                       std::map<int,std::set<int>> & map_GammaGamma_noDuplicate,
+                       std::map<int, int> & map_indices)
 {
   int counter = 0;
   for (int index = 0; index < sequenceOfTags.size(); ++index)
@@ -560,7 +646,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
     int tag =  sequenceOfTags[index];
    	
    	std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
-   	std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
+   	std::vector<int> gamma_vec(map_GammaGamma_noDuplicate[tag].begin(),map_GammaGamma_noDuplicate[tag].end());
 
     for (int i = 0; i < I_vec.size(); ++i)
     {
@@ -569,8 +655,8 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.first = I_vec[i];
       pairs.second = tag;
 
-      map_indices[pairs] = counter;
-      map_i2sub[I_vec[i]] = tag;
+      map_indices[I_vec[i]] = counter;
+      std::cout << I_vec[i] << ": "  << counter <<std::endl;
       counter++;
     }
 
@@ -580,40 +666,10 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.first = gamma_vec[i];
       pairs.second = tag;
 
-      map_indices[pairs] = counter;
-      map_i2sub[gamma_vec[i]] = tag;
+      map_indices[gamma_vec[i]] = counter;
+      std::cout << gamma_vec[i] << ": "  << counter <<std::endl;
       counter++;
     }
-  }
-
-  std::vector<int> sequenceIndices_petsc;
-  if(false){
-    for ( const auto &II : map_II ) {
-      int tag =  II.first;
-      std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
-      std::vector<int> gamma_vec(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
-      std::cout << "=====================================" <<std::endl;
-      std::cout << "tag:" << tag <<std::endl;
-      for (int i = 0; i < I_vec.size(); ++i)
-      {
-        std::pair<int,int> pairs;
-        pairs.first = I_vec[i];
-        pairs.second = tag;
-        sequenceIndices_petsc.push_back(map_indices[pairs]);
-        std::cout <<I_vec[i] << " " << map_indices[pairs] << "\n" ;
-      }
-
-      for (int i = 0; i < gamma_vec.size(); ++i)
-      {
-        std::pair<int,int> pairs;
-        pairs.first = gamma_vec[i];
-        pairs.second = tag;
-        sequenceIndices_petsc.push_back(map_indices[pairs]);
-        std::cout <<gamma_vec[i] << " " << map_indices[pairs] << "\n" ;
-      }
-      std::cout << "\n" ;
-    }
-    std::cout << "=====================================" <<std::endl;    
   }
 }
 
@@ -622,9 +678,9 @@ void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
   for (int i = 0; i < i2i.size(); ++i)
   {
     std::set<int> s = i2i[i];
-    if(s.size()==1) {
-      i2i.erase(i2i.begin()+i);
-    }
+    // if(s.size()==1) {
+    //   i2i.erase(i2i.begin()+i);
+    // }
   }
 }
 

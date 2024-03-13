@@ -301,6 +301,7 @@ int main(int argc, char* argv[])
   std::vector<std::set<int>> i2e(dof_size);                      //index to element, for the cell Filter
   std::vector<std::set<int>> i2t(dof_size);                      //index to tags
   std::vector<std::set<int>> i2i(dof_size);                      //index to index
+  std::set<int> interface_extra_dofs;                            // set of dofs on the extracellular interfaces 
 
   std::map<std::pair<int, int>, std::vector<double>> coord;     //coordinates of each dofs
   std::vector<int> i2Tag(dof_size);                                //index to tags
@@ -310,14 +311,16 @@ int main(int argc, char* argv[])
                               
   std::map<int,std::set<int>> map_II;                            // II
   std::map<int,std::set<int>> map_IGamma;                        // IGamma
+  std::map<int,std::set<int>> map_IGamma_noDuplicate;            // IGamma
   std::map<int,std::set<int>> map_GammaGamma;                    // GammaGamma
+  std::map<int,std::set<int>> map_GammaGamma_noDuplicate;        // GammaGamma_nodup
   std::map<int,std::set<int>> map_GammaGamma_W_Nbr;              // GammaGamma with nbr
   std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
   std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra_set,
-                      e2i, i2e, i2t, e2e, i2i, coord, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
+                      e2i, i2e, i2t, e2e, i2i, coord, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr, interface_extra_dofs);
   int n_subdomains = map_t2l.size();
 
 
@@ -356,29 +359,32 @@ int main(int argc, char* argv[])
   std::map<int,std::vector<int>> globalIndices;
   subdomain_indices(sequenceOfTags, map_II, map_GammaGamma_W_Nbr, local2Global, global2Local, globalIndices);
 
-  std::map<std::pair<int, int>, int> map_indices;
-  std::map<int, int> map_i2sub;
-  map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma, map_indices, map_i2sub);
+  std::map<int, int> map_indices;
+  map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices);
   std::cout << "map_kaskade2petcs "<<std::endl;
-  return 0;
- //  removeInnerIndices_i2i(i2i);
- //  std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
+ 
+  std::set<std::set<int>> i2iSet_;
+  removeInnerIndices_i2i(i2i);
+  std::cout << "i2i.size()"<< i2i.size() <<std::endl;
+  std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
- //  if(false)
- //  {
- //    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
- //    std::set<std::set<int>>::iterator it;
- //    for (it = i2iSet.begin(); it != i2iSet.end(); ++it) {
- //      std::set<int> s = *it;
- //      std::set<int>::iterator itr;
- //      for (itr = s.begin(); itr != s.end(); ++itr) {
- //        std::cout << *itr << "";
- //      }
- //      std::cout <<std::endl;
- //    }
- //    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
- //  }
+  if(true)
+  {
+    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
+    std::set<std::set<int>>::iterator it;
+    for (it = i2iSet.begin(); it != i2iSet.end(); ++it) {
+      std::set<int> s = *it;
+      std::set<int>::iterator itr;
+      for (itr = s.begin(); itr != s.end(); ++itr) {
+        std::cout << *itr << " ";
+      }
+      std::cout <<std::endl;
+    }
+    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
+  }
 
+
+ return 0;
  //  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
  //  compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
  //  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
@@ -626,3 +632,5 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+

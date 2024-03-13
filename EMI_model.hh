@@ -82,9 +82,9 @@ public:
     {
       Dune::FieldVector<double,dim> zero(0);
       cell_mat = F.material.value(cell,zero);
-      memInterface = false;
+      extra_cell = false;
       if(std::find(F.arr_extra.begin(), F.arr_extra.end(), cell_mat) != F.arr_extra.end()) 
-        memInterface = true;
+        extra_cell = true;
     }
 
     template <class Position, class Evaluators>
@@ -105,7 +105,7 @@ public:
     d1(VariationalArg<Scalar,dim,TestComponents<row>::value> const& argT) const
     {
 
-      if(memInterface)
+      if(extra_cell)
       {
         return -F.sigma_e*sp(du,argT.derivative) + f*argT.value;
       }
@@ -138,7 +138,7 @@ public:
       if(F.mass>1)
         p = 1;
 
-      if(memInterface)  
+      if(extra_cell)  
       {
         return -p*F.sigma_e*sp(argT.derivative,argA.derivative);
       }
@@ -166,7 +166,7 @@ public:
     Dune::FieldMatrix<Scalar,AnsatzComponents<uIdx>::value,dim> du;
     Kaskade::LinAlg::EuclideanScalarProduct sp;
     int cell_mat;
-    bool memInterface;
+    bool extra_cell;
   };
 
   class BoundaryCache
@@ -184,9 +184,9 @@ public:
 
       Dune::FieldVector<double,dim> zero(0);
       cell_mat = F.material.value((*cell).inside(),zero);
-      memInterface = false;
+      extra_cell = false;
       if(std::find(F.arr_extra.begin(), F.arr_extra.end(), cell_mat) != F.arr_extra.end())
-        memInterface = true;
+        extra_cell = true;
     }
 
     template <class Evaluators>
@@ -201,7 +201,7 @@ public:
     Dune::FieldVector<Scalar, TestVars::template Components<row>::m> 
     d1(VariationalArg<Scalar,dim,TestComponents<row>::value> const& arg) const
     {
-      if(memInterface) 
+      if(extra_cell) 
       {
         return -gamma*(ue-ue0)* arg.value;
       }
@@ -221,7 +221,7 @@ public:
       if(F.mass==1)
         return 0;
 
-      if(memInterface) 
+      if(extra_cell) 
       {
         return -p*gamma*argT.value*argA.value;
       }
@@ -244,7 +244,7 @@ public:
     Scalar gamma;
     Dune::FieldVector<Scalar,AnsatzComponents<uIdx>::value> ue, ue0;
     int cell_mat;
-    bool memInterface;
+    bool extra_cell;
   };
 
   class InnerBoundaryCache 

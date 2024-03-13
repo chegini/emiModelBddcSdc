@@ -40,10 +40,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
@@ -315,7 +319,8 @@ int main(int argc, char* argv[])
                       material, arr_extra_set,
                       e2i, i2e, i2t, e2e, i2i, coord, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr);
   int n_subdomains = map_t2l.size();
-  return 0;
+
+
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
   std::cout << "coord.size() "<< coord.size() <<std::endl;
@@ -336,6 +341,7 @@ int main(int argc, char* argv[])
     std::cout <<"\n";
   }
   std::cout <<"==========================\n";
+
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -353,9 +359,9 @@ int main(int argc, char* argv[])
   std::map<std::pair<int, int>, int> map_indices;
   std::map<int, int> map_i2sub;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma, map_indices, map_i2sub);
-  
+
   removeInnerIndices_i2i(i2i);
-  std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces
+  std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
   if(false)
   {
@@ -365,7 +371,7 @@ int main(int argc, char* argv[])
       std::set<int> s = *it;
       std::set<int>::iterator itr;
       for (itr = s.begin(); itr != s.end(); ++itr) {
-        std::cout << *itr << " ";
+        std::cout << *itr << "";
       }
       std::cout <<std::endl;
     }
@@ -375,10 +381,11 @@ int main(int argc, char* argv[])
   std::vector<std::vector<LocalDof>> sharedDofsKaskade;
   compute_sharedDofsKaskade(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
-
+  
   int mesh_dim = SPACEDIM==2? 2:3;
   write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord, dof_size, mesh_dim, write_to_file, matlab_dir);
   std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
+  return 0;
   // ------------------------------------------------------------------------------------
   // - i2iSet
   // ------------------------------------------------------------------------------------
@@ -415,7 +422,6 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
-  nDofs =  coord.size();
   Vector rhs_vec_original(nDofs);
   rhs_oiginal.write(rhs_vec_original.begin());
   std::cout << "coord.size(): " << coord.size() << " nDofs :" << nDofs << std::endl;

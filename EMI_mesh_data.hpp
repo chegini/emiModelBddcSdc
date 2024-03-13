@@ -301,64 +301,6 @@ void mesh_data_structure( FSElement& fse,
   }
 
 
-  // REMOVE THE INTERFACES FROM ONE OF THE EXTERNAL, 
-  // IT MEANS ONLY ONE EXTRA CELLULAR SUBDOMAIN WILL HAVE THE DOFS ON THE COMMON INTERFACES BETWEEN DIFFERENT EXTRACELLULAR SUBDOMAINS
-
-  std::cout << " remove teh extra cellular interfaces " <<std::endl;
-  for (int i = 0; i < i2t.size(); ++i)
-  {
-    std::set<int> s = i2t[i];
-    std::set<int> s_ii = i2i[i];
-    std::set<int>::iterator itr;
-    std::set<int>::iterator itr_s_ii;
-    std::set<int>::iterator itr_g_nbr;
-
-    if(s.size()>1){
-      int count = 0;
-      for (itr = s.begin(); itr != s.end(); itr++) 
-      {
-        if(count==0) {
-          i2Tag[i] = *itr;
-        }
-        if(count>0){
-          map_IGamma[*itr].erase(i);
-          map_GammaGamma[*itr].erase(i);
-          
-
-          for (itr_s_ii = s_ii.begin(); itr_s_ii != s_ii.end(); itr_s_ii++) 
-          {
-            itr_g_nbr = map_GammaGamma_W_Nbr[*itr].find(*itr_s_ii);
-            if(itr_g_nbr!=map_GammaGamma_W_Nbr[*itr].end())
-              map_GammaGamma_W_Nbr[*itr].erase(*itr_s_ii);
-          }
-        }
-        count++;
-      }
-    }else{
-      std::vector<int> v(s.begin(),s.end());
-      i2Tag[i] = v[0];
-    }
-  }
-
-
-
-  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
-  std::set<int>::iterator itr_extra;
-  for ( const auto &gammaNbr : map_GammaNbr ){
-    itr_extra = arr_extra_set.find(gammaNbr.first);
-    if(itr_extra!=arr_extra_set.end())
-    {
-      for ( const auto &nbr : gammaNbr.second )
-      {
-        itr_extra = arr_extra_set.find(nbr.first);
-        if(itr_extra!=arr_extra_set.end())
-        {
-          map_GammaNbr[gammaNbr.first].erase(nbr.first);
-        }
-      }
-    }  
-  }
-
   {
     std::map<int,std::set<int>>::iterator it;
     for (it=map_IGamma.begin(); it!=map_IGamma.end(); ++it){
@@ -373,7 +315,7 @@ void mesh_data_structure( FSElement& fse,
     for (it = map_t2l.begin(); it != map_t2l.end(); it++)
     {
       map_sT2l[n_count] = it->second; 
-      if(false){
+      if(true){
       std::cout   << "pre( "<<it->first    // tag
           << ':'
           << it->second << " ) -> "   // length of dosf for this tag 
@@ -386,11 +328,18 @@ void mesh_data_structure( FSElement& fse,
     }
   }
 
-  if(false)
+  if(true)
   {
+    std::cout << "  i2Tag "<< std::endl;
     for (int i = 0; i < i2Tag.size(); ++i)
     {
         std::cout << i << " -> " <<i2Tag[i]<< std::endl;
+    }
+
+    std::cout << "  i2t "<< std::endl;
+    for (int i = 0; i < i2t.size(); ++i)
+    {
+        std::cout << i << " -> " <<i2t[i].size()<< std::endl;
     }
 
 		for (int i = 0; i < i2i.size(); ++i)
@@ -787,12 +736,13 @@ void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags,
 
       if(values.size()>1 and write_to_file){
         f << key << "-> ";
+        std::cout << key << "-> ";
         for (const auto& value : values) {
           f <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
-          // std::cout <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
+         std::cout <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
         }
         f << "\n";
-        // std::cout <<"\n";
+        std::cout <<"\n";
       }
     }
   } 
@@ -852,9 +802,9 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     
     for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
       if(dim==2) 
-        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << " ";
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
       if(dim==3) 
-        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << " ";
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
     }
   }
 }

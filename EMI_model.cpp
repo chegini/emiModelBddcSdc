@@ -370,7 +370,7 @@ int main(int argc, char* argv[])
   std::cout << "i2i.size()"<< i2i.size() <<std::endl;
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
-  if(true)
+  if(false)
   {
     std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
     std::set<std::set<int>>::iterator it;
@@ -434,14 +434,13 @@ int main(int argc, char* argv[])
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
   petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
-  std::cout << "petsc_structure_rhs!!!!!\n\n\n\n" << std::endl;
+  std::cout << "petsc_structure_rhs!" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
-
-  // std::vector<std::vector<LocalDof>> sharedDofsKaskade;
-  // compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
-  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
+  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
+  compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
+  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!" << std::endl;
  
  //  std::vector<Vector> Fs_petcs;
  //  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);

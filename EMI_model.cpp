@@ -317,12 +317,13 @@ int main(int argc, char* argv[])
   std::map<int,std::set<int>> map_GammaGamma_noDuplicate;        // GammaGamma_nodup
   std::map<int,std::set<int>> map_GammaGamma_W_Nbr;              // GammaGamma with nbr
   std::map<int,std::set<int>> map_GammaNbr_Nbr;                  // GammaGamma only nbr without out the extra neighors...
+  std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate;      // GammaGamma only nbr without out the extra neighors...
   std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
   std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra_set,
-                      e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, map_GammaNbr, interface_extra_dofs);
+                      e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs);
   int n_subdomains = map_t2l.size();
 
 
@@ -433,7 +434,7 @@ int main(int argc, char* argv[])
   rhs.write(rhs_vec_test.begin());
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
-  petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
+  petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
   std::cout << "petsc_structure_rhs!" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
@@ -442,9 +443,9 @@ int main(int argc, char* argv[])
   compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!" << std::endl;
  
- //  std::vector<Vector> Fs_petcs;
- //  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
- //  std::cout << "petsc_structure_rhs_petsc!!!!!\n\n\n\n" << std::endl;
+  std::vector<Vector> Fs_petcs;
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+  std::cout << "petsc_structure_rhs_petsc!" << std::endl;
  //  // ------------------------------------------------------------------------------------ 
  //  // compute rhs based on petsc structure
  //  // ------------------------------------------------------------------------------------

@@ -264,7 +264,8 @@ void mesh_data_structure( FSElement& fse,
                           std::map<int,std::set<int>> & map_IGamma_noDuplicate,
                           std::map<int,std::set<int>> & map_GammaGamma_noDuplicate,                 
                           std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,  
-                          std::map<int,std::set<int>> & map_GammaNbr_Nbr,         
+                          std::map<int,std::set<int>> & map_GammaNbr_Nbr,  
+                          std::map<int,std::set<int>> & map_GammaNbr_Nbr_noDuplicate,       
                           std::map<int,std::map<int,std::set<int>>> & map_GammaNbr,
                           std::set<int> & interface_extra_dofs)     
 {
@@ -335,6 +336,20 @@ void mesh_data_structure( FSElement& fse,
                         map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
                         std::inserter(difference, difference.begin()));
     map_GammaNbr_Nbr[tag] = difference;
+  }
+
+  // GET only neighbrs without duplication the extra cellular
+  // question, I should make them be,ong to one subdomain???
+  for ( const auto &Gamma : map_IGamma_noDuplicate ) 
+  {
+    int tag = Gamma.first;
+    std::set<int> difference;
+
+    // Use std::set_difference to find the difference between set1 and set2
+    std::set_difference(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end(),
+                        map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
+                        std::inserter(difference, difference.begin()));
+    map_GammaNbr_Nbr_noDuplicate[tag] = difference;
   }
 
 
@@ -1158,6 +1173,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<i
 template<class Vector>
 void petsc_structure_rhs( std::vector<int> sequenceOfTags, 
                           std::map<int,int> startingIndexOfTag,
+                          std::map<int,int> map_indices,
                           std::map<int,std::set<int>> map_II,
                           std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                           Vector b_,
@@ -1173,12 +1189,14 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
     int x = startingIndexOfTag[tag];
     for (int i = 0; i < Interior.size(); ++i)
     {
-      bs_[i+x] = b_[Interior[i]];
+      bs_[map_indices[i]] = b_[Interior[i]];
+      // bs_[i+x] = b_[Interior[i]];
     }
 
     for (int i = 0; i < interface.size(); ++i)
     {
-      bs_[i+x+Interior.size()] = b_[interface[i]];
+      bs_[map_indices[i]] = b_[interface[i]];
+      // bs_[i+x+Interior.size()] = b_[interface[i]];
     }
   }
 }
@@ -1188,66 +1206,48 @@ template<class Vector>
 void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags, 
                                 std::map<int,int> startingIndexOfTag,
                                 std::map<int,std::set<int>> map_II,
-                                std::map<int,std::set<int>> map_GammaGamma,
-                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                                std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
+                                std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
                                 Vector b_,
-                                std::map<std::pair<int,int>, int> map_indices,
+                                std::map<int, int> map_indices,
                                 std::vector<std::vector<LocalDof>> sharedDofsAll,
                                 std::vector<Vector> &Fs)
 {
 
-  std::cout << " construct RHS for each subdomain based on petsc Sructure" <<std::endl;
+  std::cout << " RHS based on petsc Sructure" <<std::endl;
   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
   {
     int tag = sequenceOfTags[subIdx];
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+    std::vector<int> gammaNbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
 
     Vector Fs_subIdx(b_.size()); 
-    double coef = 0.5;
+    double coef = 2;
 
     for (int indx = 0; indx < Interior.size(); ++indx)
     {
       int pos = Interior[indx];
-      std::pair<int,int> pairs;
-      pairs.first = pos;
-      pairs.second = tag;
-
-      int pos_map = map_indices[pairs];
+      int pos_map = map_indices[pos];
       Fs_subIdx[pos_map] = b_[pos];
     }
 
     for (int indx = 0; indx < interface.size(); ++indx)
     {
       int pos = interface[indx];
-      std::pair<int,int> pairs;
-      pairs.first = pos;
-      pairs.second = tag;
-      int pos_map = map_indices[pairs];
-      Fs_subIdx[pos_map] = coef*b_[pos];
-      // int alpha  = sharedDofsAll[pos].size();
-      // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
+      int pos_map = map_indices[pos];
+      // Fs_subIdx[pos_map] = coef*b_[pos];
+      int alpha  = sharedDofsAll[pos].size();
+      Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
     }
 
-    for ( const auto &gamma_nbr : nbrs ) 
+    for (int indx = 0; indx < gammaNbr.size(); ++indx)
     {
-      int tag = gamma_nbr.first;
-      std::set<int> nbr = gamma_nbr.second;
-      std::set<int>::iterator it;
-      std::vector<int> nbr_vec(nbr.begin(), nbr.end());
-
-      for (int j = 0; j < nbr_vec.size(); ++j)
-      {
-        int pos = nbr_vec[j];
-        std::pair<int,int> pairs;
-        pairs.first = pos;
-        pairs.second = tag;
-        int pos_map = map_indices[pairs];
-        Fs_subIdx[pos_map] = coef*b_[pos];
-        // int alpha  = sharedDofsAll[pos].size();
-        // Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
-      }
+      int pos = gammaNbr[indx];
+      int pos_map = map_indices[pos];
+      // Fs_subIdx[pos_map] = coef*b_[pos];
+      int alpha  = sharedDofsAll[pos].size();
+      Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
     }
 
     Fs.push_back(Fs_subIdx);

@@ -55,6 +55,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::vector<std::set<int>> & i2t,
                                            std::vector<std::set<int>> & i2i,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
+                                           std::map<int, std::vector<double>> & coord_globalIndex, 
                                            std::vector<int> & i2T,
                                            std::map<int,std::set<int>> & map_IGamma)
 {
@@ -62,6 +63,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
   std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
+  std::map<int, std::vector<double>>::iterator it_coord_glabalIndex;
 
   DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
 
@@ -115,6 +117,14 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
       i2t[nIndex] = tags;
 
       auto x = fu.value(*ci,localCoordinate[i]);
+
+      it_coord_glabalIndex = coord_globalIndex.find(nIndex);
+      if (it_coord_glabalIndex == coord_globalIndex.end()){
+         for (int j = 0; j < x.size(); ++j){
+          coord_globalIndex[nIndex].push_back(x[j]);
+        }
+      }
+
 
       it_coord = coord.find(pairs);
       if (it_coord == coord.end()){
@@ -364,7 +374,7 @@ void markedIndicesForDirichlet(FSElement& fse,
                                  Function const& fu, 
                                  Material const & material,
                                  std::vector<std::vector<int>> & cell2Indice, 
-                                 std::set<std::pair<int,int>> & dofsDiriichlet )
+                                 std::set<int> & dofsDiriichlet )
 {
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
@@ -392,24 +402,18 @@ void markedIndicesForDirichlet(FSElement& fse,
     auto dof_u = fse.space().mapper().globalIndices(*ci);
     int nrNodes = dof_u.size();
 
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
-
     for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
       if(!intersection.neighbor()){
         for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
         {
           int index_c1 = cell2Indice[cellIndex][i];
-          std::pair<int,int> pairs;
-          pairs.first = index_c1;
-          pairs.second = material_var;
-
-          dofsDiriichlet.insert(pairs);
+          dofsDiriichlet.insert(index_c1);
         }
       }
     }
   }
 }
+
 
 
 #endif

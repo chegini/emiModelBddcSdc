@@ -303,8 +303,9 @@ int main(int argc, char* argv[])
   std::vector<std::set<int>> i2i(dof_size);                      //index to index
   std::set<int> interface_extra_dofs;                            // set of dofs on the extracellular interfaces 
 
-  std::map<std::pair<int, int>, std::vector<double>> coord;     //coordinates of each dofs
-  std::vector<int> i2Tag(dof_size);                                //index to tags
+  std::map<std::pair<int, int>, std::vector<double>> coord;      //coordinates of each dofs: key index and tag
+  std::map<int, std::vector<double>> coord_globalIndex;         //coordinates of each dofs: key index
+  std::vector<int> i2Tag(dof_size);                              //index to tags
   std::map<int, int> map_t2l;                                    //map: tag to lenth
   std::map<int, int> map_sT2l;                                   //map: sequance of each tag to length
   std::map<int,int> map_nT2oT;                                   //map: new Tag to original Tag
@@ -320,7 +321,7 @@ int main(int argc, char* argv[])
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra_set,
-                      e2i, i2e, i2t, e2e, i2i, coord, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr, interface_extra_dofs);
+                      e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr, interface_extra_dofs);
   int n_subdomains = map_t2l.size();
 
 
@@ -384,15 +385,11 @@ int main(int argc, char* argv[])
   }
 
 
- return 0;
- //  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
- //  compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
- //  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
- //  return 0;
- //  int mesh_dim = SPACEDIM==2? 2:3;
- //  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord, dof_size, mesh_dim, write_to_file, matlab_dir);
- //  std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
- //  return 0;
+  // return 0;
+  int mesh_dim = SPACEDIM==2? 2:3;
+  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir);
+  std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
+  return 0;
  //  // ------------------------------------------------------------------------------------
  //  // - i2iSet
  //  // ------------------------------------------------------------------------------------
@@ -441,6 +438,12 @@ int main(int argc, char* argv[])
  //  // ------------------------------------------------------------------------------------ 
  //  // compute rhs of each based on petsc structure
  //  // ------------------------------------------------------------------------------------ 
+
+ //  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
+ //  compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaNbr, write_to_file, matlab_dir, sharedDofsKaskade);
+ //  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!!!!!\n\n\n\n" << std::endl;
+ //  return 0;
+
  //  std::vector<Vector> Fs_petcs;
  //  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
  //  std::cout << "petsc_structure_rhs_petsc!!!!!\n\n\n\n" << std::endl;

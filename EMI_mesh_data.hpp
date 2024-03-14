@@ -253,7 +253,8 @@ void mesh_data_structure( FSElement& fse,
                           std::vector<std::set<int>> & i2t,                            
                           std::vector<std::set<int>> & e2e,                             
                           std::vector<std::set<int>> & i2i,                             
-                          std::map<std::pair<int, int>, std::vector<double>> & coord,   
+                          std::map<std::pair<int, int>, std::vector<double>> & coord,  
+                          std::map<int, std::vector<double>> & coord_globalIndex, 
                           std::vector<int>& i2Tag,                                      
                           std::map<int, int> & map_t2l,                                
                           std::map<int, int> & map_sT2l,                               
@@ -274,6 +275,7 @@ void mesh_data_structure( FSElement& fse,
                                         i2t,
                                         i2i,
                                         coord,
+                                        coord_globalIndex,
                                         i2Tag,
                                         map_IGamma);
 
@@ -942,8 +944,9 @@ template<class FSElement, class Material>
 void write_Dirichlet_and_coordinates( FSElement& fse, 
                                       Material const & material, 
                                       std::vector<std::vector<int>> e2i,
-                                      std::map<std::pair<int, int>, int> map_indices,
+                                      std::map<int, int> map_indices,
                                       std::map<std::pair<int, int>, std::vector<double>> & coord,
+                                      std::map<int, std::vector<double>> & coord_globalIndex,
                                       int dof_size,
                                       int dim,
                                       bool write_to_file,
@@ -951,7 +954,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
 {
 
 
-  std::set<std::pair<int,int>> dofsDirichlet;
+  std::set<int> dofsDirichlet;
   markedIndicesForDirichlet(fse,
                             GetGlobalCoordinate(), 
                             material,
@@ -966,37 +969,31 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     std::string fname = matlab_dir+"/DrichletNodes.m";
     std::ofstream f(fname.c_str());
     f.precision(precision);
-    std::set<std::pair<int,int>>::iterator it;
+    std::set<int>::iterator it;
     for (it = dofsDirichlet.begin(); it != dofsDirichlet.end(); ++it) {
       f << map_indices[*it] << " ";
     }
     f << "\n";
   }
   
-  std::cout << "coordinates"<<std::endl;
   if(write_to_file)
   {
-    std::vector<std::vector<double>> indexCoordinates_petsc(coord.size());
-    for ( const auto &coord_pair : coord ) 
-    {
-      int index = coord_pair.first.first;
-      int tag = coord_pair.first.second;
-      std::vector<double> indexCoordinates = coord_pair.second;
-      indexCoordinates_petsc[map_indices[coord_pair.first]] = indexCoordinates; // need to use map_indices based on the index and tag
-    }
-
+    std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
     double precision = 16;
     std::string fname = matlab_dir+"/coordinates.txt";
     std::ofstream f(fname.c_str());
     f.precision(precision);
-    
+    for (int i = 0; i < coord_globalIndex.size(); ++i)
+      indexCoordinates_petsc[map_indices[i]] = coord_globalIndex[i];
+
     for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
       if(dim==2) 
-        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
+        f << j << ":"<< indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
       if(dim==3) 
-        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
+        f << j << ":"<<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
     }
   }
+
 }
 
 void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequenceOfsubdomains)

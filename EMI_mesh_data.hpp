@@ -1033,7 +1033,7 @@ template<class Vector>
 void petsc_structure_rhs( std::vector<int> sequenceOfTags, 
                           std::map<int,int> startingIndexOfTag,
                           std::map<int,std::set<int>> map_II,
-                          std::map<int,std::set<int>> map_GammaGamma, 
+                          std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                           Vector b_,
                           Vector &bs_)
 {
@@ -1043,7 +1043,7 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
     int tag =  sequenceOfTags[index];
     std::cout << "tag " << tag <<std::endl;
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
 
 
     int x = startingIndexOfTag[tag];

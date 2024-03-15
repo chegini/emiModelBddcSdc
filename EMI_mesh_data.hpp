@@ -1121,22 +1121,26 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
 
 }
 
-void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<int,std::set<int>>> map_GammaNbr, std::vector<int> & sequenceOfTags, std::map<int,int> & startingIndexOfTag, std::map<int,int> & map_nT2oT, std::map<int,std::vector<int>> & sequenceOfsubdomains)
-{
+void computed_sequenceOfTags(std::map<int, int> map_t2l, 
+                             std::map<int,std::set<int>> map_IGamma_noDuplicate,
+                             std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
+                             std::vector<int> & sequenceOfTags, 
+                             std::map<int,int> & startingIndexOfTag, 
+                             std::map<int,int> & map_nT2oT, 
+                             std::map<int,std::vector<int>> & sequenceOfsubdomains)
+{  
   int start = 0;
   int index = 0;
   int nTag = 0;
-  for ( const auto &t2l : map_t2l ) 
-  {
-    int tag =  t2l.first;
+  for ( const auto &IGamma : map_IGamma_noDuplicate ) {
+    int tag = IGamma.first;
     sequenceOfTags[index] = tag;
     startingIndexOfTag[tag] = start;
     std::cout << "tag: " << tag << " start: "<< start <<std::endl;
+    start+=IGamma.second.size() ;
     map_nT2oT[nTag] = tag;
-
-    start+=map_t2l[tag];
-    index++;
     nTag++;
+    index++;
   }
 
   for (int index = 0; index < sequenceOfTags.size(); ++index)
@@ -1152,7 +1156,6 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l, std::map<int,std::map<i
     std::cout << "\n";
     sequenceOfsubdomains[tag] = sequenceOfsubdomains_subIndex;
   } 
-
 }
 
 template<class Vector>
@@ -1389,118 +1392,86 @@ void exctract_petsc_stiffness_blocks( std::vector<int> sequenceOfTags,
 // reorder matrix A with respect to petsc structure
 // -------------------------------------------------------------------------------------
 template<class Matrix>
-void petsc_structure_Matrix(std::vector<int> arr_extra, 
-                            std::vector<int> sequenceOfTags, 
-                            std::map<int,int> startingIndexOfTag,
-                            std::map<int,std::set<int>> map_II,
-                            std::map<int,std::set<int>> map_GammaGamma,
-                            Matrix A_,
-                            Matrix &As_)
+void petsc_structure_Matrix( std::vector<int> arr_extra, 
+                                  std::vector<int> sequenceOfTags, 
+                                  std::map<int,int> startingIndexOfTag,
+                                  std::map<int,std::set<int>> map_II,
+                                  std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
+                                  Matrix A_,
+                                  Matrix &As_)
 { 
+  bool more_extras = arr_extra.size();
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+  std::set<int>::iterator itr;
+  std::set<int>::iterator itr_nbr;
   for (int subIdx = 0; subIdx < map_II.size(); ++subIdx)
   {
     int tag = sequenceOfTags[subIdx];
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
 
-    // int x = startingIndexOfTag[tag];
-    // int y = startingIndexOfTag[tag];
+    int x = startingIndexOfTag[tag];
+    int y = startingIndexOfTag[tag];
 
-    // auto A_Interior_block = A_(Interior,Interior);
-    // insertMatrixBlock(A_Interior_block, x, y, As_);
+    std::cout << "tag_: "<< tag <<" x: " << x << " y: "<< y <<std::endl;
 
-    // auto A_Interior_Interface_block = A_(Interior,interface);
-    // insertMatrixBlock(A_Interior_Interface_block, x, y+Interior.size(), As_);
+    auto A_Interior_block = A_(Interior,Interior);
+    insertMatrixBlock(A_Interior_block, x, y, As_);
 
-    // auto A_Interface_Interior_block = A_(interface,Interior);
-    // insertMatrixBlock(A_Interface_Interior_block, x+Interior.size(), y, As_);
+    auto A_Interior_Interface_block = A_(Interior,interface);
+    insertMatrixBlock(A_Interior_Interface_block, x, y+Interior.size(), As_);
+
+    auto A_Interface_Interior_block = A_(interface,Interior);
+    insertMatrixBlock(A_Interface_Interior_block, x+Interior.size(), y, As_);
    
-    // auto A_Interface_Interface_block = A_(interface,interface);
-    // insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
+    auto A_Interface_Interface_block = A_(interface,interface);
+    insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
 
-    // for (int nbr = 0; nbr < sequenceOfTags.size(); ++nbr)
-    // {
-    //   int tag_nbr = sequenceOfTags[nbr];
+    for (int nbr = 0; nbr <  map_II.size(); ++nbr)
+    {
+      int tag_nbr =  sequenceOfTags[nbr]; 
+      if(tag!=tag_nbr){
+        std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
+        std::vector<int> interface_nbr(map_GammaGamma_noDuplicate[tag_nbr].begin(), map_GammaGamma_noDuplicate[tag_nbr].end());
 
-    //   bool extra_interface = true;
-    //   if( (std::find(arr_extra.begin(), arr_extra.end(), tag_nbr) != arr_extra.end() and
-    //      std::find(arr_extra.begin(), arr_extra.end(), tag) != arr_extra.end()) ){
-    //     std::cout << "extra_interface: "<<"(" << tag << ","<<tag_nbr << ")" << std::endl;
-    //     extra_interface = false;
-    //   } 
-        
+        x = startingIndexOfTag[tag] + Interior.size();
+        y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
+        std::cout << "\t\ttag: "<< tag <<" tag_nbr " << tag_nbr <<std::endl;
+        auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
+        insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
+      }
+    }
 
-    //   if(extra_interface)
-    //   {
-    //     std::cout<< "(" << tag << ","<<tag_nbr << ")" << "inner: "<< map_II[tag_nbr].size() << " gamma: " << map_GammaGamma[tag_nbr].size()<<std::endl;
+    if(more_extras){
+      for (int nbr = 0; nbr <  map_II.size(); ++nbr)
+      {
+        int tag_nbr =  sequenceOfTags[nbr]; 
+        bool extra_cells = false;
+        itr = arr_extra_set.find(tag);
+        itr_nbr = arr_extra_set.find(tag_nbr);
+        if(itr!= arr_extra_set.end() and itr_nbr!= arr_extra_set.end())
+        {
+          extra_cells = true;
+        }
 
-    //     std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
-    //     std::vector<int> interface_nbr(map_GammaGamma[tag_nbr].begin(), map_GammaGamma[tag_nbr].end());
+        if(tag!=tag_nbr and extra_cells){
+          std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
+          std::vector<int> interface_nbr(map_GammaGamma_noDuplicate[tag_nbr].begin(), map_GammaGamma_noDuplicate[tag_nbr].end());
 
-    //     x = startingIndexOfTag[tag] + Interior.size();
-    //     y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
-    //     auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
-    //     insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
-    //   }
-    // }
-  }
-}
+          x = startingIndexOfTag[tag] + Interior.size();
+          y = startingIndexOfTag[tag_nbr];
+          std::cout << "\t\ttag: "<< tag <<" tag_nbr " << tag_nbr << " x " << x << " y " << y <<std::endl;
+          auto A_Interface_Interior_nbr_block = A_(interface,Interior_nbr);
+          insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
 
-template<class Matrix>
-void petsc_structure_Matrix_temp(std::vector<int> arr_extra, 
-                            std::vector<int> sequenceOfTags, 
-                            std::map<int,int> startingIndexOfTag,
-                            std::map<int,std::set<int>> map_II,
-                            std::map<int,std::set<int>> map_GammaGamma,
-                            Matrix A_,
-                            Matrix &As_)
-{ 
-  for (int subIdx = 0; subIdx < map_II.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx];
-    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-
-    // int x = startingIndexOfTag[tag];
-    // int y = startingIndexOfTag[tag];
-
-    // auto A_Interior_block = A_(Interior,Interior);
-    // insertMatrixBlock(A_Interior_block, x, y, As_);
-
-    // auto A_Interior_Interface_block = A_(Interior,interface);
-    // insertMatrixBlock(A_Interior_Interface_block, x, y+Interior.size(), As_);
-
-    // auto A_Interface_Interior_block = A_(interface,Interior);
-    // insertMatrixBlock(A_Interface_Interior_block, x+Interior.size(), y, As_);
-   
-    // auto A_Interface_Interface_block = A_(interface,interface);
-    // insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
-
-    // for (int nbr = 0; nbr < sequenceOfTags.size(); ++nbr)
-    // {
-    //   int tag_nbr = sequenceOfTags[nbr];
-
-    //   bool extra_interface = true;
-    //   if( (std::find(arr_extra.begin(), arr_extra.end(), tag_nbr) != arr_extra.end() and
-    //      std::find(arr_extra.begin(), arr_extra.end(), tag) != arr_extra.end()) ){
-    //     std::cout << "extra_interface: "<<"(" << tag << ","<<tag_nbr << ")" << std::endl;
-    //     extra_interface = false;
-    //   } 
-        
-
-    //   if(extra_interface)
-    //   {
-    //     std::cout<< "(" << tag << ","<<tag_nbr << ")" << "inner: "<< map_II[tag_nbr].size() << " gamma: " << map_GammaGamma[tag_nbr].size()<<std::endl;
-
-    //     std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
-    //     std::vector<int> interface_nbr(map_GammaGamma[tag_nbr].begin(), map_GammaGamma[tag_nbr].end());
-
-    //     x = startingIndexOfTag[tag] + Interior.size();
-    //     y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
-    //     auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
-    //     insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
-    //   }
-    // }
+          x = startingIndexOfTag[tag_nbr];
+          y = startingIndexOfTag[tag]+ Interior.size();
+          std::cout << "\t\ttag_br: "<< tag_nbr <<" tag " << tag << " x " << x << " y " << y <<std::endl;
+          A_Interface_Interior_nbr_block = A_(Interior_nbr,interface);
+          insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
+        }
+      }
+    }
   }
 }
 

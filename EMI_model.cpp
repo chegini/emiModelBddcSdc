@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
@@ -327,13 +327,13 @@ int main(int argc, char* argv[])
                       map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
                       map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs);
-  int n_subdomains = map_t2l.size();
+  int n_subdomains = map_II.size();
 
 
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
   std::cout << "coord.size() "<< coord.size() <<std::endl;
-  computed_sequenceOfTags(map_t2l,map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequenceOfsubdomains);
+  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequenceOfsubdomains);
   std::cout <<"==========================\n";
   std::cout <<"sequenceOfsubdomains\n";
   std::cout <<"==========================\n";
@@ -472,9 +472,9 @@ int main(int argc, char* argv[])
       creator.addElement(row_indx,col_indx);  
     }
   }
-  // Matrix A_petsc(creator);
-  // petsc_structure_Matrix_temp(arr_extra_set,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma,A_,A_petsc);
-
+  Matrix A_petsc(creator);
+  petsc_structure_Matrix(arr_extra_set,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,A_,A_petsc);
+  writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
   // construct_submatrices_petsc(arr_extra_set,
   //                             map_nT2oT,
   //                             gridManager,

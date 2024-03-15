@@ -387,7 +387,7 @@ void mesh_data_structure( FSElement& fse,
     for (it = map_t2l.begin(); it != map_t2l.end(); it++)
     {
       map_sT2l[n_count] = it->second; 
-      if(true){
+      if(false){
       std::cout   << "pre( "<<it->first    // tag
           << ':'
           << it->second << " ) -> "   // length of dosf for this tag 
@@ -400,7 +400,7 @@ void mesh_data_structure( FSElement& fse,
     }
   }
 
-  if(true)
+  if(false)
   {
     std::cout << "  i2Tag "<< std::endl;
     for (int i = 0; i < i2Tag.size(); ++i)
@@ -651,7 +651,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
     global2Local[tag] = global2Local_subIdx;
     globalIndices[tag] = globalIndices_subIdx;
 
-    if(true){
+    if(false){
       std::cout <<" size of globalIndices_subIdx " << globalIndices_subIdx.size() << std::endl; 
       for (int i = 0; i < globalIndices_subIdx.size(); ++i)
       {
@@ -684,7 +684,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.second = tag;
 
       map_indices[I_vec[i]] = counter;
-      std::cout << I_vec[i] << ": "  << counter <<std::endl;
+      // std::cout << I_vec[i] << ": "  << counter <<std::endl;
       counter++;
     }
 
@@ -695,7 +695,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.second = tag;
 
       map_indices[gamma_vec[i]] = counter;
-      std::cout << gamma_vec[i] << ": "  << counter <<std::endl;
+      // std::cout << gamma_vec[i] << ": "  << counter <<std::endl;
       counter++;
     }
   }
@@ -1136,7 +1136,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
     int tag = IGamma.first;
     sequenceOfTags[index] = tag;
     startingIndexOfTag[tag] = start;
-    std::cout << "tag: " << tag << " start: "<< start <<std::endl;
+    // std::cout << "tag: " << tag << " start: "<< start <<std::endl;
     start+=IGamma.second.size() ;
     map_nT2oT[nTag] = tag;
     nTag++;
@@ -1148,12 +1148,12 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
     int tag =  sequenceOfTags[index];
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
     std::vector<int> sequenceOfsubdomains_subIndex;
-    std::cout << "tag: " << tag << ": ";
+    // std::cout << "tag: " << tag << ": ";
     for ( const auto &gamma_nbr : nbrs ) {
-      std::cout << gamma_nbr.first << " ";
+      // std::cout << gamma_nbr.first << " ";
       sequenceOfsubdomains_subIndex.push_back(gamma_nbr.first);
     }
-    std::cout << "\n";
+    // std::cout << "\n";
     sequenceOfsubdomains[tag] = sequenceOfsubdomains_subIndex;
   } 
 }
@@ -1175,12 +1175,12 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
     std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
     for (int i = 0; i < Interior.size(); ++i)
     {
-      bs_[map_indices[i]] = b_[Interior[i]];
+      bs_[map_indices[Interior[i]]] = b_[Interior[i]];
     }
 
     for (int i = 0; i < interface.size(); ++i)
     {
-      bs_[map_indices[i]] = b_[interface[i]];
+      bs_[map_indices[interface[i]]] = b_[interface[i]];
     }
   }
 }
@@ -1413,8 +1413,6 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
     int x = startingIndexOfTag[tag];
     int y = startingIndexOfTag[tag];
 
-    std::cout << "tag_: "<< tag <<" x: " << x << " y: "<< y <<std::endl;
-
     auto A_Interior_block = A_(Interior,Interior);
     insertMatrixBlock(A_Interior_block, x, y, As_);
 
@@ -1436,7 +1434,6 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
 
         x = startingIndexOfTag[tag] + Interior.size();
         y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
-        std::cout << "\t\ttag: "<< tag <<" tag_nbr " << tag_nbr <<std::endl;
         auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
         insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
       }
@@ -1460,13 +1457,11 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
 
           x = startingIndexOfTag[tag] + Interior.size();
           y = startingIndexOfTag[tag_nbr];
-          std::cout << "\t\ttag: "<< tag <<" tag_nbr " << tag_nbr << " x " << x << " y " << y <<std::endl;
           auto A_Interface_Interior_nbr_block = A_(interface,Interior_nbr);
           insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
 
           x = startingIndexOfTag[tag_nbr];
           y = startingIndexOfTag[tag]+ Interior.size();
-          std::cout << "\t\ttag_br: "<< tag_nbr <<" tag " << tag << " x " << x << " y " << y <<std::endl;
           A_Interface_Interior_nbr_block = A_(Interior_nbr,interface);
           insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
         }
@@ -1489,9 +1484,10 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           std::map<int,int> startingIndexOfTag,
                                                           std::map<int,std::set<int>> map_II,
                                                           std::map<int,std::set<int>> map_GammaGamma,
+                                                          std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
                                                           std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
                                                           std::map<int,std::vector<int>> sequenceOfsubdomains,
-                                                          std::map<std::pair<int,int>, int> map_indices,
+                                                          std::map<int, int> map_indices,
                                                           std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
                                                           Matrix K_,
@@ -1512,312 +1508,21 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   // ------------------------------------------------------------------------------------ 
   NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
   int counter_elements = 0;
-  int count_row = 0;
-  for (int r=0; r<A_.N(); ++r)
+  for (int k=0; k<A_.N(); ++k)
   {
-    auto row  = A_[r];
+    auto row  = A_[k];
     for (auto ca=row.begin(); ca!=row.end(); ++ca)
     {
-      int const c = ca.index();
-      std::vector<int> tags_r(i2t[r].begin(), i2t[r].end());
-      std::vector<int> tags_c(i2t[c].begin(), i2t[c].end());
-
-      if(tags_r.size()==2 and tags_c.size()==2){
-        std::pair<int,int> pairs_r1;
-        pairs_r1.first = r;
-        pairs_r1.second = tags_r[0];
-
-        std::pair<int,int> pairs_c1;
-        pairs_c1.first = c;
-        pairs_c1.second = tags_c[0];
-
-        int row_indx = map_indices[pairs_r1];
-        int col_indx = map_indices[pairs_c1];
-
-        if(r==2 and c ==9){
-          std::cout <<"(tags_r.size()==2 and tags_c.size()==2)" <<"\n";
-        }
-        creator.addElement(row_indx,col_indx); 
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
-
-
-        std::pair<int,int> pairs_r2;
-        pairs_r2.first = r;
-        pairs_r2.second = tags_r[1];
-
-        std::pair<int,int> pairs_c2;
-        pairs_c2.first = c;
-        pairs_c2.second = tags_c[1];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx); 
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n"; 
-
-        std::pair<int,int> pairs_r3;
-        pairs_r3.first = r;
-        pairs_r3.second = tags_r[0];
-
-        std::pair<int,int> pairs_c3;
-        pairs_c3.first = c;
-        pairs_c3.second = tags_c[1];
-
-        row_indx = map_indices[pairs_r3];
-        col_indx = map_indices[pairs_c3];
-        creator.addElement(row_indx,col_indx); 
-        creator.addElement(col_indx,row_indx);
-
-        std::pair<int,int> pairs_r4;
-        pairs_r4.first = r;
-        pairs_r4.second = tags_r[1];
-
-        std::pair<int,int> pairs_c4;
-        pairs_c4.first = c;
-        pairs_c4.second = tags_c[0];
-
-        row_indx = map_indices[pairs_r4];
-        col_indx = map_indices[pairs_c4];
-        creator.addElement(row_indx,col_indx); 
-        creator.addElement(col_indx,row_indx);
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"(tags_r.size()==2 and tags_c.size()==2)" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-      }else if(tags_r.size()==1 and tags_c.size()==1){ // other subdomains either inner or myocytes
-        std::pair<int,int> pairs_r1;
-        pairs_r1.first = r;
-        pairs_r1.second = tags_r[0];
-
-        std::pair<int,int> pairs_c1;
-        pairs_c1.first = c;
-        pairs_c1.second = tags_c[0];
-
-        int row_indx = map_indices[pairs_r1];
-        int col_indx = map_indices[pairs_c1];
-
-        // if(r==2 and c ==9){
-        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        // }
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-
-        std::pair<int,int> pairs_r2;
-        pairs_r2.first = r;
-        pairs_r2.second = tags_r[0];
-
-        std::pair<int,int> pairs_c2;
-        pairs_c2.first = c;
-        pairs_c2.second = tags_c[0];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        // --------------------------------------------------------------------------------------------------------
-
-        pairs_r1.first = r;
-        pairs_r1.second = tags_c[0];
-
-        pairs_c1.first = c;
-        pairs_c1.second = tags_r[0];
-
-        row_indx = map_indices[pairs_r1];
-        col_indx = map_indices[pairs_c1];
-
-        // if(r==2 and c ==9){
-        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        // }
-
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-        pairs_r2.first = r;
-        pairs_r2.second = tags_c[0];
-
-        pairs_c2.first = c;
-        pairs_c2.second = tags_r[0];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-        // --------------------------------------------------------------------------------------------------------
-
-        pairs_r1.first = r;
-        pairs_r1.second = tags_c[0];
-
-        pairs_c1.first = c;
-        pairs_c1.second = tags_r[0];
-
-        row_indx = map_indices[pairs_r1];
-        col_indx = map_indices[pairs_c1];
-
-        // if(r==2 and c ==9){
-        //   std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        // }
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-        pairs_r2.first = r;
-        pairs_r2.second = tags_c[0];
-
-        pairs_c2.first = c;
-        pairs_c2.second = tags_r[0];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()==1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-        // --------------------------------------------------------------------------------------------------------
-        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
-      }else if(tags_c.size()!=1 and tags_r.size()==1){ // row is inner
-        std::pair<int,int> pairs_r1;
-        pairs_r1.first = r;
-        pairs_r1.second = tags_c[0];
-
-        std::pair<int,int> pairs_c1;
-        pairs_c1.first = c;
-        pairs_c1.second = tags_c[0];
-
-        // if(r==2 and c ==9){
-        //   std::cout <<"tags_c.size()!=1 and tags_r.size()==1" <<"\n";
-        // }
-
-        int row_indx = map_indices[pairs_r1];
-        int col_indx = map_indices[pairs_c1];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_c.size()!=1 and tags_r.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-        std::pair<int,int> pairs_r2;
-        pairs_r2.first = r;
-        pairs_r2.second = tags_c[1];
-
-        std::pair<int,int> pairs_c2;
-        pairs_c2.first = c;
-        pairs_c2.second = tags_c[1];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx); 
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_c.size()!=1 and tags_r.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-
-
-        std::pair<int,int> pairs_r3;
-        pairs_r3.first = r;
-        pairs_r3.second = tags_r[0];
-
-        std::pair<int,int> pairs_c3;
-        pairs_c3.first = c;
-        pairs_c3.second = tags_c[0];
-
-        row_indx = map_indices[pairs_r3];
-        col_indx = map_indices[pairs_c3];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx); 
-
-
-        std::pair<int,int> pairs_r4;
-        pairs_r4.first = r;
-        pairs_r4.second = tags_r[0];
-
-        std::pair<int,int> pairs_c4;
-        pairs_c4.first = c;
-        pairs_c4.second = tags_c[1];
-
-        row_indx = map_indices[pairs_r4];
-        col_indx = map_indices[pairs_c4];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx); 
-
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
-      }else if(tags_r.size()!=1 and tags_c.size()==1){ // row is interface
-        std::pair<int,int> pairs_r1;
-        pairs_r1.first = r;
-        pairs_r1.second = tags_r[0];
-
-        std::pair<int,int> pairs_c1;
-        pairs_c1.first = c;
-        pairs_c1.second = tags_r[0];
-
-        int row_indx = map_indices[pairs_r1];
-        int col_indx = map_indices[pairs_c1];
-
-        // if(r==2 and c ==9){
-        //   std::cout <<"tags_r.size()!=1 and tags_c.size()==1" <<"\n";
-        // }
-
-        creator.addElement(row_indx,col_indx); 
-        creator.addElement(col_indx,row_indx);
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()!=1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-        std::pair<int,int> pairs_r2;
-        pairs_r2.first = r;
-        pairs_r2.second = tags_r[1];
-
-        std::pair<int,int> pairs_c2;
-        pairs_c2.first = c;
-        pairs_c2.second = tags_r[1];
-
-        row_indx = map_indices[pairs_r2];
-        col_indx = map_indices[pairs_c2];
-
-        creator.addElement(row_indx,col_indx);
-        creator.addElement(col_indx,row_indx); 
-        //std::cout <<row_indx << ", " << col_indx <<"\n";
-        // std::cout << "(" <<r << ", " << c << "), (" <<row_indx << ", " << col_indx << ") = "<< *ca <<  "\n";
-
-        if(row_indx==5 and col_indx ==8){
-          std::cout <<"tags_r.size()!=1 and tags_c.size()==1" << "r= "<< r << " ->  "<< row_indx << " c=  "<< c << " ->  "<< col_indx <<"\n";
-        }
-      }
+      int const l = ca.index();
+      int row_indx = map_indices[k];
+      int col_indx = map_indices[l];
+      counter_elements++;
+      creator.addElement(row_indx,col_indx);  
     }
   }
+  Matrix A_petsc(creator);
+  petsc_structure_Matrix(arr_extra_set,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,A_,A_petsc);
+  writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
   // ------------------------------------------------------------------------------------ 
   // construct submatrices
@@ -1831,116 +1536,116 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   typedef VariationalFunctionalAssembler<SemiLinearization> Assembler;
   Assembler assembler(spaces);
 
-  // ------------------------------------------------------------------------------------
-  // construct mass and stiffness matrix from semi-implicit structure
-  // ------------------------------------------------------------------------------------  
-  auto du(u);
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx]; 
-    du *= 0;
-    std::map<int,Matrix> massSubmatrices_nbr;
-    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+  // // ------------------------------------------------------------------------------------
+  // // construct mass and stiffness matrix from semi-implicit structure
+  // // ------------------------------------------------------------------------------------  
+  // auto du(u);
+  // for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  // {
+  //   int tag = sequenceOfTags[subIdx]; 
+  //   du *= 0;
+  //   std::map<int,Matrix> massSubmatrices_nbr;
+  //   std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
 
-    F.Mass_stiff(1);
-    F.set_mass_submatrix(true);
-    SemiImplicitEulerStep<Functional>  eqM(&F,dt);
-    eqM.setTau(0);
-    for ( const auto & gamma_nbr: nbrs ){
-      int row = gamma_nbr.first;
-      int col = tag;
-      std::string path = std::to_string(col) + "_" + std::to_string(row);
+  //   F.Mass_stiff(1);
+  //   F.set_mass_submatrix(true);
+  //   SemiImplicitEulerStep<Functional>  eqM(&F,dt);
+  //   eqM.setTau(0);
+  //   for ( const auto & gamma_nbr: nbrs ){
+  //     int row = gamma_nbr.first;
+  //     int col = tag;
+  //     std::string path = std::to_string(col) + "_" + std::to_string(row);
 
-      F.set_row_col_subdomain(row,col);
-      assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
-      Matrix sub_M_ = assembler.template get<Matrix>(false);
-      // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
-      massSubmatrices_nbr[row] = sub_M_;
-    }
+  //     F.set_row_col_subdomain(row,col);
+  //     assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
+  //     Matrix sub_M_ = assembler.template get<Matrix>(false);
+  //     // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
+  //     massSubmatrices_nbr[row] = sub_M_;
+  //   }
 
-    Matrix subMatrix(creator);
-    std::string path = std::to_string(subIdx+1);
+  //   Matrix subMatrix(creator);
+  //   std::string path = std::to_string(tag);
 
-    Vector Fs_petcs_sub =  Fs_petcs[subIdx];
+  //   Vector Fs_petcs_sub =  Fs_petcs[subIdx];
 
-    // construct mass blocks
-    Matrix M_sub(creator);
-    exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, sequenceOfsubdomains,
-                               map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,subIdx, M_sub);
-    Ms.push_back(M_sub);
-    // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);
-    M_sum+=M_sub;
+  //   // construct mass blocks
+  //   Matrix M_sub(creator);
+  //   exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, sequenceOfsubdomains,
+  //                              map_II,map_GammaGamma_noDuplicate,map_GammaNbr,A_,M_,massSubmatrices_nbr,subIdx, M_sub);
+  //   Ms.push_back(M_sub);
+  //   // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);
+  //   M_sum+=M_sub;
     
-    // -------------------------------------
-    // added mass blocks to subMatrix
-    // -------------------------------------
-    subMatrix+=M_sub;
+  //   // -------------------------------------
+  //   // added mass blocks to subMatrix
+  //   // -------------------------------------
+  //   subMatrix+=M_sub;
 
-    // construct stiffness + mass on the current subdomain blocks
-    Matrix K_sub(creator);
-    exctract_petsc_stiffness_blocks(sequenceOfTags, startingIndexOfTag, map_II,map_GammaGamma, A_,K_,subIdx,K_sub);
-    Ks.push_back(K_sub);
-    // writeToMatlab(K_sub,rhs_petsc_test,"K_petsc_"+path);
-    K_sum+=K_sub;
+  //   // construct stiffness + mass on the current subdomain blocks
+  //   Matrix K_sub(creator);
+  //   exctract_petsc_stiffness_blocks(sequenceOfTags, startingIndexOfTag, map_II,map_GammaGamma, A_,K_,subIdx,K_sub);
+  //   Ks.push_back(K_sub);
+  //   // writeToMatlab(K_sub,rhs_petsc_test,"K_petsc_"+path);
+  //   K_sum+=K_sub;
 
-    // -------------------------------------
-    // added stiffness blocks to subMatrix
-    // -------------------------------------
-    subMatrix+=K_sub;
+  //   // -------------------------------------
+  //   // added stiffness blocks to subMatrix
+  //   // -------------------------------------
+  //   subMatrix+=K_sub;
 
-    subMatrices.push_back(subMatrix);
-    subMatrices_M.push_back(M_sub);
-    subMatrices_K.push_back(K_sub);
-    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-  }
+  //   subMatrices.push_back(subMatrix);
+  //   subMatrices_M.push_back(M_sub);
+  //   subMatrices_K.push_back(K_sub);
+  //   if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+  // }
 
-  // writeToMatlab(M_sum,rhs_petsc_test,"M_sum");
-  // writeToMatlab(K_sum,rhs_petsc_test,"K_sum");
+  // // writeToMatlab(M_sum,rhs_petsc_test,"M_sum");
+  // // writeToMatlab(K_sum,rhs_petsc_test,"K_sum");
 
-  M_sum+=K_sum; 
-  // writeToMatlabPath(M_sum,rhs_petsc_test,"sum_submatrices",matlab_dir);
+  // M_sum+=K_sum; 
+  // // writeToMatlabPath(M_sum,rhs_petsc_test,"sum_submatrices",matlab_dir);
 
-  Matrix A_petsc(creator);
-  petsc_structure_Matrix(arr_extra_set,sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, A_, A_petsc);  
-  // if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"A_petsc",matlab_dir);
-  if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
+  // // Matrix A_petsc_gamma(creator);
+  // // petsc_structure_Matrix(arr_extra_set,sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, A_, A_petsc_gamma);  
+  // // // if(write_to_file) writeToMatlabPath(A_petsc,rhs_petsc_test,"A_petsc",matlab_dir);
+  // // if(write_to_file) writeToMatlabPath(A_petsc_gamma,rhs_petsc_test,"resultBDDC_gamma",matlab_dir, true);
 
-  // -------------------------------------
-  // compute the weight for each subdomain to update the rhs
-  // -------------------------------------
-  // - we need to go through the interfaces  
-  //  - of the current and their neighbors   
-  // - update the rhs for each subdomain
-  // - generate the submatrices with the writeToMatlabPath again
-  // -------------------------------------
-  // then 
-  // -------------------------------------
+  // // // -------------------------------------
+  // // // compute the weight for each subdomain to update the rhs
+  // // // -------------------------------------
+  // // // - we need to go through the interfaces  
+  // // //  - of the current and their neighbors   
+  // // // - update the rhs for each subdomain
+  // // // - generate the submatrices with the writeToMatlabPath again
+  // // // -------------------------------------
+  // // // then 
+  // // // -------------------------------------
 
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  {
-    // std::cout << "============================" <<std::endl;
-    // std::cout << "subIdx, weights " << subIdx <<std::endl;
-    // std::cout << "============================" <<std::endl;
-    std::string path = std::to_string(subIdx+1);
-    Matrix subMatrix(creator);
-    subMatrix = subMatrices[subIdx];
-    Vector Fs_petcs_sub =  rhs_petsc_test;
-    Vector weights_sub(subMatrix.N()); 
-    // optimize it by iterating only on the interfaces
-    for (int k = 0; k < subMatrix.N(); ++k)
-    {
-      double subvalue = subMatrix[k][k];
-      double originalvalue = A_petsc[k][k];
-      double weight = (subvalue/originalvalue);
-      Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
-      weights_sub[k] = weight;
-      // std::cout << k << " : "<< weight <<std::endl;
-    }
-    // std::cout << "============================" <<std::endl;
-    Fs_petcs[subIdx] = Fs_petcs_sub;
-    weights.push_back(weights_sub);
-    // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
-  }
+  // for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  // {
+  //   // std::cout << "============================" <<std::endl;
+  //   // std::cout << "subIdx, weights " << subIdx <<std::endl;
+  //   // std::cout << "============================" <<std::endl;
+  //   std::string path = std::to_string(subIdx+1);
+  //   Matrix subMatrix(creator);
+  //   subMatrix = subMatrices[subIdx];
+  //   Vector Fs_petcs_sub =  rhs_petsc_test;
+  //   Vector weights_sub(subMatrix.N()); 
+  //   // optimize it by iterating only on the interfaces
+  //   for (int k = 0; k < subMatrix.N(); ++k)
+  //   {
+  //     double subvalue = subMatrix[k][k];
+  //     double originalvalue = A_petsc[k][k];
+  //     double weight = (subvalue/originalvalue);
+  //     Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
+  //     weights_sub[k] = weight;
+  //     // std::cout << k << " : "<< weight <<std::endl;
+  //   }
+  //   // std::cout << "============================" <<std::endl;
+  //   Fs_petcs[subIdx] = Fs_petcs_sub;
+  //   weights.push_back(weights_sub);
+  //   // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
+  // }
 
   return u;
 }

@@ -44,10 +44,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
@@ -64,6 +64,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -334,6 +338,8 @@ int main(int argc, char* argv[])
   std::map<int,int> startingIndexOfTag;
   std::cout << "coord.size() "<< coord.size() <<std::endl;
   computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequenceOfsubdomains);
+  if(false)
+  {
   std::cout <<"==========================\n";
   std::cout <<"sequenceOfsubdomains\n";
   std::cout <<"==========================\n";
@@ -350,7 +356,7 @@ int main(int argc, char* argv[])
     std::cout <<"\n";
   }
   std::cout <<"==========================\n";
-
+  }
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -458,51 +464,36 @@ int main(int argc, char* argv[])
   std::vector<Vector> weights; 
   std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
 
-  NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
-  int counter_elements = 0;
-  for (int k=0; k<A_.N(); ++k)
-  {
-    auto row  = A_[k];
-    for (auto ca=row.begin(); ca!=row.end(); ++ca)
-    {
-      int const l = ca.index();
-      int row_indx = map_indices[k];
-      int col_indx = map_indices[l];
-      counter_elements++;
-      creator.addElement(row_indx,col_indx);  
-    }
-  }
-  Matrix A_petsc(creator);
-  petsc_structure_Matrix(arr_extra_set,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,A_,A_petsc);
-  writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
-  // construct_submatrices_petsc(arr_extra_set,
-  //                             map_nT2oT,
-  //                             gridManager,
-  //                             F,
-  //                             variableSetDesc, 
-  //                             spaces,
-  //                             gridManager.grid(), 
-  //                             u,
-  //                             dt,
-  //                             sequenceOfTags, 
-  //                             startingIndexOfTag,
-  //                             map_II,
-  //                             map_GammaGamma,
-  //                             map_GammaNbr,
-  //                             sequenceOfsubdomains,
-  //                             map_indices, 
-  //                             i2t,
-  //                             A_,K_,M_,
-  //                             rhs_petsc_test,
-  //                             nDofs,
-  //                             options.assemblyThreads,
-  //                             write_to_file,
-  //                             matlab_dir,
-  //                             Fs_petcs,
-  //                             weights,
-  //                             subMatrices,
-  //                             subMatrices_M,
-  //                             subMatrices_K);
+
+  construct_submatrices_petsc(arr_extra_set,
+                              map_nT2oT,
+                              gridManager,
+                              F,
+                              variableSetDesc, 
+                              spaces,
+                              gridManager.grid(), 
+                              u,
+                              dt,
+                              sequenceOfTags, 
+                              startingIndexOfTag,
+                              map_II,
+                              map_GammaGamma,
+                              map_GammaGamma_noDuplicate,
+                              map_GammaNbr,
+                              sequenceOfsubdomains,
+                              map_indices, 
+                              i2t,
+                              A_,K_,M_,
+                              rhs_petsc_test,
+                              nDofs,
+                              options.assemblyThreads,
+                              write_to_file,
+                              matlab_dir,
+                              Fs_petcs,
+                              weights,
+                              subMatrices,
+                              subMatrices_M,
+                              subMatrices_K);
 
  //  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
  //  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
@@ -542,56 +533,56 @@ int main(int argc, char* argv[])
  // // //  } 
 
 
- //  // ------------------------------------------------------------------------------------
- //  // semi implicit + CG methods
- //  // ------------------------------------------------------------------------------------
- //  {
- //    if(run_implicit_CG){
- //      Vector sol_semi(nDofs);
- //      Functional F_semi( material,
- //                  gridManager.grid(),
- //                  spaces,
- //                  penalty,
- //                  sigma_i,
- //                  sigma_e,
- //                  C_m,  
- //                  R,
- //                  R_extra);
- //      F_semi.extracellular_materials(arr_extra_set);
- //      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
- //      uAll = component<0>(u);
- //      writeVTK(uAll,out+"/initialSemiF",
- //               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
- //      timer.start("linearly semi implicit method");
- //      std::cout << "---------------------------------------------" << std::endl;
- //      std::cout << "semi implict approach" << std::endl;
- //      std::cout << "---------------------------------------------" << std::endl;
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG){
+      Vector sol_semi(nDofs);
+      Functional F_semi( material,
+                  gridManager.grid(),
+                  spaces,
+                  penalty,
+                  sigma_i,
+                  sigma_e,
+                  C_m,  
+                  R,
+                  R_extra);
+      F_semi.extracellular_materials(arr_extra_set);
+      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+      writeVTK(uAll,out+"/initialSemiF",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+      timer.start("linearly semi implicit method");
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implict approach" << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
 
 
- //      uAll = component<0>(u);
- //      u = semiImplicit_CG_Jacobi( gridManager,
- //                                  F_semi,
- //                                  variableSetDesc,
- //                                  spaces,
- //                                  gridManager.grid(),
- //                                  options,
- //                                  out,
- //                                  cg_semi, 
- //                                  direct,
- //                                  u,
- //                                  uAll,
- //                                  sol_semi
- //                                  );  
- //      timer.stop("linearly semi implicit method");
+      uAll = component<0>(u);
+      u = semiImplicit_CG_Jacobi( gridManager,
+                                  F_semi,
+                                  variableSetDesc,
+                                  spaces,
+                                  gridManager.grid(),
+                                  options,
+                                  out,
+                                  cg_semi, 
+                                  direct,
+                                  u,
+                                  uAll,
+                                  sol_semi
+                                  );  
+      timer.stop("linearly semi implicit method");
 
- //      {
- //        Vector sol_semi_to_petsc(sol_semi);
- //        sol_semi_to_petsc = 0;
- //        //petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, sol_semi,sol_semi_to_petsc);
- //        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
- //      }
- //    }
- //  }
+      {
+        Vector sol_semi_to_petsc(sol_semi);
+        sol_semi_to_petsc = 0;
+         petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
+        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
+      }
+    }
+  }
 
  // //  // ------------------------------------------------------------------------------------
  // //  // semi implicit + CG + BDDC methods

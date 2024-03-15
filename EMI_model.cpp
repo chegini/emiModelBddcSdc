@@ -323,7 +323,10 @@ int main(int argc, char* argv[])
 
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra_set,
-                      e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs);
+                      e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, 
+                      map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
+                      map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
+                      map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs);
   int n_subdomains = map_t2l.size();
 
 
@@ -434,7 +437,7 @@ int main(int argc, char* argv[])
   rhs.write(rhs_vec_test.begin());
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
-  petsc_structure_rhs(sequenceOfTags, startingIndexOfTag, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
+  petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
   std::cout << "petsc_structure_rhs!" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
@@ -444,44 +447,62 @@ int main(int argc, char* argv[])
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!" << std::endl;
  
   std::vector<Vector> Fs_petcs;
-  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
   std::cout << "petsc_structure_rhs_petsc!" << std::endl;
- //  // ------------------------------------------------------------------------------------ 
- //  // compute rhs based on petsc structure
- //  // ------------------------------------------------------------------------------------
- //  std::vector<Matrix> subMatrices;
- //  std::vector<Matrix> subMatrices_M;
- //  std::vector<Matrix> subMatrices_K;
- //  std::vector<Vector> weights; 
- //  std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
- //  construct_submatrices_petsc(arr_extra_set,
- //                              map_nT2oT,
- //                              gridManager,
- //                              F,
- //                              variableSetDesc, 
- //                              spaces,
- //                              gridManager.grid(), 
- //                              u,
- //                              dt,
- //                              sequenceOfTags, 
- //                              startingIndexOfTag,
- //                              map_II,
- //                              map_GammaGamma,
- //                              map_GammaNbr,
- //                              sequenceOfsubdomains,
- //                              map_indices, 
- //                              i2t,
- //                              A_,K_,M_,
- //                              rhs_petsc_test,
- //                              nDofs,
- //                              options.assemblyThreads,
- //                              write_to_file,
- //                              matlab_dir,
- //                              Fs_petcs,
- //                              weights,
- //                              subMatrices,
- //                              subMatrices_M,
- //                              subMatrices_K);
+  // ------------------------------------------------------------------------------------ 
+  // compute rhs based on petsc structure
+  // ------------------------------------------------------------------------------------
+  std::vector<Matrix> subMatrices;
+  std::vector<Matrix> subMatrices_M;
+  std::vector<Matrix> subMatrices_K;
+  std::vector<Vector> weights; 
+  std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
+
+  NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
+  int counter_elements = 0;
+  for (int k=0; k<A_.N(); ++k)
+  {
+    auto row  = A_[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      int row_indx = map_indices[k];
+      int col_indx = map_indices[l];
+      counter_elements++;
+      creator.addElement(row_indx,col_indx);  
+    }
+  }
+  // Matrix A_petsc(creator);
+  // petsc_structure_Matrix_temp(arr_extra_set,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma,A_,A_petsc);
+
+  // construct_submatrices_petsc(arr_extra_set,
+  //                             map_nT2oT,
+  //                             gridManager,
+  //                             F,
+  //                             variableSetDesc, 
+  //                             spaces,
+  //                             gridManager.grid(), 
+  //                             u,
+  //                             dt,
+  //                             sequenceOfTags, 
+  //                             startingIndexOfTag,
+  //                             map_II,
+  //                             map_GammaGamma,
+  //                             map_GammaNbr,
+  //                             sequenceOfsubdomains,
+  //                             map_indices, 
+  //                             i2t,
+  //                             A_,K_,M_,
+  //                             rhs_petsc_test,
+  //                             nDofs,
+  //                             options.assemblyThreads,
+  //                             write_to_file,
+  //                             matlab_dir,
+  //                             Fs_petcs,
+  //                             weights,
+  //                             subMatrices,
+  //                             subMatrices_M,
+  //                             subMatrices_K);
 
  //  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
  //  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);

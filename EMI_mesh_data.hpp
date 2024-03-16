@@ -1322,6 +1322,27 @@ void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices, std:
 }
 
 template<class Matrix, class Matrix_>
+void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices, std::vector<int> i2Tag, int tag, double coef, std::vector<int> Interior, std::vector<int> Interface, Matrix_ &As_)
+{
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    {
+      for (auto ca=row.begin(); ca!=row.end(); ++ca)
+      {
+        int const l = ca.index();
+        if(i2Tag[Interior[k]] == tag and i2Tag[Interface[l]] == tag) {
+          As_[map_indices[Interior[k]]][map_indices[Interface[l]]] = *ca;
+        }else if((i2Tag[Interior[k]] == tag and i2Tag[Interface[l]] != tag) or
+                 (i2Tag[Interior[k]] != tag and i2Tag[Interface[l]] == tag) ){
+          As_[map_indices[Interior[k]]][map_indices[Interface[l]]] = coef*(*ca); 
+        }
+      }
+    }
+  }
+}
+
+template<class Matrix, class Matrix_>
 void insertMatrixBlockNbr(Matrix A_block, double coef, int x, int y, Matrix_ &As_)
 {  
   for (int k = 0; k < A_block.N(); ++k)
@@ -1365,6 +1386,7 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
                                 Matrix A_,
                                 Matrix M_,
                                 std::map<int,Matrix> massSubmatrices_subIndx,
+                                std::vector<int> i2Tag,
                                 int subIdx,
                                 Matrix &Ms)
 {
@@ -1378,6 +1400,7 @@ void exctract_petsc_mass_blocks(std::vector<int> sequenceOfTags,
   double coef = 0.5;
   auto M_GAMMAGAMMA_block = M_(Interface,Interface);
   insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface,Interface, Ms);
+  //insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, i2Tag, tag, coef, Interface,Interface, Ms);
 
   for ( const auto &gammaNbr : nbrs ){
     std::vector<int> Interface_nbr(gammaNbr.second.begin(),gammaNbr.second.end());
@@ -1647,10 +1670,10 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // construct mass blocks
     Matrix M_sub(creator);
     exctract_petsc_mass_blocks(sequenceOfTags, startingIndexOfTag, map_indices, sequenceOfsubdomains,
-                               map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,subIdx, M_sub);
+                               map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,i2Tag,subIdx, M_sub);
     Ms.push_back(M_sub);
     // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);
-    M_sum+=M_sub;
+    // M_sum+=M_sub;
     
     // -------------------------------------
     // added mass blocks to subMatrix

@@ -1508,16 +1508,16 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
     int x = startingIndexOfTag[tag];
     int y = startingIndexOfTag[tag];
 
-    auto A_Interior_block = A_(Interior,Interior);
+    auto A_Interior_block = K_(Interior,Interior);
     insertMatrixBlock(A_Interior_block, x, y, As_);
 
-    auto A_Interior_Interface_block = A_(Interior,interface);
+    auto A_Interior_Interface_block = K_(Interior,interface);
     insertMatrixBlock(A_Interior_Interface_block, x, y+Interior.size(), As_);
 
-    auto A_Interface_Interior_block = A_(interface,Interior);
+    auto A_Interface_Interior_block = K_(interface,Interior);
     insertMatrixBlock(A_Interface_Interior_block, x+Interior.size(), y, As_);
    
-    auto A_Interface_Interface_block = A_(interface,interface);
+    auto A_Interface_Interface_block = K_(interface,interface);
     insertMatrixBlock(A_Interface_Interface_block, x+Interior.size(), y+Interior.size(), As_);
 
     for (int nbr = 0; nbr <  map_II.size(); ++nbr)
@@ -1529,7 +1529,7 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
 
         x = startingIndexOfTag[tag] + Interior.size();
         y = startingIndexOfTag[tag_nbr] + Interior_nbr.size();
-        auto A_Interface_Interface_nbr_block = A_(interface,interface_nbr);
+        auto A_Interface_Interface_nbr_block = K_(interface,interface_nbr);
         insertMatrixBlockNbr(A_Interface_Interface_nbr_block, x, y, As_); 
       }
     }
@@ -1552,12 +1552,12 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
 
           x = startingIndexOfTag[tag] + Interior.size();
           y = startingIndexOfTag[tag_nbr];
-          auto A_Interface_Interior_nbr_block = A_(interface,Interior_nbr);
+          auto A_Interface_Interior_nbr_block = K_(interface,Interior_nbr);
           insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
 
           x = startingIndexOfTag[tag_nbr];
           y = startingIndexOfTag[tag]+ Interior.size();
-          A_Interface_Interior_nbr_block = A_(Interior_nbr,interface);
+          A_Interface_Interior_nbr_block = K_(Interior_nbr,interface);
           insertMatrixBlockNbr(A_Interface_Interior_nbr_block, x, y, As_); 
         }
       }
@@ -1678,7 +1678,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // -------------------------------------
     // added mass blocks to subMatrix
     // -------------------------------------
-    subMatrix+=M_sub;
+    // subMatrix+=M_sub;
 
     // construct stiffness + mass on the current subdomain blocks
     Matrix K_sub(creator);

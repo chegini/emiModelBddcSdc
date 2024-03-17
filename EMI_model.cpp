@@ -486,6 +486,7 @@ int main(int argc, char* argv[])
                               map_GammaNbr,
                               sequenceOfsubdomains,
                               map_indices,
+                              map_markCorners,
                               i2Tag,
                               i2t,
                               A_,K_,M_,

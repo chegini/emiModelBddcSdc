@@ -1361,6 +1361,24 @@ void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices , dou
 }
 
 template<class Matrix, class Matrix_>
+void insertMatrixBlock_mass_extra(Matrix A_block, std::map<int,int> map_indices , double coef, std::vector<int> Interior, std::vector<int> Interface, std::map<int,bool> map_markCorners, std::vector<int> i2Tag, int tag ,Matrix_ &As_)
+{
+  for (int k = 0; k < A_block.N(); ++k)
+  {
+    auto row  = A_block[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      if(Interior[k]==Interface[l] and map_markCorners[Interface[l]] and tag!=i2Tag[Interface[l]]){
+        std::cout << Interior[k]<< " &&&& " << Interface[l] << " tag: " << tag << " i2Tag[Interface[l]] " << i2Tag[Interface[l]] <<" coef*(*ca)" << coef*(*ca) << std::endl;
+      }
+      else 
+        As_[map_indices[Interior[k]]][map_indices[Interface[l]]] = coef*(*ca); 
+    }
+  }
+}
+
+template<class Matrix, class Matrix_>
 void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices, std::vector<int> i2Tag, int tag, std::vector<int> Interior, std::vector<int> Interface, Matrix_ &As_)
 {
   for (int k = 0; k < A_block.N(); ++k)
@@ -1440,6 +1458,7 @@ void exctract_petsc_mass_blocks( std::vector<int> arr_extra,
                                 std::vector<int> sequenceOfTags, 
                                 std::map<int,int> startingIndexOfTag,
                                 std::map<int,int> map_indices,
+                                std::map<int,bool> map_markCorners,
                                 std::map<int,std::vector<int>> sequenceOfsubdomains,
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma,
@@ -1461,12 +1480,13 @@ void exctract_petsc_mass_blocks( std::vector<int> arr_extra,
   std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
 
   int start = startingIndexOfTag[tag];
-
+  std::cout << "Interface,Interface"<<std::endl;
   double coef = 0.5;
   auto M_GAMMAGAMMA_block = M_(Interface,Interface);
-  insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface,Interface, Ms);
+  insertMatrixBlock_mass_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface,Interface, map_markCorners, i2Tag, tag, Ms);
   //insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, i2Tag, tag, coef, Interface,Interface, Ms);
 
+  std::cout << "Interface_nbr,Interface_nbr"<<std::endl;
   for ( const auto &gammaNbr : nbrs ){
     std::vector<int> Interface_nbr(gammaNbr.second.begin(),gammaNbr.second.end());
     int tag_nbr = gammaNbr.first; 
@@ -1480,12 +1500,14 @@ void exctract_petsc_mass_blocks( std::vector<int> arr_extra,
     }
     //if(not extra_cells)
     {
+      std::cout <<"tag: "<< tag << " tag_nbr: " << tag_nbr << std::endl;
       auto massSubmatrices_nbr = massSubmatrices_subIndx[tag_nbr];
       auto M_GAMMAGAMMA_block = massSubmatrices_nbr(Interface_nbr,Interface_nbr);
       insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface_nbr, Interface_nbr, Ms);      
     }
   }
 
+  std::cout << "Interface, Interface_nbr"<<std::endl;
   for ( const auto &gammaNbr : nbrs ){
     std::vector<int> Interface_nbr(gammaNbr.second.begin(),gammaNbr.second.end());
     int tag_nbr = gammaNbr.first; 
@@ -1497,13 +1519,24 @@ void exctract_petsc_mass_blocks( std::vector<int> arr_extra,
       extra_cells = true;
     }
 
+
     if(tag_nbr!=tag)
     {
-      std::cout <<"tag: "<< tag << " tag_nbr: " << tag_nbr << std::endl;
-      auto M_GAMMAGAMMA_block = M_(Interface,Interface_nbr);
-      insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface, Interface_nbr, Ms);
-      M_GAMMAGAMMA_block = M_(Interface_nbr,Interface);
-      insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface_nbr, Interface, Ms);
+      if(extra_cells){
+        std::cout <<"tag: "<< tag << " tag_nbr: " << tag_nbr << std::endl;
+        auto M_GAMMAGAMMA_block = M_(Interface,Interface_nbr);
+        insertMatrixBlock_mass_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface, Interface_nbr,map_markCorners, i2Tag, tag,Ms);
+        M_GAMMAGAMMA_block = M_(Interface_nbr,Interface);
+        insertMatrixBlock_mass_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface_nbr, Interface,map_markCorners, i2Tag, tag,Ms);        
+      }else{
+        std::cout <<"tag: "<< tag << " tag_nbr: " << tag_nbr << std::endl;
+        auto M_GAMMAGAMMA_block = M_(Interface,Interface_nbr);
+        insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface, Interface_nbr,Ms);
+        M_GAMMAGAMMA_block = M_(Interface_nbr,Interface);
+        insertMatrixBlock_extra(M_GAMMAGAMMA_block, map_indices, coef, Interface_nbr, Interface,Ms);  
+
+      }
+
     }
   }
   std::cout <<"============================================================"<< std::endl;
@@ -1669,6 +1702,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
                                                           std::map<int,std::vector<int>> sequenceOfsubdomains,
                                                           std::map<int, int> map_indices,
+                                                          std::map<int,bool> map_markCorners,
                                                           std::vector<int> i2Tag,
                                                           std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
@@ -1703,7 +1737,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     }
   }
   Matrix A_petsc(creator);
-  petsc_structure_Matrix(arr_extra,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,M_,M_,A_petsc);
+  petsc_structure_Matrix(arr_extra,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,A_,K_,A_petsc);
   writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
   // ------------------------------------------------------------------------------------ 
@@ -1755,7 +1789,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
 
     // construct mass blocks
     Matrix M_sub(creator);
-    exctract_petsc_mass_blocks(arr_extra, sequenceOfTags, startingIndexOfTag, map_indices, sequenceOfsubdomains,
+    exctract_petsc_mass_blocks(arr_extra, sequenceOfTags, startingIndexOfTag, map_indices, map_markCorners, sequenceOfsubdomains,
                                map_II,map_GammaGamma,map_GammaNbr,A_,M_,massSubmatrices_nbr,i2Tag,subIdx, M_sub);
     Ms.push_back(M_sub);
     // writeToMatlab(M_sub,rhs_petsc_test,"M_petsc_"+path);
@@ -1782,7 +1816,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // -------------------------------------
     // added stiffness blocks to subMatrix
     // -------------------------------------
-    // subMatrix+=K_sub;
+    subMatrix+=K_sub;
 
     subMatrices.push_back(subMatrix);
     // subMatrices_M.push_back(M_sub);

@@ -1158,6 +1158,66 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
   } 
 }
 
+void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::vector<std::set<int>> i2t, std::map<int,std::set<int>> map_GammaNbr_Nbr,  std::map<int,bool> & map_markCorners)
+{
+
+  std::vector<std::set<int>> i2t_all = i2t;
+  bool more_extras = arr_extra.size();
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+  std::set<int>::iterator itr;
+  std::set<int>::iterator itr_tags;
+
+  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  {
+    int tag = sequenceOfTags[subIdx];
+
+    std::vector<int> gammaNbr(map_GammaNbr_Nbr[tag].begin(), map_GammaNbr_Nbr[tag].end());
+    for (int i = 0; i < gammaNbr.size(); ++i)
+    {
+      std::set<int> s = i2t_all[gammaNbr[i]]; 
+      itr = s.find(tag);
+      if (itr == s.end())
+      {
+        s.insert(tag);
+        i2t_all[gammaNbr[i]] = s;
+      }
+    }
+  }
+
+  for (int i = 0; i < i2t_all.size(); ++i)
+  {
+    std::set<int> tags = i2t_all[i];
+    int count_extra = 0;
+    int count_intra = 0;
+    std::cout << i << ": ";
+    for (itr_tags = tags.begin(); itr_tags != tags.end(); ++itr_tags) {
+      itr = arr_extra_set.find(*itr_tags );
+      if (itr != arr_extra_set.end())
+      {
+        count_extra++;
+      }else{
+        count_intra++;
+      }
+
+      std::cout << *itr_tags << " ";
+    }
+    if(count_intra>0 and count_extra>1)
+    {
+      map_markCorners[i] = true;
+      std::cout << "~~~~~~" << std::endl;
+    }
+    std::cout << std::endl;
+  }
+
+  std::cout << "====================================================" <<std::endl;
+
+  std::map<int, bool>::iterator it_mark;
+  for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
+  {
+    std::cout << it_mark->first << std::endl;       
+  }
+}
+
 template<class Vector>
 void petsc_structure_rhs( std::vector<int> sequenceOfTags,
                           std::map<int,int> map_indices,
@@ -1643,7 +1703,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     }
   }
   Matrix A_petsc(creator);
-  petsc_structure_Matrix(arr_extra,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,A_,K_,A_petsc);
+  petsc_structure_Matrix(arr_extra,sequenceOfTags,startingIndexOfTag,map_II,map_GammaGamma_noDuplicate,M_,M_,A_petsc);
   writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
   // ------------------------------------------------------------------------------------ 
@@ -1722,7 +1782,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // -------------------------------------
     // added stiffness blocks to subMatrix
     // -------------------------------------
-    subMatrix+=K_sub;
+    // subMatrix+=K_sub;
 
     subMatrices.push_back(subMatrix);
     // subMatrices_M.push_back(M_sub);

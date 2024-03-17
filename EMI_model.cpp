@@ -176,8 +176,8 @@ int main(int argc, char* argv[])
   std::ifstream file_extra_list(extra_set);
   int n_extra_set;
   file_extra_list >> n_extra_set;
-  std::vector<int> arr_extra_set(n_extra_set);
-  getSubdomain(arr_extra_set, file_extra_list);
+  std::vector<int> arr_extra(n_extra_set);
+  getSubdomain(arr_extra, file_extra_list);
 
   std::ifstream file_intra_list(intra_set);
   int n_intra_set;
@@ -200,11 +200,11 @@ int main(int argc, char* argv[])
   // map all the extracellular tags to zero,
   // however in order to assemble matrices for BDDC, we need to consider the origonal tags numbers.  
   std::map<int, Dune::FieldVector<double,1>> map_OriginalTag_anzastTag;
-  for (int i = 0; i < arr_extra_set.size(); ++i)
+  for (int i = 0; i < arr_extra.size(); ++i)
   {
     Dune::FieldVector<double,1> extra_zero(0);
     extra_zero[0] = 0.0;
-    map_OriginalTag_anzastTag.insert({ arr_extra_set[i], extra_zero }); 
+    map_OriginalTag_anzastTag.insert({ arr_extra[i], extra_zero }); 
   }
   for (int i = 0; i < arr_intra_set.size(); ++i)
   {
@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
   FEFunctionSpace uSpace(gridManager,PiecewiseContinuousLagrangeMapper( gridManager.grid().leafGridView(),
                                                                         order,
                                                                         [&](auto cell) { 
-                                                                            if(arr_extra_set.size()>1){
+                                                                            if(arr_extra.size()>1){
                                                                               return map_OriginalTag_anzastTag[static_cast<int>(material.value(cell,zero))];
                                                                             }
                                                                             return material.value(cell,zero);
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
                 C_m,  
                 R,
                 R_extra);
-  F.extracellular_materials(arr_extra_set);
+  F.extracellular_materials(arr_extra);
   typedef typename Functional::OriginVars::VariableSet State;
   constexpr int nvars = Functional::AnsatzVars::noOfVariables;
   constexpr int neq = Functional::TestVars::noOfVariables;
@@ -325,8 +325,10 @@ int main(int argc, char* argv[])
   std::map<int,std::map<int,std::set<int>>> map_GammaNbr;        // GammaNbr
   std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
+  std::map<int,bool> map_markCorners;                              // if the indices on the corners when we have more than one extracellular
+
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
-                      material, arr_extra_set,
+                      material, arr_extra,
                       e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, 
                       map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
@@ -357,6 +359,8 @@ int main(int argc, char* argv[])
   }
   std::cout <<"==========================\n";
   }
+
+  marked_corners(arr_extra, sequenceOfTags, i2t, map_GammaNbr_Nbr, map_markCorners);
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -465,7 +469,7 @@ int main(int argc, char* argv[])
   std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
 
 
-  construct_submatrices_petsc(arr_extra_set,
+  construct_submatrices_petsc(arr_extra,
                               map_nT2oT,
                               gridManager,
                               F,
@@ -549,7 +553,7 @@ int main(int argc, char* argv[])
                   C_m,  
                   R,
                   R_extra);
-      F_semi.extracellular_materials(arr_extra_set);
+      F_semi.extracellular_materials(arr_extra);
       F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
       uAll = component<0>(u);
       writeVTK(uAll,out+"/initialSemiF",
@@ -604,7 +608,7 @@ int main(int argc, char* argv[])
  // //                          C_m,  
  // //                          R,
  // //                          R_extra);
- // //      F_BDDC.extracellular_materials(arr_extra_set);
+ // //      F_BDDC.extracellular_materials(arr_extra);
  // //      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
  // //      uAll = component<0>(u);
 

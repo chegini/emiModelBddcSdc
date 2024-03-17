@@ -1248,7 +1248,6 @@ template<class Vector>
 void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags, 
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
-                                std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
                                 Vector b_,
                                 std::map<int, int> map_indices,
                                 std::vector<std::vector<LocalDof>> sharedDofsAll,
@@ -1261,7 +1260,6 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
     int tag = sequenceOfTags[subIdx];
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
     std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
-    std::vector<int> gammaNbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
 
     Vector Fs_subIdx(b_.size()); 
     double coef = 2;
@@ -1276,15 +1274,6 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
     for (int indx = 0; indx < interface.size(); ++indx)
     {
       int pos = interface[indx];
-      int pos_map = map_indices[pos];
-      // Fs_subIdx[pos_map] = coef*b_[pos];
-      int alpha  = sharedDofsAll[pos].size();
-      Fs_subIdx[pos_map] = (1.0/alpha)*b_[pos];
-    }
-
-    for (int indx = 0; indx < gammaNbr.size(); ++indx)
-    {
-      int pos = gammaNbr[indx];
       int pos_map = map_indices[pos];
       // Fs_subIdx[pos_map] = coef*b_[pos];
       int alpha  = sharedDofsAll[pos].size();
@@ -1776,7 +1765,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       F.set_row_col_subdomain(row,col);
       assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
       Matrix sub_M_ = assembler.template get<Matrix>(false);
-      if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
+      // if(write_to_file) writeToMatlab(assembler,matlab_dir+"/subMatrixM_"+path, "M"); 
       massSubmatrices_nbr[row] = sub_M_;
     }
 
@@ -1875,9 +1864,9 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
 
 void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
                                               std::map<int,std::set<int>> map_II,
-                                              std::map<int,std::set<int>> map_GammaGamma,
-                                              std::map<int,std::set<int>> map_GammaGamma_W_Nbr,
-                                              std::map<std::pair<int,int>, int> map_indices, 
+                                              std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
+                                              std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
+                                              std::map<int, int> map_indices, 
                                               std::string matlab_dir)
 {
   double precision = 16;
@@ -1886,17 +1875,13 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
     int tag = sequenceOfTags[i]; 
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
 
-    std::string Ii = matlab_dir+"/BDDC_I"+ std::to_string(i+1) + ".txt";
+    std::string Ii = matlab_dir+"/BDDC_I"+ std::to_string(tag) + ".txt";
     std::ofstream Iii(Ii.c_str());
     Iii.precision(precision);
 
     for (int j = 0; j < Interior.size(); ++j)
     {
-      std::pair<int,int> pairs;
-      pairs.first = Interior[j];
-      pairs.second = tag;
-
-      Iii << map_indices[pairs]+1 << " ";   
+      Iii << map_indices[Interior[j]]+1 << " ";   
     }
   }
 
@@ -1908,34 +1893,26 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
   for (int i = 0; i < sequenceOfTags.size(); ++i)
   {
     int tag = sequenceOfTags[i];
-    std::vector<int> interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-    std::vector<int> gamma_W_Nbr(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end());
+    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+    std::vector<int> gamma_W_Nbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
 
-    std::string gammai = matlab_dir+"/BDDC_Gamma"+ std::to_string(i+1) + ".txt";
+    std::string gammai = matlab_dir+"/BDDC_Gamma"+ std::to_string(tag) + ".txt";
     std::ofstream Gammaii(gammai.c_str());
     Gammaii.precision(precision);
 
-    std::string gammai_w_nbr = matlab_dir+"/BDDC_Gamma_w_nbr"+ std::to_string(i+1) + ".txt";
+    std::string gammai_w_nbr = matlab_dir+"/BDDC_Gamma_w_nbr"+ std::to_string(tag) + ".txt";
     std::ofstream Gammaii_w_nbr(gammai_w_nbr.c_str());
     Gammaii_w_nbr.precision(precision);
 
     for (int j = 0; j < gamma_W_Nbr.size(); ++j)
     {
-      std::pair<int,int> pairs;
-      pairs.first = gamma_W_Nbr[j];
-      pairs.second = tag;
-
-      Gammaii_w_nbr << map_indices[pairs]+1 << " "; 
+      Gammaii_w_nbr << map_indices[gamma_W_Nbr[j]]+1 << " "; 
     }
 
     for (int j = 0; j < interface.size(); ++j)
     {
-      std::pair<int,int> pairs;
-      pairs.first = interface[j];
-      pairs.second = tag;
-
-      Gammaii << map_indices[pairs]+1 << " "; 
-      GammaAll << map_indices[pairs]+1 << " ";   
+      Gammaii << map_indices[interface[j]]+1 << " "; 
+      GammaAll << map_indices[interface[j]]+1 << " ";   
     }
   }
 }

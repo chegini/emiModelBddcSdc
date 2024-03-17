@@ -457,7 +457,7 @@ int main(int argc, char* argv[])
   std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!" << std::endl;
  
   std::vector<Vector> Fs_petcs;
-  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
   std::cout << "petsc_structure_rhs_petsc!" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -501,8 +501,8 @@ int main(int argc, char* argv[])
                               subMatrices_M,
                               subMatrices_K);
 
- //  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
- //  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
+  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
 
  //  // ------------------------------------------------------------------------------------ 
  //  // compute submatrices and rhs based on Kaskade structure

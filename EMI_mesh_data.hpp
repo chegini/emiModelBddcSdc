@@ -1189,7 +1189,7 @@ void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
     std::set<int> tags = i2t_all[i];
     int count_extra = 0;
     int count_intra = 0;
-    std::cout << i << ": ";
+    // std::cout << i << ": ";
     for (itr_tags = tags.begin(); itr_tags != tags.end(); ++itr_tags) {
       itr = arr_extra_set.find(*itr_tags );
       if (itr != arr_extra_set.end())
@@ -1199,22 +1199,20 @@ void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
         count_intra++;
       }
 
-      std::cout << *itr_tags << " ";
+      // std::cout << *itr_tags << " ";
     }
     if(count_intra>0 and count_extra>1)
     {
       map_markCorners[i] = true;
-      std::cout << "~~~~~~" << std::endl;
     }
-    std::cout << std::endl;
   }
 
-  std::cout << "====================================================" <<std::endl;
-
-  std::map<int, bool>::iterator it_mark;
-  for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
-  {
-    std::cout << it_mark->first << std::endl;       
+  if(false){
+    std::map<int, bool>::iterator it_mark;
+    for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
+    {
+      std::cout << it_mark->first << std::endl;       
+    }    
   }
 }
 
@@ -1370,7 +1368,7 @@ void insertMatrixBlock_mass_extra(Matrix A_block, std::map<int,int> map_indices 
     {
       int const l = ca.index();
       if(Interior[k]==Interface[l] and map_markCorners[Interface[l]] and tag!=i2Tag[Interface[l]]){
-        std::cout << Interior[k]<< " &&&& " << Interface[l] << " tag: " << tag << " i2Tag[Interface[l]] " << i2Tag[Interface[l]] <<" coef*(*ca)" << coef*(*ca) << std::endl;
+        // std::cout << Interior[k]<< " &&&& " << Interface[l] << " tag: " << tag << " i2Tag[Interface[l]] " << i2Tag[Interface[l]] <<" coef*(*ca)" << coef*(*ca) << std::endl;
       }
       else 
         As_[map_indices[Interior[k]]][map_indices[Interface[l]]] = coef*(*ca); 
@@ -1846,31 +1844,31 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   // // // then 
   // // // -------------------------------------
 
-  // for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  // {
-  //   // std::cout << "============================" <<std::endl;
-  //   // std::cout << "subIdx, weights " << subIdx <<std::endl;
-  //   // std::cout << "============================" <<std::endl;
-  //   std::string path = std::to_string(subIdx+1);
-  //   Matrix subMatrix(creator);
-  //   subMatrix = subMatrices[subIdx];
-  //   Vector Fs_petcs_sub =  rhs_petsc_test;
-  //   Vector weights_sub(subMatrix.N()); 
-  //   // optimize it by iterating only on the interfaces
-  //   for (int k = 0; k < subMatrix.N(); ++k)
-  //   {
-  //     double subvalue = subMatrix[k][k];
-  //     double originalvalue = A_petsc[k][k];
-  //     double weight = (subvalue/originalvalue);
-  //     Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
-  //     weights_sub[k] = weight;
-  //     // std::cout << k << " : "<< weight <<std::endl;
-  //   }
-  //   // std::cout << "============================" <<std::endl;
-  //   Fs_petcs[subIdx] = Fs_petcs_sub;
-  //   weights.push_back(weights_sub);
-  //   // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
-  // }
+  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  {
+    // std::cout << "============================" <<std::endl;
+    // std::cout << "subIdx, weights " << subIdx <<std::endl;
+    // std::cout << "============================" <<std::endl;
+    std::string path = std::to_string(subIdx+1);
+    Matrix subMatrix(creator);
+    subMatrix = subMatrices[subIdx];
+    Vector Fs_petcs_sub =  rhs_petsc_test;
+    Vector weights_sub(subMatrix.N()); 
+    // optimize it by iterating only on the interfaces
+    for (int k = 0; k < subMatrix.N(); ++k)
+    {
+      double subvalue = subMatrix[k][k];
+      double originalvalue = A_petsc[k][k];
+      double weight = (subvalue/originalvalue);
+      Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
+      weights_sub[k] = weight;
+      // std::cout << k << " : "<< weight <<std::endl;
+    }
+    // std::cout << "============================" <<std::endl;
+    Fs_petcs[subIdx] = Fs_petcs_sub;
+    weights.push_back(weights_sub);
+    // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
+  }
 
   return u;
 }

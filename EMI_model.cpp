@@ -333,7 +333,6 @@ int main(int argc, char* argv[])
                       map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains);
   int n_subdomains = map_II.size();
 
-
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
   computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT);
@@ -370,7 +369,7 @@ int main(int argc, char* argv[])
   std::map<int,std::unordered_map<int, int>> local2Global;
   std::map<int,std::unordered_map<int, int>> global2Local;
   std::map<int,std::vector<int>> globalIndices;
-  subdomain_indices(sequenceOfTags, map_II, map_GammaGamma_W_Nbr, local2Global, global2Local, globalIndices);
+  subdomain_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, local2Global, global2Local, globalIndices);
 
   std::map<int, int> map_indices;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices);
@@ -427,10 +426,10 @@ int main(int argc, char* argv[])
   // get stiffness 
   F.Mass_stiff(0);
   SemiImplicitEulerStep<Functional>  eqK(&F,options.dt);
-  eqK.setTau(1);
+  // eqK.setTau(1);
   assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
   K_ = assembler.template get<Matrix>(false);
-  K_*=(-options.dt);
+  //K_*=(-options.dt);
   writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
   
   // ------------------------------------------------------------------------------------ 
@@ -475,6 +474,8 @@ int main(int argc, char* argv[])
                               map_GammaGamma,
                               map_GammaGamma_noDuplicate,
                               map_GammaNbr,
+                              map_GammaNbr_Nbr_noDuplicate,
+                              sequenceOfsubdomains,
                               map_indices,
                               map_markCorners,
                               i2Tag,
@@ -491,36 +492,41 @@ int main(int argc, char* argv[])
                               subMatrices_M,
                               subMatrices_K);
   if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+
   // ------------------------------------------------------------------------------------ 
   // compute submatrices and rhs based on Kaskade structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
+  Vector rhs_kaskade(nDofs);
+  rhs.write(rhs_kaskade.begin());
+
   std::vector<Matrix> As;
   std::vector<Matrix> Ms;
   std::vector<Matrix> Ks;
   std::vector<Vector> Fs;
   construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
               sequenceOfsubdomains, map_indices, i2t,
-              rhs_petsc_test, 
               subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 
  
 
   construct_Fs(sequenceOfTags, startingIndexOfTag, 
               map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
-              rhs_petsc_test, sharedDofsKaskade, weights, map_indices, Fs);
+              rhs_kaskade, sharedDofsKaskade, weights, map_indices, Fs);
  
- if(write_to_file and false){
+ if(write_to_file){
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
-      std::string path = std::to_string(subIdx+1);
+      int tag = sequenceOfTags[subIdx];
+      std::string path = std::to_string(tag);
       writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
   }
   if(write_to_file){
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
-      std::string path = std::to_string(subIdx+1);
+      int tag = sequenceOfTags[subIdx];
+      std::string path = std::to_string(tag);
       writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
       writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
     }  
@@ -601,40 +607,39 @@ int main(int argc, char* argv[])
       F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
       uAll = component<0>(u);
 
-      // u = semiImplicit_CG_BDDC( gridManager,
-      //                           F_BDDC,
-      //                           variableSetDesc,
-      //                           spaces,
-      //                           gridManager.grid(),
-      //                           options,
-      //                           out,
-      //                           cg_semi, 
-      //                           direct,
-      //                           u,
-      //                           uAll,
-      //                           sol_BDDC,
-      //                           sharedDofsKaskade,
-      //                           interfaceTypes,
-      //                           n_subdomains,
-      //                           As,
-      //                           map_IGamma,
-      //                           sequenceOfTags, 
-      //                           startingIndexOfTag,
-      //                           map_II,
-      //                           map_GammaGamma,
-      //                           map_GammaNbr,
-      //                           sequenceOfsubdomains,
-      //                           weights,
-      //                           Fs,
-      //                           cg_solver,
-      //                           iter_cg_with_bddc,
-      //                           local2Global,
-      //                           global2Local,
-      //                           tol,
-      //                           map_t2l,
-      //                           map_indices,
-      //                           BDDC_verbose
-      //                           );    
+      u = semiImplicit_CG_BDDC( gridManager,
+                                F_BDDC,
+                                variableSetDesc,
+                                spaces,
+                                gridManager.grid(),
+                                options,
+                                out,
+                                cg_semi, 
+                                direct,
+                                u,
+                                uAll,
+                                sol_BDDC,
+                                sharedDofsKaskade,
+                                interfaceTypes,
+                                n_subdomains,
+                                As,
+                                map_IGamma,
+                                sequenceOfTags, 
+                                startingIndexOfTag,
+                                map_II,
+                                map_GammaGamma_noDuplicate,
+                                map_GammaNbr_Nbr_noDuplicate,
+                                weights,
+                                Fs,
+                                cg_solver,
+                                iter_cg_with_bddc,
+                                local2Global,
+                                global2Local,
+                                tol,
+                                map_t2l,
+                                map_indices,
+                                BDDC_verbose
+                                );    
     }  
   }
 

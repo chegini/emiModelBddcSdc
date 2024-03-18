@@ -250,8 +250,6 @@ int main(int argc, char* argv[])
   typedef typename Functional::OriginVars::VariableSet State;
   constexpr int nvars = Functional::AnsatzVars::noOfVariables;
   constexpr int neq = Functional::TestVars::noOfVariables;
-  std::cout << " neq "<< neq <<std::endl;
-  std::cout << " nvars "<< nvars <<std::endl;
 
   using LinearSpace = VariableSetDesc::CoefficientVectorRepresentation<0,neq>::type;
 
@@ -267,8 +265,8 @@ int main(int argc, char* argv[])
   auto up = variableSetDesc.variableSet();
   auto u = variableSetDesc.variableSet();
   auto uM = variableSetDesc.variableSet();
-  std::cout << " The numeber of dofs: "<< nDofs <<std::endl;
-  std::cout << " The numeber of cells :: "<<gridManager.grid().size(0)<<std::endl;
+  std::cout << "The numeber of dofs: "<< nDofs <<std::endl;
+  std::cout << "The numeber of cells :: "<<gridManager.grid().size(0)<<std::endl;
   size_t dof_size = variableSetDesc.degreesOfFreedom(0, 1);
    // ------------------------------------------------------------------------------------
   // initila the data
@@ -332,14 +330,13 @@ int main(int argc, char* argv[])
                       e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, 
                       map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
-                      map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs);
+                      map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains);
   int n_subdomains = map_II.size();
 
 
   std::vector<int> sequenceOfTags(n_subdomains);
   std::map<int,int> startingIndexOfTag;
-  std::cout << "coord.size() "<< coord.size() <<std::endl;
-  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT, sequenceOfsubdomains);
+  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT);
   if(false)
   {
   std::cout <<"==========================\n";
@@ -377,11 +374,9 @@ int main(int argc, char* argv[])
 
   std::map<int, int> map_indices;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices);
-  std::cout << "map_kaskade2petcs "<<std::endl;
  
   std::set<std::set<int>> i2iSet_;
   removeInnerIndices_i2i(i2i);
-  std::cout << "i2i.size()"<< i2i.size() <<std::endl;
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
   if(false)
@@ -400,10 +395,10 @@ int main(int argc, char* argv[])
   }
 
 
-  // return 0;
+  std::cout << "write Dirichlet and coordinates!" << std::endl;
   int mesh_dim = SPACEDIM==2? 2:3;
   write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir);
-  std::cout << "write_Dirichlet_and_coordinates!!!!!\n\n\n\n" << std::endl;
+  
 
   // ------------------------------------------------------------------------------------
   // - i2iSet
@@ -448,27 +443,23 @@ int main(int argc, char* argv[])
   Vector rhs_petsc_test(nDofs);
   rhs.write(rhs_petsc_test.begin());
   petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_original,rhs_petsc_test);
-  std::cout << "petsc_structure_rhs!" << std::endl;
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
   std::vector<std::vector<LocalDof>> sharedDofsKaskade;
   compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
-  std::cout << "generated sub matrices of cell by cell for BDDC in petsc(data for Kaskade)~!" << std::endl;
- 
-  std::vector<Vector> Fs_petcs;
-  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
-  std::cout << "petsc_structure_rhs_petsc!" << std::endl;
+
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
+  std::cout << "generated sub matrices of EMI model for BDDC in petsc!" << std::endl;
+  std::vector<Vector> Fs_petcs;
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+
   std::vector<Matrix> subMatrices;
   std::vector<Matrix> subMatrices_M;
   std::vector<Matrix> subMatrices_K;
-  std::vector<Vector> weights; 
-  std::cout<< "K_.N() = "<< K_.N() << ", M_.N() = "<< M_.N() << ", A_.N() = "<< A_.N() << std::endl;
-
-
+  std::map<int, Vector> weights; 
   construct_submatrices_petsc(arr_extra,
                               map_nT2oT,
                               gridManager,
@@ -484,7 +475,6 @@ int main(int argc, char* argv[])
                               map_GammaGamma,
                               map_GammaGamma_noDuplicate,
                               map_GammaNbr,
-                              sequenceOfsubdomains,
                               map_indices,
                               map_markCorners,
                               i2Tag,
@@ -500,43 +490,41 @@ int main(int argc, char* argv[])
                               subMatrices,
                               subMatrices_M,
                               subMatrices_K);
-
-  std::cout << "construct_submatrices_petsc!!!!!\n\n\n\n" << std::endl;
   if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+  // ------------------------------------------------------------------------------------ 
+  // compute submatrices and rhs based on Kaskade structure
+  // ------------------------------------------------------------------------------------
+  std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
+  std::vector<Matrix> As;
+  std::vector<Matrix> Ms;
+  std::vector<Matrix> Ks;
+  std::vector<Vector> Fs;
+  construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
+              sequenceOfsubdomains, map_indices, i2t,
+              rhs_petsc_test, 
+              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
 
- //  // ------------------------------------------------------------------------------------ 
- //  // compute submatrices and rhs based on Kaskade structure
- //  // ------------------------------------------------------------------------------------
- //  std::vector<Matrix> As;
- //  std::vector<Matrix> Ms;
- //  std::vector<Matrix> Ks;
- //  std::vector<Vector> Fs;
- //  // construct_As(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, 
- //  //             sequenceOfsubdomains, map_indices, i2t,
- //  //             rhs_petsc_test, 
- //  //             subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
-
-
- // // //  Vector rhs_vec_test_new(nDofs);
- // // //  rhs.write(rhs_vec_test_new.begin());
-
- // // //  construct_Fs(sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaNbr, sequenceOfsubdomains, rhs_vec_test_new, sharedDofsKaskade, weights, map_indices, Fs);
  
- // // // if(write_to_file){
- // // //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
- // // //    {
- // // //      std::string path = std::to_string(subIdx+1);
- // // //      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
- // // //    }  
- // // //  }
- // // //  if(write_to_file){
- // // //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
- // // //    {
- // // //      std::string path = std::to_string(subIdx+1);
- // // //      writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
- // // //      writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
- // // //    }  
- // // //  } 
+
+  construct_Fs(sequenceOfTags, startingIndexOfTag, 
+              map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
+              rhs_petsc_test, sharedDofsKaskade, weights, map_indices, Fs);
+ 
+ if(write_to_file and false){
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+      std::string path = std::to_string(subIdx+1);
+      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+    }  
+  }
+  if(write_to_file){
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+      std::string path = std::to_string(subIdx+1);
+      writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
+      writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
+    }  
+  } 
 
 
   // ------------------------------------------------------------------------------------
@@ -590,65 +578,65 @@ int main(int argc, char* argv[])
     }
   }
 
- // //  // ------------------------------------------------------------------------------------
- // //  // semi implicit + CG + BDDC methods
- // //  // ------------------------------------------------------------------------------------
- // //  {
- // //    if(run_implicit_CG_BDDC)
- // //    {
- // //      std::cout << "---------------------------------------------" << std::endl;
- // //      std::cout << "semi implicit with CG + BDDC                  " << std::endl;
- // //      std::cout << "---------------------------------------------" << std::endl;
- // //      Vector sol_BDDC(nDofs);
- // //      Functional F_BDDC(  material,
- // //                          gridManager.grid(),
- // //                          spaces,
- // //                          penalty,
- // //                          sigma_i,
- // //                          sigma_e,
- // //                          C_m,  
- // //                          R,
- // //                          R_extra);
- // //      F_BDDC.extracellular_materials(arr_extra);
- // //      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
- // //      uAll = component<0>(u);
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_BDDC)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with CG + BDDC                  " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC(nDofs);
+      Functional F_BDDC(  material,
+                          gridManager.grid(),
+                          spaces,
+                          penalty,
+                          sigma_i,
+                          sigma_e,
+                          C_m,  
+                          R,
+                          R_extra);
+      F_BDDC.extracellular_materials(arr_extra);
+      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
 
- // //      // u = semiImplicit_CG_BDDC( gridManager,
- // //      //                           F_BDDC,
- // //      //                           variableSetDesc,
- // //      //                           spaces,
- // //      //                           gridManager.grid(),
- // //      //                           options,
- // //      //                           out,
- // //      //                           cg_semi, 
- // //      //                           direct,
- // //      //                           u,
- // //      //                           uAll,
- // //      //                           sol_BDDC,
- // //      //                           sharedDofsKaskade,
- // //      //                           interfaceTypes,
- // //      //                           n_subdomains,
- // //      //                           As,
- // //      //                           map_IGamma,
- // //      //                           sequenceOfTags, 
- // //      //                           startingIndexOfTag,
- // //      //                           map_II,
- // //      //                           map_GammaGamma,
- // //      //                           map_GammaNbr,
- // //      //                           sequenceOfsubdomains,
- // //      //                           weights,
- // //      //                           Fs,
- // //      //                           cg_solver,
- // //      //                           iter_cg_with_bddc,
- // //      //                           local2Global,
- // //      //                           global2Local,
- // //      //                           tol,
- // //      //                           map_t2l,
- // //      //                           map_indices,
- // //      //                           BDDC_verbose
- // //      //                           );    
- // //    }  
- // //  }
+      // u = semiImplicit_CG_BDDC( gridManager,
+      //                           F_BDDC,
+      //                           variableSetDesc,
+      //                           spaces,
+      //                           gridManager.grid(),
+      //                           options,
+      //                           out,
+      //                           cg_semi, 
+      //                           direct,
+      //                           u,
+      //                           uAll,
+      //                           sol_BDDC,
+      //                           sharedDofsKaskade,
+      //                           interfaceTypes,
+      //                           n_subdomains,
+      //                           As,
+      //                           map_IGamma,
+      //                           sequenceOfTags, 
+      //                           startingIndexOfTag,
+      //                           map_II,
+      //                           map_GammaGamma,
+      //                           map_GammaNbr,
+      //                           sequenceOfsubdomains,
+      //                           weights,
+      //                           Fs,
+      //                           cg_solver,
+      //                           iter_cg_with_bddc,
+      //                           local2Global,
+      //                           global2Local,
+      //                           tol,
+      //                           map_t2l,
+      //                           map_indices,
+      //                           BDDC_verbose
+      //                           );    
+    }  
+  }
 
   return 0;
 }

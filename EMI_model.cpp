@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -64,10 +64,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
   std::cout <<"==========================\n";
   }
 
-  marked_corners(arr_extra, sequenceOfTags, i2t, map_GammaNbr_Nbr, map_markCorners);
+
   // ------------------------------------------------------------------------------------
   // compute the data petsc from the mesh data
   // - local2Global
@@ -374,6 +374,8 @@ int main(int argc, char* argv[])
   std::map<int, int> map_indices;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices);
  
+
+
   std::set<std::set<int>> i2iSet_;
   removeInnerIndices_i2i(i2i);
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
@@ -393,10 +395,11 @@ int main(int argc, char* argv[])
     std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
   }
 
+  marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
 
   std::cout << "write Dirichlet and coordinates!" << std::endl;
   int mesh_dim = SPACEDIM==2? 2:3;
-  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir);
+  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, arr_extra, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir);
   
 
   // ------------------------------------------------------------------------------------
@@ -584,6 +587,7 @@ int main(int argc, char* argv[])
     }
   }
 
+  return 0;
   // ------------------------------------------------------------------------------------
   // semi implicit + CG + BDDC methods
   // ------------------------------------------------------------------------------------

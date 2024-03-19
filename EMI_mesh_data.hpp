@@ -406,7 +406,7 @@ void mesh_data_structure( FSElement& fse,
     }
   }
 
-  if(true)
+  if(false)
   {
     std::cout << "\ni2Tag "<< std::endl;
     for (int i = 0; i < i2Tag.size(); ++i)
@@ -641,7 +641,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
     global2Local[tag] = global2Local_subIdx;
     globalIndices[tag] = globalIndices_subIdx;
 
-    if(true){
+    if(false){
       std::cout <<" size of globalIndices_subIdx " << globalIndices_subIdx.size() << std::endl; 
       for (int i = 0; i < globalIndices_subIdx.size(); ++i)
       {
@@ -1058,6 +1058,7 @@ void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags,
 template<class FSElement, class Material>
 void write_Dirichlet_and_coordinates( FSElement& fse, 
                                       Material const & material, 
+                                      std::vector<int> arr_extra,
                                       std::vector<std::vector<int>> e2i,
                                       std::map<int, int> map_indices,
                                       std::map<std::pair<int, int>, std::vector<double>> & coord,
@@ -1073,6 +1074,7 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
   markedIndicesForDirichlet(fse,
                             GetGlobalCoordinate(), 
                             material,
+                            arr_extra,
                             e2i,
                             dofsDirichlet);
 
@@ -1101,9 +1103,9 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
 
     for (int j = 0; j < indexCoordinates_petsc.size(); ++j){
       if(dim==2) 
-        f << j << ":"<< indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
+        f << indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
       if(dim==3) 
-        f << j << ":"<<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
     }
   }
 
@@ -1145,7 +1147,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
   // } 
 }
 
-void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::vector<std::set<int>> i2t, std::map<int,std::set<int>> map_GammaNbr_Nbr,  std::map<int,bool> & map_markCorners)
+void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::map<int,int> map_indices, std::vector<std::set<int>> i2t, std::map<int,std::set<int>> map_GammaNbr_Nbr,  std::string matlab_dir, std::map<int,bool> & map_markCorners)
 {
 
   std::vector<std::set<int>> i2t_all = i2t;
@@ -1194,13 +1196,16 @@ void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
     }
   }
 
-  if(false){
-    std::map<int, bool>::iterator it_mark;
-    for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
-    {
-      std::cout << it_mark->first << std::endl;       
-    }    
-  }
+  double precision = 16;
+  std::string fname = matlab_dir+"/corners.m";
+  std::ofstream f(fname.c_str());
+  f.precision(precision);
+  std::map<int, bool>::iterator it_mark;
+  for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
+  {
+     f << map_indices[it_mark->first] << " ";     
+  } 
+  f << "\n";   
 }
 
 template<class Vector>

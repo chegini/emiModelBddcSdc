@@ -373,9 +373,13 @@ template< class FSElement, class Function, class Material>
 void markedIndicesForDirichlet(FSElement& fse,  
                                  Function const& fu, 
                                  Material const & material,
+                                 std::vector<int> arr_extra,
                                  std::vector<std::vector<int>> & cell2Indice, 
-                                 std::set<int> & dofsDiriichlet )
+                                 std::set<int> & dofsDirichlet )
 {
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+  std::set<int>::iterator itr;
+
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
 
@@ -398,16 +402,22 @@ void markedIndicesForDirichlet(FSElement& fse,
     auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
     globalValues.setSize(localCoordinate.size(),1);
 
+    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+    int material_var = material.value(*ci,zero);
+
+    itr = arr_extra_set.find(material_var);
     using Cell = decltype(ci);
     auto dof_u = fse.space().mapper().globalIndices(*ci);
     int nrNodes = dof_u.size();
 
-    for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
-      if(!intersection.neighbor()){
+    for(auto const& intersection : intersections(fse.space().gridView(),*ci))
+    {
+      if(!intersection.neighbor() and itr!=arr_extra_set.end())
+      {
         for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
         {
           int index_c1 = cell2Indice[cellIndex][i];
-          dofsDiriichlet.insert(index_c1);
+          dofsDirichlet.insert(index_c1);
         }
       }
     }

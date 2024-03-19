@@ -514,7 +514,7 @@ int main(int argc, char* argv[])
               map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
               rhs_kaskade, sharedDofsKaskade, weights, map_indices, Fs);
  
- if(write_to_file){
+ if(write_to_file and false){
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
       int tag = sequenceOfTags[subIdx];
@@ -522,7 +522,7 @@ int main(int argc, char* argv[])
       writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
   }
-  if(write_to_file){
+  if(write_to_file and false){
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
       int tag = sequenceOfTags[subIdx];

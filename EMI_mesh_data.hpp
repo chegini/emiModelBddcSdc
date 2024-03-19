@@ -1735,14 +1735,14 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     }
 
     subMatrix+=subMatrix_mass;
-    if(write_to_file) writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"mass"+path,matlab_dir, false);
+    // if(write_to_file) writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"mass"+path,matlab_dir, false);
 
 
     // construct stiffness
     Matrix subMatrix_stiffness(creator);
     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
     subMatrix+=subMatrix_stiffness;
-    if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
+    // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
     
    
     subMatrices.push_back(subMatrix);

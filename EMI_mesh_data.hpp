@@ -1147,7 +1147,8 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
   // } 
 }
 
-void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::map<int,int> map_indices, std::vector<std::set<int>> i2t, std::map<int,std::set<int>> map_GammaNbr_Nbr,  std::string matlab_dir, std::map<int,bool> & map_markCorners)
+void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::map<int,int> map_indices, std::vector<std::set<int>> i2t, 
+                    std::set<std::set<int>> i2iSet, std::map<int,std::set<int>> map_GammaNbr_Nbr,  std::string matlab_dir, std::map<int,bool> & map_markCorners)
 {
 
   std::vector<std::set<int>> i2t_all = i2t;
@@ -1195,17 +1196,7 @@ void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
       map_markCorners[i] = true;
     }
   }
-
-  double precision = 16;
-  std::string fname = matlab_dir+"/corners.m";
-  std::ofstream f(fname.c_str());
-  f.precision(precision);
-  std::map<int, bool>::iterator it_mark;
-  for (it_mark = map_markCorners.begin(); it_mark != map_markCorners.end(); it_mark++)
-  {
-     f << map_indices[it_mark->first] << " ";     
-  } 
-  f << "\n";   
+ 
 }
 
 template<class Vector>

@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
   std::map<int,std::vector<int>> sequenceOfsubdomains;           // sequence of neighboring tags for each subdomain
 
   std::map<int,bool> map_markCorners;                              // if the indices on the corners when we have more than one extracellular
-
+  std::set<int> corners;
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra,
                       e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, 
@@ -380,22 +380,29 @@ int main(int argc, char* argv[])
   removeInnerIndices_i2i(i2i);
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
-  if(false)
   {
-    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
+    double precision = 16;
+    std::string fname = matlab_dir+"/corners.m";
+    std::ofstream f(fname.c_str());
+
     std::set<std::set<int>>::iterator it;
-    for (it = i2iSet.begin(); it != i2iSet.end(); ++it) {
+    for (it = i2iSet.begin(); it != i2iSet.end(); ++it) 
+    {
       std::set<int> s = *it;
       std::set<int>::iterator itr;
-      for (itr = s.begin(); itr != s.end(); ++itr) {
-        std::cout << *itr << " ";
+
+      for (itr = s.begin(); itr != s.end(); ++itr) 
+      {
+        if(s.size()>2) corners.insert(map_indices[*itr]);
+        if(s.size()>2) f << map_indices[*itr] << " "; 
+       if(false) std::cout << map_indices[*itr]<< " ";
       }
-      std::cout <<std::endl;
+      if(s.size()>2) f << "\n";
+      if(false) std::cout <<std::endl;
     }
-    std::cout <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" <<std::endl;
   }
 
-  marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
+  marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, i2iSet, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
 
   std::cout << "write Dirichlet and coordinates!" << std::endl;
   int mesh_dim = SPACEDIM==2? 2:3;

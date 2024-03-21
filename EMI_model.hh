@@ -130,15 +130,14 @@ public:
       // after multiplication with test function phi and integration by parts, represented by
       // - nabla phi * sigma * nabla u. Note the minus sign!
 
-      // Scalar p = -1;
-      //       // if(F.mass>1)
-      //   p = 1;
+      Scalar p = -1;
 
-      double  p = 1;
       if( F.mass==1){
         p = 0;    
       } 
 
+      if(F.mass>1)
+        p = 1;
 
       if(extra_cell)  
       {
@@ -215,12 +214,12 @@ public:
     Dune::FieldMatrix<Scalar,TestVars::template Components<row>::m,AnsatzVars::template Components<row>::m>
     d2(VariationalArg<Scalar,dim,TestComponents<row>::value> const &argT, VariationalArg<Scalar,dim,AnsatzComponents<col>::value> const &argA) const
     {
-      // double p = -1;
 
-      // // if(F.mass>1)
-      //   p = 1;
+      double p = -1;
 
-      double p = 1;
+      if(F.mass>1)
+        p = 1;
+
       if(F.mass==1)
         return 0;
 
@@ -395,12 +394,11 @@ public:
 
       Scalar dCurrent = centerCell? dcurrentCell: dcurrentNeighbour;
 
+    
+      double p = -1;
       
-      // double p = -1;
-      
-      // // if(F.mass>1)
-      //   p = 1;
-      double p = 1;
+      if(F.mass>1)
+        p = 1;
 
       // Compute derivative of the flux integrand.
       Scalar result = -p * argT.value * dCurrent * argA.value;

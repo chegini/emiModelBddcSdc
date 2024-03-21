@@ -55,7 +55,7 @@ using namespace std;
 
 
 #ifndef SPACEDIM
-#define SPACEDIM 3
+#define SPACEDIM 2
 #endif
 
 template <typename Material>
@@ -131,25 +131,57 @@ struct CardiacIntegrationStatistics
   double sdcTime;
 };
 
-template <class FSElement>
+template <class FSElement, class Material>
 class CellFilter {
 
 public:
-    CellFilter(FSElement& fse_, std::set<int> marked_cells_): fse(fse_) {
+    CellFilter(FSElement& fse_, std::set<int> marked_cells_, std::set<int> tags_, Material const& material_): fse(fse_), material(material_) {
       marked_cells.insert(marked_cells_.begin(), marked_cells_.end());
+      tags.insert(tags_.begin(), tags_.end());
     }    
+
+    typedef typename FSElement::Space ImageSpace;
+    typedef typename ImageSpace::Grid Grid;
 
     template <class Cell>   
     bool operator()(Cell const& cell) const {
       
+
       auto cellIndex = fse.space().indexSet().index(cell);
-      auto pos = marked_cells.find(cellIndex);
-      return pos != marked_cells.end();
+      auto cell_itr = marked_cells.find(cellIndex);
+      
+      Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+      int material_var = material.value(cell,zero);
+      auto tag_itr = tags.find(material_var);
+
+      if(based_on_tag and tag_itr != tags.end())
+      {
+        std::cout << "CellFilter based on tag: "<< material_var << " tag " << " tags.size() "<<tags.size()<< std::endl;
+        return tag_itr != tags.end();
+      }else if(based_on_tag){
+          return false;
+      }
+    
+      return cell_itr != marked_cells.end();
     }
 
     void set_cells(std::set<int> marked_cells_update){
       marked_cells.clear();  
       marked_cells.insert(marked_cells_update.begin(), marked_cells_update.end());
+    }
+
+    void set_tags(std::set<int> tags_){
+      tags.clear();  
+      tags.insert(tags_.begin(), tags_.end());
+      // std::set<int>::iterator tag_itr;
+      // for (tag_itr = tags.begin(); tag_itr != tags.end(); ++tag_itr) {
+      //   std::cout << "set_tags: "<< *tag_itr <<std::endl;
+      // }
+    }
+
+    void select_based_on_tag(bool based_on_tag_)
+    {
+      based_on_tag = based_on_tag_;
     }
 
     void get_cells(){
@@ -164,6 +196,9 @@ public:
 private:
     FSElement fse;
     std::set<int> marked_cells;
+    Material const& material;
+    std::set<int> tags;
+    bool based_on_tag = false;
 };
 
 template <class State, class elementType>

@@ -255,7 +255,8 @@ void mesh_data_structure( FSElement& fse,
                           std::vector<std::set<int>> & i2i,                             
                           std::map<std::pair<int, int>, std::vector<double>> & coord,  
                           std::map<int, std::vector<double>> & coord_globalIndex, 
-                          std::vector<int>& i2Tag,                                      
+                          std::vector<int>& i2Tag,  
+                          std::set<int>& tags,                                    
                           std::map<int, int> & map_t2l,                                
                           std::map<int, int> & map_sT2l,                               
                           std::map<int,std::set<int>> & map_II,                         
@@ -298,7 +299,9 @@ void mesh_data_structure( FSElement& fse,
   std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
 
   for ( const auto &IGamma : map_IGamma ) {
+
     int tag = IGamma.first;
+    tags.insert(tag);
     std::vector<int> igamma(IGamma.second.begin(), IGamma.second.end());
     std::vector<int> gamma(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
 
@@ -1465,8 +1468,8 @@ void exctract_petsc_stiffness_blocks_moreExtracellular( std::vector<int> sequenc
   insertMatrixBlock_extra(A_GAMMAI_block, map_indices, Interface, Interior, Ks_);
 
   auto K_GAMMAGAMMA_block = K_(Interface,Interface);
-  // insertMatrixBlock_extra(K_GAMMAGAMMA_block, map_indices, Interface, Interface, Ks_);
-  insertMatrixBlock_extra_exclude(K_GAMMAGAMMA_block, map_indices,i2Tag, tag, Interface, Interface, Ks_);
+  insertMatrixBlock_extra(K_GAMMAGAMMA_block, map_indices, Interface, Interface, Ks_);
+  // insertMatrixBlock_extra_exclude(K_GAMMAGAMMA_block, map_indices, i2Tag, tag, Interface, Interface, Ks_);
 }
 
 template<class Matrix, class Matrix_>
@@ -1579,11 +1582,12 @@ void petsc_structure_Matrix( std::vector<int> arr_extra,
   }
 }
 
-template<class Grid, class Functional, class VariableSet, class Spaces, class Matrix, class Vector>
+template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
 typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int> arr_extra, 
                                                           std::map<int,int> map_nT2oT,
                                                           GridManager<Grid>& gridManager,
                                                           Functional& F,
+                                                          CellFilter & Cellfltr,
                                                           VariableSet const& variableSet, 
                                                           Spaces const& spaces,
                                                           Grid const& grid, 
@@ -1599,6 +1603,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           std::map<int,std::vector<int>> sequenceOfsubdomains,
                                                           std::map<int, int> map_indices,
                                                           std::map<int,bool> map_markCorners,
+                                                          std::set<int> cells_set,
+                                                          std::set<int> tags,
                                                           std::vector<int> i2Tag,
                                                           std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
@@ -1691,6 +1697,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // construct mass
     for ( const auto & gamma_nbr: nbrs )
     {
+      Cellfltr.set_cells(cells_set);
+      Cellfltr.set_tags(tags);
       int row = tag;
       int col = gamma_nbr.first;
       {
@@ -1716,7 +1724,6 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
         assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
         Matrix sub_M_ = assembler.template get<Matrix>(false);
 
-
         for (int k = 0; k < sub_M_.N(); ++k)
         {
           auto row_ = sub_M_[k];
@@ -1734,12 +1741,27 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     // if(write_to_file) writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"mass"+path,matlab_dir, false);
 
 
-    // construct stiffness
+   // construct stiffness
     Matrix subMatrix_stiffness(creator);
-    exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
-    subMatrix+=subMatrix_stiffness;
-    // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
+    {
+      SemiImplicitEulerStep<Functional>  eqK(&F,dt);
+      F.Mass_stiff(0);
+      F.set_mass_submatrix(false);
+      eqK.setTau(1);
     
+      std::set<int> tags_target;
+      tags_target.insert(tag);
+      Cellfltr.set_tags(tags_target);
+      std::cout <<"tags.size() = " << tags_target.size() <<std::endl;
+      Cellfltr.select_based_on_tag(true);
+      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
+      K_ = assembler.template get<Matrix>(false);
+      K_*=(-dt);
+      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+      subMatrix+=subMatrix_stiffness;
+      if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
+      Cellfltr.select_based_on_tag(false);
+    }
    
     subMatrices.push_back(subMatrix);
     subMatrices_M.push_back(subMatrix_mass);

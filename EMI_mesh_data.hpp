@@ -1678,7 +1678,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
   {
     int tag = sequenceOfTags[subIdx]; 
-    std::string path = std::to_string(tag);
+    std::string path = std::to_string(subIdx);
     du *= 0;
 
     std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
@@ -1752,7 +1752,6 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       std::set<int> tags_target;
       tags_target.insert(tag);
       Cellfltr.set_tags(tags_target);
-      std::cout <<"tags.size() = " << tags_target.size() <<std::endl;
       Cellfltr.select_based_on_tag(true);
       assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
       K_ = assembler.template get<Matrix>(false);
@@ -1816,7 +1815,7 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
     int tag = sequenceOfTags[i]; 
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
 
-    std::string Ii = matlab_dir+"/BDDC_I"+ std::to_string(tag) + ".txt";
+    std::string Ii = matlab_dir+"/BDDC_I"+ std::to_string(i) + ".txt";
     std::ofstream Iii(Ii.c_str());
     Iii.precision(precision);
 
@@ -1837,11 +1836,11 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
     std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
     std::vector<int> gamma_W_Nbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
 
-    std::string gammai = matlab_dir+"/BDDC_Gamma"+ std::to_string(tag) + ".txt";
+    std::string gammai = matlab_dir+"/BDDC_Gamma"+ std::to_string(i) + ".txt";
     std::ofstream Gammaii(gammai.c_str());
     Gammaii.precision(precision);
 
-    std::string gammai_w_nbr = matlab_dir+"/BDDC_Gamma_w_nbr"+ std::to_string(tag) + ".txt";
+    std::string gammai_w_nbr = matlab_dir+"/BDDC_Gamma_w_nbr"+ std::to_string(i) + ".txt";
     std::ofstream Gammaii_w_nbr(gammai_w_nbr.c_str());
     Gammaii_w_nbr.precision(precision);
 

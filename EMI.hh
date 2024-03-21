@@ -156,7 +156,6 @@ public:
 
       if(based_on_tag and tag_itr != tags.end())
       {
-        std::cout << "CellFilter based on tag: "<< material_var << " tag " << " tags.size() "<<tags.size()<< std::endl;
         return tag_itr != tags.end();
       }else if(based_on_tag){
           return false;
@@ -173,10 +172,6 @@ public:
     void set_tags(std::set<int> tags_){
       tags.clear();  
       tags.insert(tags_.begin(), tags_.end());
-      // std::set<int>::iterator tag_itr;
-      // for (tag_itr = tags.begin(); tag_itr != tags.end(); ++tag_itr) {
-      //   std::cout << "set_tags: "<< *tag_itr <<std::endl;
-      // }
     }
 
     void select_based_on_tag(bool based_on_tag_)

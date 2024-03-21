@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
@@ -468,11 +468,6 @@ int main(int argc, char* argv[])
 
   std::vector<int> cells(gridManager.grid().size(0)); // vector with size ints.
   std::iota (std::begin(cells), std::end(cells), 0);
-
-
-  for (int i = 0; i < gridManager.grid().size(0); ++i){
-   std::cout << cells[i] << std::endl;
-  }
 
   std::set<int> cells_set(cells.begin(),cells.begin());
   CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 

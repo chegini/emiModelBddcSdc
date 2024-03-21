@@ -1758,7 +1758,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       K_*=(-dt);
       exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
       subMatrix+=subMatrix_stiffness;
-      if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
+      // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
       Cellfltr.select_based_on_tag(false);
     }
    

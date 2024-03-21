@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited_old.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
   {
     double precision = 16;
     std::string fname = matlab_dir+"/corners.m";
-    std::ofstream f(fname.c_str());
+    //std::ofstream f(fname.c_str());
 
     std::set<std::set<int>>::iterator it;
     for (it = i2iSet.begin(); it != i2iSet.end(); ++it) 
@@ -395,11 +395,11 @@ int main(int argc, char* argv[])
       for (itr = s.begin(); itr != s.end(); ++itr) 
       {
         if(s.size()>2) corners.insert(map_indices[*itr]);
-        if(s.size()>2) f << map_indices[*itr] << " "; 
-       if(false) std::cout << map_indices[*itr]<< " ";
+        //if(s.size()>2) f << map_indices[*itr] << " "; 
+        //if(false) std::cout << map_indices[*itr]<< " ";
       }
-      if(s.size()>2) f << "\n";
-      if(false) std::cout <<std::endl;
+      //if(s.size()>2) f << "\n";
+      //if(false) std::cout <<std::endl;
     }
   }
 

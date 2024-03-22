@@ -409,7 +409,7 @@ void mesh_data_structure( FSElement& fse,
     }
   }
 
-  if(false)
+  if(true)
   {
     std::cout << "\ni2Tag "<< std::endl;
     for (int i = 0; i < i2Tag.size(); ++i)
@@ -1617,7 +1617,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           std::string matlab_dir,
                                                           std::vector<Vector> &Fs_petcs,
                                                           std::map<int, Vector> &weights,
-                                                          std::vector<Matrix> &subMatrices,
+                                                          std::map<int, Matrix> &subMatrices,
                                                           std::vector<Matrix> &subMatrices_M,
                                                           std::vector<Matrix> &subMatrices_K)
 {
@@ -1762,7 +1762,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       Cellfltr.select_based_on_tag(false);
     }
    
-    subMatrices.push_back(subMatrix);
+    subMatrices[tag] = subMatrix;
     subMatrices_M.push_back(subMatrix_mass);
     subMatrices_K.push_back(subMatrix_stiffness);
     if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
@@ -1782,7 +1782,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     int tag = sequenceOfTags[subIdx]; 
     std::string path = std::to_string(subIdx+1);
     Matrix subMatrix(creator);
-    subMatrix = subMatrices[subIdx];
+    subMatrix = subMatrices[tag];
     Vector Fs_petcs_sub =  rhs_petsc_test;
     Vector weights_sub(subMatrix.N()); 
     // optimize it by iterating only on the interfaces
@@ -1853,6 +1853,133 @@ void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
     {
       Gammaii << map_indices[interface[j]]+1 << " "; 
       GammaAll << map_indices[interface[j]]+1 << " ";   
+    }
+  }
+}
+
+template<class Matrix>
+void construct_As_new(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, 
+                  std::map<int,int> startingIndexOfTag,
+                  std::map<int,std::set<int>> map_II,
+                  std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
+                  std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
+                  std::map<int,std::vector<int>> sequanceOfsubdomains,
+                  std::map<int, int> map_indices_petsc,
+                  std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                  std::vector<std::set<int>> i2t, 
+                  std::map<int,Matrix> subMatrices,
+                  std::vector<Matrix> subMatrices_M,
+                  std::vector<Matrix> subMatrices_K,
+                  std::map<int,Matrix> &subMatrices_kaskade,
+                  std::vector<Matrix> &subMatrices_kaskade_M,
+                  std::vector<Matrix> &subMatrices_kaskade_K)
+{
+
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end()); 
+  std::set<int>::iterator itr_extra; 
+  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  {
+    int tag = sequenceOfTags[subIdx]; 
+
+    int count = 0;
+
+    bool extra = false;
+    itr_extra =arr_extra_set.find(tag);
+    if(itr_extra!=arr_extra_set.end())
+      extra = true;
+
+
+    Matrix subMatrix  = subMatrices[subIdx];
+    Matrix subMatrix_M  = subMatrices_M[subIdx];
+    Matrix subMatrix_K  = subMatrices_K[subIdx];
+
+    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+    std::vector<int> Interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+    int size = Interior.size()+Interface.size();
+    
+    std::cout <<"=========================================\n";
+    std::cout << "subIdx: " << subIdx << ": "<< sequenceOfTags[subIdx] << std::endl;
+
+    int counter_kasakde = 0;
+    std::map<int, int> map_indices_kaskade;
+    {
+      for (int k = 0; k < Interior.size(); ++k)
+      {
+        map_indices_kaskade[counter_kasakde] = map_indices_petsc[Interior[k]];
+        if(true) std::cout <<map_indices_petsc[Interior[k]] + 1 << ":" << counter_kasakde+1 << "\n";
+        counter_kasakde++;
+      }   
+
+      for (int k = 0; k < Interface.size(); ++k)
+      {
+        map_indices_kaskade[counter_kasakde] = map_indices_petsc[Interface[k]];
+        if(true) std::cout <<map_indices_petsc[Interface[k]] + 1 << ":" << counter_kasakde+1 << "\n";
+        counter_kasakde++;
+      }  
+    
+      std::map<int,std::set<int>> Nbrs= map_GammaNbr[tag];
+
+      for ( const auto &nbr : Nbrs)
+      {
+        int tag_nbr = nbr.first;
+        std::set<int>::iterator itr;
+
+        bool extra_second = false;
+        itr_extra =arr_extra_set.find(tag_nbr);
+        if(itr_extra!=arr_extra_set.end())
+          extra_second = true;
+
+        std::vector<int> Interior_nbr(map_II[tag_nbr].begin(), map_II[tag_nbr].end());
+        std::vector<int> Interface_nbr(map_GammaGamma_noDuplicate[tag_nbr].begin(), map_GammaGamma_noDuplicate[tag_nbr].end());
+        int size_nbr = Interior_nbr.size()+Interface_nbr.size();
+        if(extra and extra_second)
+        {
+          int start = startingIndexOfTag[tag_nbr];
+
+          
+          std::vector<int> IG(size_nbr); // vector with size ints.
+          std::iota (std::begin(IG), std::end(IG), start); // Fill with start, 1, ..., size.
+          auto block_nbr = subMatrix(IG,IG);
+
+          std::set<int> indices_nbr;       
+          for (int k = 0; k < block_nbr.N(); ++k)
+          {
+            auto row  = block_nbr[k];
+            for (auto ca=row.begin(); ca!=row.end(); ++ca)
+            {
+              int const l = ca.index();
+              double val = *ca;
+              if(val> 1e-10 or val < -1e-10){
+                indices_nbr.insert(k+start);
+              }
+            }
+          }
+
+          std::set<int>::iterator it;
+          for (it = indices_nbr.begin(); it != indices_nbr.end(); ++it) 
+          {
+            map_indices_kaskade[counter_kasakde] = *it;
+            if(true) std::cout  << *it + 1 << ":" << counter_kasakde+1 << "\n";
+            counter_kasakde++;
+          }
+          if(indices_nbr.size()>0)
+            size+=size_nbr;
+        }
+        else
+        {
+          int start = startingIndexOfTag[tag_nbr];
+          int size_nbr = Interior_nbr.size()+Interface_nbr.size();
+
+          for (itr = nbr.second.begin(); itr != nbr.second.end(); itr++) 
+          {
+            map_indices_kaskade[counter_kasakde] = map_indices_petsc[*itr];
+            if(true) std::cout <<map_indices_petsc[*itr] + 1 << ":" << counter_kasakde+1 << "\n";
+            counter_kasakde++;
+          }
+          size+=size_nbr;
+        }
+      }
+      std::cout << "\n";
     }
   }
 }

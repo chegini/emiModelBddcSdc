@@ -518,31 +518,30 @@ int main(int argc, char* argv[])
   // compute submatrices and rhs based on Kaskade structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
-  Vector rhs_kaskade(nDofs);
-  rhs.write(rhs_kaskade.begin());
+  // Vector rhs_kaskade(nDofs);
+  // rhs.write(rhs_kaskade.begin());
 
   std::map<int, Matrix> As;
   std::vector<Matrix> Ms;
   std::vector<Matrix> Ks;
-  std::vector<Vector> Fs;
-  construct_As_new(arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
-              sequenceOfsubdomains, map_indices, map_GammaNbr, i2t,
-              subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks);
+  std::map<int, Vector> Fs;
+  std::map<int,std::map<int,int>> map_kaskadeToPetscAll;
+  std::map<int,std::map<int,int>> map_indices_kaskadeAll;
+  std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
+  construct_As( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
+                rhs_petsc_test, sequenceOfsubdomains, weights, map_indices, map_GammaNbr, i2t, matlab_dir,write_to_file,
+                subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks, Fs, map_kaskadeToPetscAll, map_indices_kaskadeAll, sharedDofsKaskade_new);
+  
+  if(write_to_file)
+  {
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+      int tag = sequenceOfTags[subIdx];
+      std::string path = std::to_string(tag);
+      writeToMatlabPath(As[tag],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+    }  
+  }
 
- 
-
- //  construct_Fs(sequenceOfTags, startingIndexOfTag, 
- //              map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
- //              rhs_kaskade, sharedDofsKaskade, weights, map_indices, Fs);
- 
- // if(write_to_file and false){
- //    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
- //    {
- //      int tag = sequenceOfTags[subIdx];
- //      std::string path = std::to_string(tag);
- //      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
- //    }  
- //  }
  //  // if(write_to_file and false){
  //  //   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
  //  //   {
@@ -554,116 +553,118 @@ int main(int argc, char* argv[])
  //  // } 
 
 
- //  // ------------------------------------------------------------------------------------
- //  // semi implicit + CG methods
- //  // ------------------------------------------------------------------------------------
- //  {
- //    if(run_implicit_CG){
- //      Vector sol_semi(nDofs);
- //      Functional F_semi( material,
- //                  gridManager.grid(),
- //                  spaces,
- //                  penalty,
- //                  sigma_i,
- //                  sigma_e,
- //                  C_m,  
- //                  R,
- //                  R_extra);
- //      F_semi.extracellular_materials(arr_extra);
- //      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
- //      uAll = component<0>(u);
- //      writeVTK(uAll,out+"/initialSemiF",
- //               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
- //      timer.start("linearly semi implicit method");
- //      std::cout << "---------------------------------------------" << std::endl;
- //      std::cout << "semi implict approach" << std::endl;
- //      std::cout << "---------------------------------------------" << std::endl;
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG){
+      Vector sol_semi(nDofs);
+      Functional F_semi( material,
+                  gridManager.grid(),
+                  spaces,
+                  penalty,
+                  sigma_i,
+                  sigma_e,
+                  C_m,  
+                  R,
+                  R_extra);
+      F_semi.extracellular_materials(arr_extra);
+      F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+      writeVTK(uAll,out+"/initialSemiF",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+      timer.start("linearly semi implicit method");
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implict approach" << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
 
 
- //      uAll = component<0>(u);
- //      u = semiImplicit_CG_Jacobi( gridManager,
- //                                  F_semi,
- //                                  variableSetDesc,
- //                                  spaces,
- //                                  gridManager.grid(),
- //                                  options,
- //                                  out,
- //                                  cg_semi, 
- //                                  direct,
- //                                  u,
- //                                  uAll,
- //                                  sol_semi
- //                                  );  
- //      timer.stop("linearly semi implicit method");
+      uAll = component<0>(u);
+      u = semiImplicit_CG_Jacobi( gridManager,
+                                  F_semi,
+                                  variableSetDesc,
+                                  spaces,
+                                  gridManager.grid(),
+                                  options,
+                                  out,
+                                  cg_semi, 
+                                  direct,
+                                  u,
+                                  uAll,
+                                  sol_semi
+                                  );  
+      timer.stop("linearly semi implicit method");
 
- //      {
- //        Vector sol_semi_to_petsc(sol_semi);
- //        sol_semi_to_petsc = 0;
- //         petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
- //        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
- //      }
- //    }
- //  }
+      {
+        Vector sol_semi_to_petsc(sol_semi);
+        sol_semi_to_petsc = 0;
+         petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
+        if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
+      }
+    }
+  }
 
 
- //  // ------------------------------------------------------------------------------------
- //  // semi implicit + CG + BDDC methods
- //  // ------------------------------------------------------------------------------------
- //  {
- //    if(run_implicit_CG_BDDC)
- //    {
- //      std::cout << "---------------------------------------------" << std::endl;
- //      std::cout << "semi implicit with CG + BDDC                  " << std::endl;
- //      std::cout << "---------------------------------------------" << std::endl;
- //      Vector sol_BDDC(nDofs);
- //      Functional F_BDDC(  material,
- //                          gridManager.grid(),
- //                          spaces,
- //                          penalty,
- //                          sigma_i,
- //                          sigma_e,
- //                          C_m,  
- //                          R,
- //                          R_extra);
- //      F_BDDC.extracellular_materials(arr_extra);
- //      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
- //      uAll = component<0>(u);
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_BDDC)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with CG + BDDC                  " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC(nDofs);
+      Functional F_BDDC(  material,
+                          gridManager.grid(),
+                          spaces,
+                          penalty,
+                          sigma_i,
+                          sigma_e,
+                          C_m,  
+                          R,
+                          R_extra);
+      F_BDDC.extracellular_materials(arr_extra);
+      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
 
- //      u = semiImplicit_CG_BDDC( gridManager,
- //                                F_BDDC,
- //                                variableSetDesc,
- //                                spaces,
- //                                gridManager.grid(),
- //                                options,
- //                                out,
- //                                cg_semi, 
- //                                direct,
- //                                u,
- //                                uAll,
- //                                sol_BDDC,
- //                                sharedDofsKaskade,
- //                                interfaceTypes,
- //                                n_subdomains,
- //                                As,
- //                                map_IGamma,
- //                                sequenceOfTags, 
- //                                startingIndexOfTag,
- //                                map_II,
- //                                map_GammaGamma_noDuplicate,
- //                                map_GammaNbr_Nbr_noDuplicate,
- //                                weights,
- //                                Fs,
- //                                cg_solver,
- //                                iter_cg_with_bddc,
- //                                local2Global,
- //                                global2Local,
- //                                tol,
- //                                map_t2l,
- //                                map_indices,
- //                                BDDC_verbose
- //                                );    
- //    }  
- //  }
+      u = semiImplicit_CG_BDDC( gridManager,
+                                F_BDDC,
+                                variableSetDesc,
+                                spaces,
+                                gridManager.grid(),
+                                options,
+                                out,
+                                cg_semi, 
+                                direct,
+                                u,
+                                uAll,
+                                sol_BDDC,
+                                sharedDofsKaskade_new,
+                                interfaceTypes,
+                                n_subdomains,
+                                As,
+                                map_IGamma,
+                                sequenceOfTags, 
+                                startingIndexOfTag,
+                                map_II,
+                                map_GammaGamma_noDuplicate,
+                                map_GammaNbr_Nbr_noDuplicate,
+                                weights,
+                                cg_solver,
+                                iter_cg_with_bddc,
+                                local2Global,
+                                global2Local,
+                                tol,
+                                map_t2l,
+                                map_indices,
+                                BDDC_verbose,
+                                map_kaskadeToPetscAll,
+                                map_indices_kaskadeAll,
+                                matlab_dir
+                                );    
+    }  
+  }
 
   return 0;
 }

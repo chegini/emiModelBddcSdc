@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -64,10 +64,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -425,14 +425,14 @@ int main(int argc, char* argv[])
   A_ = assembler.template get<Matrix>(false);
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs = assembler.rhs();
-  writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+  if(false) writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
 
   F.Mass_stiff(1);
   SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
   eqM.setTau(0);
   assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX, options.assemblyThreads);  
   M_ = assembler.template get<Matrix>(false);
-  writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
+  if(false) writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
 
   // get stiffness 
   F.Mass_stiff(0);
@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
   K_ = assembler.template get<Matrix>(false);
   K_*=(-options.dt);
-  writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
+  if(false) writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
   
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure

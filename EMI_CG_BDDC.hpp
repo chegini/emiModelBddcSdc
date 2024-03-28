@@ -17,14 +17,14 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         std::vector<std::vector<LocalDof>> sharedDofsKaskade,
                                                         int interfaceTypes,
                                                         int n_subdomains,
-                                                        std::map<int,Matrix> As,
+                                                        std::vector<Matrix> As,
                                                         std::map<int,std::set<int>> IGamma,
                                                         std::vector<int> sequenceOfTags, 
                                                         std::map<int,int> startingIndexOfTag,           
                                                         std::map<int,std::set<int>> map_II,
                                                         std::map<int,std::set<int>> map_GammaGamma_noDuplicate,  
                                                         std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
-                                                        std::map<int, Vector> weights,
+                                                        std::vector<Vector> weights,
                                                         bool cg_solver,
                                                         int iter_cg_with_bddc,
                                                         std::map<int,std::unordered_map<int, int>> local2Global,
@@ -87,7 +87,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   std::vector<int> subdomSize(n_subdomains);
   for (int subIdx=0; subIdx<n_subdomains; ++subIdx){
     int tag = sequenceOfTags[subIdx];
-    subdomSize[subIdx] = As[tag].N();  
+    subdomSize[subIdx] = As[subIdx].N();  
   }
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
@@ -98,12 +98,17 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
 
-  parallelFor(0,n_subdomains,[&](int i)
+  // parallelFor(0,n_subdomains,[&](int i)
+  // {
+  //   int tag = sequenceOfTags[i];
+  //   subsptr[i] = std::make_unique<BddcSubdomain>(i,As[tag],ifa);
+  // });
+  for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
   {
-    int tag = sequenceOfTags[i];
-    subsptr[i] = std::make_unique<BddcSubdomain>(i,As[tag],ifa);
-  });
-
+    int tag = sequenceOfTags[subIdx];
+    std::cout << subIdx << " -> " << tag << std::endl;
+    subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
+  }
 
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {
@@ -138,7 +143,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_test, rhs_petsc_test);
 
-    std::vector<Vector> Fs;
+    std::vector<Vector> Fs(n_subdomains);
         // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // fill the sub matrices for kaskade format
     // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -153,22 +158,22 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
         for (int i = 0; i < counter_kasakde; ++i)
         {
           int index = map_kaskadeToPetsc[i]; 
-          float coef = weights[tag][index];
+          float coef = weights[subIdx][index];
           Fs_subIdx[i] = coef*rhs_petsc_test[index];
         }
       }
-      Fs.push_back(Fs_subIdx);
+      Fs[subIdx] = Fs_subIdx;
     }
 
-     // if(write_to_file)
-    {
-      for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-      {
-        int tag = sequenceOfTags[subIdx];
-        std::string path = std::to_string(tag);
-        writeToMatlabPath(As[tag],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
-      }  
-    }
+    //  // if(write_to_file)
+    // {
+    //   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    //   {
+    //     int tag = sequenceOfTags[subIdx];
+    //     std::string path = std::to_string(tag);
+    //     writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+    //   }  
+    // }
     
     timer.stop("updating sub rhs");
 

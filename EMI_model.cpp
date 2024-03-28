@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -68,6 +68,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/robin_mesh_old.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/robin_extracellular_old.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/robin_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/40cells3D.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/40cells3D_early_excitedtxt.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/40cells3D_list_extracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/40cells3D_list_intracellular.txt","subdomain definition")
   ("dir",                      dir_out,                             "./output","subdomain definition")
   ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
@@ -96,7 +104,7 @@ int main(int argc, char* argv[])
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
-  ("write_to_file",            write_to_file,                       true,"write to matlab file")  
+  ("write_to_file",            write_to_file,                       false,"write to matlab file")  
   ("maxSteps",                 options.maxSteps,                    10,  "max number of time steps")
   ("vtk",                      options.writeVTK,                    1,  "write VTK output files 0=none, 1=time steps 2=sweeps")
   ("T_",                       options.T,                           0.01,  "final time[ms]")
@@ -463,7 +471,7 @@ int main(int argc, char* argv[])
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in petsc!" << std::endl;
-  std::vector<Vector> Fs_petcs;
+  std::vector<Vector> Fs_petcs(n_subdomains);
   petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
 
   std::vector<int> cells(gridManager.grid().size(0)); // vector with size ints.
@@ -472,10 +480,10 @@ int main(int argc, char* argv[])
   std::set<int> cells_set(cells.begin(),cells.begin());
   CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
 
-  std::map<int,Matrix> subMatrices;
-  std::vector<Matrix> subMatrices_M;
-  std::vector<Matrix> subMatrices_K;
-  std::map<int, Vector> weights; 
+  std::vector<Matrix> subMatrices(n_subdomains);
+  std::vector<Matrix> subMatrices_M(n_subdomains);
+  std::vector<Matrix> subMatrices_K(n_subdomains);
+  std::vector<Vector> weights(n_subdomains); 
   construct_submatrices_petsc(arr_extra,
                               map_nT2oT,
                               gridManager,
@@ -521,37 +529,24 @@ int main(int argc, char* argv[])
   // Vector rhs_kaskade(nDofs);
   // rhs.write(rhs_kaskade.begin());
 
-  std::map<int, Matrix> As;
-  std::vector<Matrix> Ms;
-  std::vector<Matrix> Ks;
-  std::map<int, Vector> Fs;
+  std::vector<Matrix> As(n_subdomains);
+  std::vector<Vector> Fs(n_subdomains);
   std::map<int,std::map<int,int>> map_kaskadeToPetscAll;
   std::map<int,std::map<int,int>> map_indices_kaskadeAll;
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
-  construct_As( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
+  construct_As_new( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
                 rhs_petsc_test, sequenceOfsubdomains, weights, map_indices, map_GammaNbr, i2t, matlab_dir,write_to_file,
-                subMatrices, subMatrices_M, subMatrices_K, As, Ms, Ks, Fs, map_kaskadeToPetscAll, map_indices_kaskadeAll, sharedDofsKaskade_new);
+                subMatrices, As, Fs, map_kaskadeToPetscAll, map_indices_kaskadeAll, sharedDofsKaskade_new);
   
   if(write_to_file)
   {
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
       int tag = sequenceOfTags[subIdx];
-      std::string path = std::to_string(tag);
-      writeToMatlabPath(As[tag],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+      std::string path = std::to_string(subIdx);
+      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
   }
-
- //  // if(write_to_file and false){
- //  //   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
- //  //   {
- //  //     int tag = sequenceOfTags[subIdx];
- //  //     std::string path = std::to_string(tag);
- //  //     writeToMatlabPath(Ms[subIdx],Fs[subIdx],"Ms_"+path,matlab_dir, true);  
- //  //     writeToMatlabPath(Ks[subIdx],Fs[subIdx],"Ks_"+path,matlab_dir, true);      
- //  //   }  
- //  // } 
-
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods

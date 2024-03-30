@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -68,10 +68,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/robin_mesh_old.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/robin_extracellular_old.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/robin_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/robin_mesh_old.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/robin_extracellular_old.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/robin_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/40cells3D.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/40cells3D_early_excitedtxt.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40cells3D_list_extracellular.txt","subdomain definition")
@@ -534,19 +534,19 @@ int main(int argc, char* argv[])
   std::map<int,std::map<int,int>> map_kaskadeToPetscAll;
   std::map<int,std::map<int,int>> map_indices_kaskadeAll;
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
-  construct_As_new( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
+  construct_As( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
                 rhs_petsc_test, sequenceOfsubdomains, weights, map_indices, map_GammaNbr, i2t, matlab_dir,write_to_file,
                 subMatrices, As, Fs, map_kaskadeToPetscAll, map_indices_kaskadeAll, sharedDofsKaskade_new);
   
-  if(write_to_file)
-  {
-    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-    {
-      int tag = sequenceOfTags[subIdx];
-      std::string path = std::to_string(subIdx);
-      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
-    }  
-  }
+  // if(write_to_file)
+  // {
+  //   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  //   {
+  //     int tag = sequenceOfTags[subIdx];
+  //     std::string path = std::to_string(subIdx);
+  //     writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+  //   }  
+  // }
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods

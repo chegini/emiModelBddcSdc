@@ -55,7 +55,7 @@ using namespace std;
 
 
 #ifndef SPACEDIM
-#define SPACEDIM 3
+#define SPACEDIM 2
 #endif
 
 template <typename Material>

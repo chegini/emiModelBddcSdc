@@ -13,7 +13,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   			                                                bool direct,
   			                                                typename VariableSet::VariableSet u,
   			                                                elementType & uAll,
-                                                        Vector & sol_semi,
+                                                        Vector & sol_bddc,
                                                         std::vector<std::vector<LocalDof>> sharedDofsKaskade,
                                                         int interfaceTypes,
                                                         int n_subdomains,
@@ -33,9 +33,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         std::map<int, int> map_t2l,
                                                         std::map<int, int> map_indices,
                                                         bool BDDC_verbose,
-                                                        std::map<int,std::map<int,int>> map_kaskadeToPetscAll,
-                                                        std::map<int,std::map<int,int>> map_indices_kaskadeAll,
-                                                        std::string matlab_dir
+                                                        std::vector<std::vector<int>> IG_seq,
+                                                        std::string matlab_dir,
+                                                        bool write_to_file
                                                         )
 {
 
@@ -150,14 +150,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
       int tag = sequenceOfTags[subIdx];
-      std::map<int,int>  map_kaskadeToPetsc = map_kaskadeToPetscAll[tag];
-      std::map<int,int>  map_indices_kaskade = map_indices_kaskadeAll[tag];
-      int counter_kasakde = map_kaskadeToPetsc.size();
+      std::vector<int> IG = IG_seq[subIdx];
+      int counter_kasakde = IG.size();
       Vector Fs_subIdx(counter_kasakde);  
       { 
         for (int i = 0; i < counter_kasakde; ++i)
         {
-          int index = map_kaskadeToPetsc[i]; 
+          int index = IG[i];
           float coef = weights[subIdx][index];
           Fs_subIdx[i] = coef*rhs_petsc_test[index];
         }
@@ -165,7 +164,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       Fs[subIdx] = Fs_subIdx;
     }
 
-     // if(write_to_file)
+     if(write_to_file)
     {
       for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
       {
@@ -218,9 +217,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
         {
           double val = component<0>(u).coefficients()[local2Global[tag][local]] + ui[local];
           component<0>(u).coefficients()[local2Global[tag][local]] = val;
+          component<0>(step_test).coefficients()[local2Global[tag][local]] = ui[local];
         }
       }
     }
+
+    sol_bddc *= 0;
+    step_test.write(sol_bddc.begin());
 
     uAll = component<0>(u);
 

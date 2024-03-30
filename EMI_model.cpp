@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -64,10 +64,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -433,14 +433,14 @@ int main(int argc, char* argv[])
   A_ = assembler.template get<Matrix>(false);
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs = assembler.rhs();
-  writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+  // writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
 
   F.Mass_stiff(1);
   SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
   eqM.setTau(0);
   assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX, options.assemblyThreads);  
   M_ = assembler.template get<Matrix>(false);
-  writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
+  // writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
 
   // get stiffness 
   F.Mass_stiff(0);
@@ -449,7 +449,7 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
   K_ = assembler.template get<Matrix>(false);
   K_*=(-options.dt);
-  writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
+  // writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
   
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -526,17 +526,13 @@ int main(int argc, char* argv[])
   // compute submatrices and rhs based on Kaskade structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
-  // Vector rhs_kaskade(nDofs);
-  // rhs.write(rhs_kaskade.begin());
-
   std::vector<Matrix> As(n_subdomains);
   std::vector<Vector> Fs(n_subdomains);
-  std::map<int,std::map<int,int>> map_kaskadeToPetscAll;
-  std::map<int,std::map<int,int>> map_indices_kaskadeAll;
+  std::vector<std::vector<int>> IG_seq(n_subdomains);
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
   construct_As( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
                 rhs_petsc_test, sequenceOfsubdomains, weights, map_indices, map_GammaNbr, i2t, matlab_dir,write_to_file,
-                subMatrices, As, Fs, map_kaskadeToPetscAll, map_indices_kaskadeAll, sharedDofsKaskade_new);
+                subMatrices, As, Fs, IG_seq, sharedDofsKaskade_new);
   
   // if(write_to_file)
   // {
@@ -654,10 +650,14 @@ int main(int argc, char* argv[])
                                 map_t2l,
                                 map_indices,
                                 BDDC_verbose,
-                                map_kaskadeToPetscAll,
-                                map_indices_kaskadeAll,
-                                matlab_dir
-                                );    
+                                IG_seq,
+                                matlab_dir,
+                                write_to_file
+                                );  
+        Vector sol_bddc_to_petsc(sol_BDDC);
+        sol_bddc_to_petsc = 0; 
+        petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
+        if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
     }  
   }
 

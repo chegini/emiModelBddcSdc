@@ -1894,8 +1894,7 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
                   std::vector<Matrix> subMatrices,
                   std::vector<Matrix> &subMatrices_kaskade,
                   std::vector<Vector> &Fs,
-                  std::map<int,std::map<int,int>> &map_Kaskade2PetscAll,
-                  std::map<int,std::map<int,int>> &map_Petsc2KaskadeAll,
+                  std::vector<vector<int>> &IG_seq,
                   std::vector<std::vector<LocalDof>> &sharedDofsKaskade)
 {
 
@@ -1941,7 +1940,6 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
 
     // int start = startingIndexOfTag[tag];
     std::map<int, int> map_Petsc2Kaskade;
-    std::map<int, int> map_Kaskade2Petsc;
     std::map<int, int> map_petsc_diff;
     std::vector<int> IG(Interior.size()+Interface_noDup.size()+ diff.size()+Interface_nbr.size()); // vector with size ints.
     int counter_kaskade = 0;
@@ -1949,7 +1947,6 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
       for (int k = 0; k < Interior.size(); ++k)
       {
         map_Petsc2Kaskade[map_indices[Interior[k]]] = k + counter_kaskade;
-        map_Kaskade2Petsc[k+counter_kaskade] = map_indices[Interior[k]];
         IG[k+counter_kaskade] = map_indices[Interior[k]];
       }   
 
@@ -1957,7 +1954,6 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
       for (int k = 0; k < Interface_noDup.size(); ++k)
       {
         map_Petsc2Kaskade[map_indices[Interface_noDup[k]]] = k + counter_kaskade;
-        map_Kaskade2Petsc[k+counter_kaskade] = map_indices[Interface_noDup[k]];
         IG[k+counter_kaskade] = map_indices[Interface_noDup[k]];
       }    
 
@@ -1968,7 +1964,6 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
         for (int k = 0; k < diff_vec.size(); ++k)
         {
           map_Petsc2Kaskade[map_indices[diff_vec[k]]] = k + counter_kaskade;
-          map_Kaskade2Petsc[k+counter_kaskade] = map_indices[diff_vec[k]];
           IG[k+counter_kaskade] = map_indices[diff_vec[k]];
           map_petsc_diff[map_indices[diff_vec[k]]] = k+counter_kaskade;
         } 
@@ -1978,7 +1973,6 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
         for (int k = 0; k < Interface_nbr.size(); ++k)
         {
           map_Petsc2Kaskade[map_indices[Interface_nbr[k]]] = k+counter_kaskade;
-          map_Kaskade2Petsc[k+counter_kaskade] = map_indices[Interface_nbr[k]];
           IG[k+counter_kaskade] = map_indices[Interface_nbr[k]];
         }
         counter_kaskade += Interface_nbr.size(); 
@@ -1986,6 +1980,7 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
 
       if(false) std::cout << "\n";
     }
+    IG_seq[subIdx] = IG;
     if(false) std::cout <<"============================" << std::endl; 
     if(false) std::cout << tag<<" -> "<< counter_kaskade << " diff " << diff.size() << " IG.size() "<< IG.size()<< std::endl;
     if(false) std::cout <<"============================" << std::endl;
@@ -2027,29 +2022,17 @@ void construct_As(std::vector<int> arr_extra, std::vector<int> sequenceOfTags,
     {
       auto IGAMMA_block = subMatrix(IG,IG);
       insertMatrixBlock(IGAMMA_block, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_shrinked,true);
-      // if(diff.size()>0)
-      // {
-      //   std::vector<int> diff_vec(diff.begin(), diff.end());
-      //   for (int k = 0; k < diff_vec.size(); ++k)
-      //   {
-      //     int row_indx = map_petsc_diff[map_indices[diff_vec[k]]];
-      //     // subMatrix_kaskade_shrinked[row_indx][row_indx] = subMatrix[map_indices[diff_vec[k]]][map_indices[diff_vec[k]]]; 
-      //     // std::cout << map_indices[diff_vec[k]] << "-> " << subMatrix[map_indices[diff_vec[k]]][map_indices[diff_vec[k]]] << std::endl; 
-      //   } 
-      // }
     }
     subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
 
     // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // save sub_matrices for kaskade format
     // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    map_Kaskade2PetscAll[tag] = map_Kaskade2Petsc;
-    map_Petsc2KaskadeAll[tag] = map_Petsc2Kaskade;
     Vector Fs_subIdx(counter_kaskade);  
     { 
       for (int i = 0; i < counter_kaskade; ++i)
       {
-        int index = map_Kaskade2Petsc[i]; 
+        int index = IG[i]; 
         sequanceOfsubdomainsKaskade[tag].push_back(index);
         int coef = weights[subIdx][index];
         Fs_subIdx[i] = coef*rhs_kaskade[index];

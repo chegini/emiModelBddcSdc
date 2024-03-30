@@ -21,5 +21,5 @@ pwd
 # The -n1 specification causes exactly one instance of the program myfile to be started (which is typical for the present Kaskade7 applications - other specifications for the -n value could make sense e.g. for MPI programs).
 # Just use this like you would use your console to start your program.
  
-srun -B *:*:* -n1 ./emiModel --refine 1
+srun -B *:*:* -n1 ./emiModel --write_to_file true
 

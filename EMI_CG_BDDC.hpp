@@ -1,5 +1,5 @@
-#ifndef INTEGRATE_CG_HH
-#define INTEGRATE_CG_HH
+#ifndef INTEGRATE_BDDC_CG_HH
+#define INTEGRATE_BDDC_CG_HH
 
 template <class Grid, class Functional, class VariableSet, class Spaces, class elementType, class Vector, class Options, class Matrix>
 typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridManager,
@@ -9,18 +9,14 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   			                                                Grid const& grid, 
                                                         Options const& options,
   			                                                std::string out,
-  			                                                bool cg_semi, 
   			                                                bool direct,
   			                                                typename VariableSet::VariableSet u,
   			                                                elementType & uAll,
                                                         Vector & sol_bddc,
                                                         std::vector<std::vector<LocalDof>> sharedDofsKaskade,
                                                         int interfaceTypes,
-                                                        int n_subdomains,
                                                         std::vector<Matrix> As,
-                                                        std::map<int,std::set<int>> IGamma,
-                                                        std::vector<int> sequenceOfTags, 
-                                                        std::map<int,int> startingIndexOfTag,           
+                                                        std::vector<int> sequenceOfTags,          
                                                         std::map<int,std::set<int>> map_II,
                                                         std::map<int,std::set<int>> map_GammaGamma_noDuplicate,  
                                                         std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
@@ -28,7 +24,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         bool cg_solver,
                                                         int iter_cg_with_bddc,
                                                         std::map<int,std::unordered_map<int, int>> local2Global,
-                                                        std::map<int,std::unordered_map<int, int>> global2Local,
                                                         double tol,
                                                         std::map<int, int> map_t2l,
                                                         std::map<int, int> map_indices,
@@ -84,6 +79,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   assembler.assemble(SemiLinearization(eq,u,u,du),options.assemblyThreads);
   AssembledGalerkinOperator<Assembler> A(assembler);
   Matrix LHS = assembler.template get<Matrix>(false); 
+  int n_subdomains = sequenceOfTags.size();
   std::vector<int> subdomSize(n_subdomains);
   for (int subIdx=0; subIdx<n_subdomains; ++subIdx){
     int tag = sequenceOfTags[subIdx];

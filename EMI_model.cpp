@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
   int refinements, order, solver, refinements_sol, interfaceTypes, iter_cg_with_bddc;
   double penalty, sigma_i, sigma_e, C_m, R, R_extra, tol, dt;
   bool  direct, onlyLowerTriangle, vtk_, timing, test_newCof;
-  bool run_implicit_CG, run_implicit_CG_SDC, run_implicit_CG_BDDC, run_implicit_CG_SDC_BDDC, run_implicit_CG_SDC_BDDC_first_Sweep;
+  bool run_implicit_CG, run_implicit_CG_SDC, run_implicit_CG_BDDC, run_implicit_CG_SDC_BDDC, run_implicit_CG_BDDC_Fused, run_implicit_CG_SDC_BDDC_first_Sweep;
   std::string inputfile, early_excited, extra_set, intra_set, dir_out, matlab_dir;
   bool cg_semi, plot, withSplitFace,cg_solver;
   bool test_mesh_data, write_to_file;
@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
   ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
+  ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
@@ -345,8 +346,10 @@ int main(int argc, char* argv[])
   int n_subdomains = map_II.size();
 
   std::vector<int> sequenceOfTags(n_subdomains);
+  std::vector<int> sequenceOfTags_extra(n_extra_set); // only extra cellular
+  // extracellular is only even number
   std::map<int,int> startingIndexOfTag;
-  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, startingIndexOfTag, map_nT2oT);
+  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, map_nT2oT);
   if(false)
   {
   std::cout <<"==========================\n";
@@ -532,9 +535,25 @@ int main(int argc, char* argv[])
   std::vector<Vector> Fs(n_subdomains);
   std::vector<std::vector<int>> IG_seq(n_subdomains);
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
-  construct_As( arr_extra, sequenceOfTags, startingIndexOfTag, map_II, map_GammaGamma, map_GammaGamma_noDuplicate, map_GammaNbr_Nbr_noDuplicate, 
-                rhs_petsc_test, sequenceOfsubdomains, weights, map_indices, map_GammaNbr, i2t, matlab_dir,write_to_file,
-                subMatrices, As, Fs, IG_seq, sharedDofsKaskade_new);
+  std::map<int,int> T2Index;
+
+  construct_As( arr_extra, 
+                sequenceOfTags, 
+                map_II, 
+                map_GammaGamma, 
+                map_GammaGamma_noDuplicate, 
+                map_GammaNbr_Nbr_noDuplicate, 
+                rhs_petsc_test, 
+                weights, 
+                map_indices, 
+                matlab_dir,
+                write_to_file,
+                subMatrices, 
+                As, 
+                Fs, 
+                IG_seq, 
+                sharedDofsKaskade_new,
+                T2Index);
   
   // if(write_to_file)
   // {
@@ -546,6 +565,50 @@ int main(int argc, char* argv[])
   //   }  
   // }
 
+  std::map<int,std::set<int>> map_II_fused;                        // II
+  std::map<int,std::set<int>> map_GammaGamma_fused;                // GammaGamma
+  std::map<int,std::set<int>> map_GammaGamma_noDuplicate_fused;    // GammaGamma_nodup
+  std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate_fused;  // GammaGamma only nbr without out the extra neighors...
+  std::vector<Matrix> subMatrices_fused(sequenceOfTags_extra.size());
+  std::map<int, int> map_t2l_fused;                                    //map: tag to lenth
+  merge_inner_interface_bddc_fused( sequenceOfTags_extra,
+                                    T2Index,
+                                    map_II,
+                                    map_GammaGamma,
+                                    map_GammaGamma_noDuplicate,
+                                    map_GammaNbr_Nbr_noDuplicate,
+                                    subMatrices,
+                                    map_II_fused,
+                                    map_GammaGamma_fused,
+                                    map_GammaGamma_noDuplicate_fused,
+                                    map_GammaNbr_Nbr_noDuplicate_fused,
+                                    map_t2l_fused,
+                                    subMatrices_fused);
+
+
+
+
+
+  std::vector<Matrix> As_fused(n_subdomains);
+  std::vector<Vector> Fs_fused(n_subdomains);
+  std::vector<std::vector<int>> IG_seq_fused(n_subdomains);
+  std::vector<std::vector<LocalDof>> sharedDofsKaskade_new_fused;
+  construct_As_fused( arr_extra, 
+                      sequenceOfTags_extra, 
+                      map_II_fused, 
+                      map_GammaGamma_fused, 
+                      map_GammaGamma_noDuplicate_fused, 
+                      map_GammaNbr_Nbr_noDuplicate_fused, 
+                      rhs_petsc_test, 
+                      weights, 
+                      map_indices, 
+                      matlab_dir,
+                      write_to_file,
+                      subMatrices_fused, 
+                      As_fused, 
+                      Fs_fused, 
+                      IG_seq_fused, 
+                      sharedDofsKaskade_new_fused);
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods
   // ------------------------------------------------------------------------------------
@@ -628,18 +691,14 @@ int main(int argc, char* argv[])
                                 gridManager.grid(),
                                 options,
                                 out,
-                                cg_semi, 
                                 direct,
                                 u,
                                 uAll,
                                 sol_BDDC,
                                 sharedDofsKaskade_new,
                                 interfaceTypes,
-                                n_subdomains,
                                 As,
-                                map_IGamma,
                                 sequenceOfTags, 
-                                startingIndexOfTag,
                                 map_II,
                                 map_GammaGamma_noDuplicate,
                                 map_GammaNbr_Nbr_noDuplicate,
@@ -647,12 +706,72 @@ int main(int argc, char* argv[])
                                 cg_solver,
                                 iter_cg_with_bddc,
                                 local2Global,
-                                global2Local,
                                 tol,
                                 map_t2l,
                                 map_indices,
                                 BDDC_verbose,
                                 IG_seq,
+                                matlab_dir,
+                                write_to_file
+                                );  
+        Vector sol_bddc_to_petsc(sol_BDDC);
+        sol_bddc_to_petsc = 0; 
+        petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
+        if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
+    }  
+  }
+
+    // ------------------------------------------------------------------------------------
+  // semi implicit + CG + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_BDDC_Fused)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with CG + BDDC + Fused subdomain" << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC(nDofs);
+      Functional F_BDDC(  material,
+                          gridManager.grid(),
+                          spaces,
+                          penalty,
+                          sigma_i,
+                          sigma_e,
+                          C_m,  
+                          R,
+                          R_extra);
+      F_BDDC.extracellular_materials(arr_extra);
+      F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      u = semiImplicit_CG_BDDC_fused( gridManager,
+                                F_BDDC,
+                                variableSetDesc,
+                                spaces,
+                                gridManager.grid(),
+                                options,
+                                out,
+                                direct,
+                                u,
+                                uAll,
+                                sol_BDDC,
+                                sharedDofsKaskade_new_fused,
+                                interfaceTypes,
+                                As,               // pass the right one 
+                                sequenceOfTags,   // sequenceOfTags for fused!
+                                sequenceOfTags_extra, 
+                                map_II_fused,                          // update 
+                                map_GammaGamma_noDuplicate_fused,      // update
+                                map_GammaNbr_Nbr_noDuplicate_fused,    // update 
+                                weights,
+                                cg_solver,
+                                iter_cg_with_bddc,
+                                local2Global,  // update
+                                tol,
+                                map_t2l_fused,       // update 
+                                map_indices,
+                                BDDC_verbose,
+                                IG_seq_fused,        // update
                                 matlab_dir,
                                 write_to_file
                                 );  

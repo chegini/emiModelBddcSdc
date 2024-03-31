@@ -64,22 +64,22 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/robin_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/robin_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/40cells3D.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/40cells3D_early_excitedtxt.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40cells3D_list_extracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/40cells3D_list_intracellular.txt","subdomain definition")
-  // ("dir",                      dir_out,                             "./output","subdomain definition")
-  // ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
-  ("dir",                      dir_out,                             "/scratch/htc/fchegini/output","subdomain definition")
-  ("matlab_dir",               matlab_dir,                          "/scratch/htc/fchegini/matlab_dir","subdomain definition")
+  ("dir",                      dir_out,                             "./output","subdomain definition")
+  ("matlab_dir",               matlab_dir,                          "./matlab_dir","subdomain definition")
+  // ("dir",                      dir_out,                             "/scratch/htc/fchegini/output","subdomain definition")
+  // ("matlab_dir",               matlab_dir,                          "/scratch/htc/fchegini/matlab_dir","subdomain definition")
   ("refine",                   refinements,                         0,"uniform mesh refinements")
   ("refine_sol",               refinements_sol,                     0,"uniform mesh refinements")
   ("order",                    order,                               1,"polynomial ansatz order")
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     std::cout << "Directory called 'output' created" << std::endl;
 
   std::string out = dir_out;
-
+  std::cout << "mesh: " << inputfile <<std::endl;
   std::cout << "dt: " << options.dt <<std::endl;
   std::cout << "order: " << order <<std::endl;
   std::cout << "refinement: "<< refinements << std::endl;

@@ -21,7 +21,7 @@ pwd
 # The -n1 specification causes exactly one instance of the program myfile to be started (which is typical for the present Kaskade7 applications - other specifications for the -n value could make sense e.g. for MPI programs).
 # Just use this like you would use your console to start your program.
  
-srun -B *:*:* -n1 ./emiModel --write_to_file true --input "./input/robin_mesh.vtu" --extra_set "./input/robin_extracellular.txt" --intra_set "./input/robin_intracellular.txt" --excited "./input/robin_early_excited.txt" --dir "/scratch/htc/fchegini/robin_output" --matlab_dir "/scratch/htc/fchegini/robin_matlab_dir"
+srun -B *:*:* -n1 ./emiModel --write_to_file true --input "./input/robin_mesh.vtu" --extra_set "./input/robin_extracellular.txt" --intra_set "./input/robin_intracellular.txt" --excited "./input/robin_early_excited.txt" --dir "/scratch/htc/fchegini/robin1_output" --matlab_dir "/scratch/htc/fchegini/robin1_matlab_dir" --refine 1
 
 # srun -B *:*:* -n1 ./emiModel --write_to_file true --input "./input/kermit_mesh.vtu" --extra_set "./input/kermit_extracellular.txt" --intra_set "./input/kermit_intracellular.txt" --excited "./input/kermit_early_excited.txt" --dir "/scratch/htc/fchegini/kermit_output" --matlab_dir "/scratch/htc/fchegini/kermit_matlab_dir"
 

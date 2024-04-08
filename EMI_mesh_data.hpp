@@ -664,7 +664,8 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
 void map_kaskade2petcs(std::vector<int> sequenceOfTags, 
                        std::map<int,std::set<int>> & map_II,
                        std::map<int,std::set<int>> & map_GammaGamma_noDuplicate,
-                       std::map<int, int> & map_indices)
+                       std::map<int, int> & map_indices,
+                       std::map<int, int> & map_index_to_subdomain)
 {
   int counter = 0;
   for (int index = 0; index < sequenceOfTags.size(); ++index)
@@ -682,6 +683,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.second = tag;
 
       map_indices[I_vec[i]] = counter;
+      map_index_to_subdomain[I_vec[i]] = index;
       counter++;
     }
 
@@ -692,6 +694,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.second = tag;
 
       map_indices[gamma_vec[i]] = counter;
+      map_index_to_subdomain[gamma_vec[i]] = index;
       counter++;
     }
   }

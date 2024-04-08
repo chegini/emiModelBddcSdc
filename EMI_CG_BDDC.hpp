@@ -19,7 +19,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         std::vector<int> sequenceOfTags,          
                                                         std::map<int,std::set<int>> map_II,
                                                         std::map<int,std::set<int>> map_GammaGamma_noDuplicate,  
-                                                        std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
                                                         std::map<int,Vector> weights,
                                                         bool cg_solver,
                                                         int iter_cg_with_bddc,

@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -64,10 +64,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -532,6 +532,9 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
   std::vector<Matrix> As(n_subdomains);
+  std::vector<Matrix> Ms(n_subdomains);
+  std::vector<Matrix> Ks(n_subdomains);
+
   std::vector<Vector> Fs(n_subdomains);
   std::vector<std::vector<int>> IG_seq(n_subdomains);
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
@@ -548,8 +551,12 @@ int main(int argc, char* argv[])
                 map_indices, 
                 matlab_dir,
                 write_to_file,
-                subMatrices, 
+                subMatrices,
+                subMatrices_M,
+                subMatrices_K, 
                 As, 
+                Ms,
+                Ks,
                 Fs, 
                 IG_seq, 
                 sharedDofsKaskade_new,
@@ -721,7 +728,7 @@ int main(int argc, char* argv[])
     }  
   }
 
-    // ------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------
   // semi implicit + CG + BDDC methods
   // ------------------------------------------------------------------------------------
   {
@@ -779,6 +786,87 @@ int main(int argc, char* argv[])
         sol_bddc_to_petsc = 0; 
         petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
         if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
+    }  
+  }
+
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + SDC + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_SDC_BDDC)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG           " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC_SDC(nDofs);
+      Functional F_BDDC_SDC(material,
+                            gridManager.grid(),
+                            spaces,
+                            penalty,
+                            sigma_i,
+                            sigma_e,
+                            C_m,  
+                            R,
+                            R_extra);
+      F_BDDC_SDC.extracellular_materials(arr_extra);
+      CardiacIntegrationStatistics statistics;
+      F_BDDC_SDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      if(options.plot) writeVTK(uAll,out+"/emiSDCBDDCInitial",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+      std::cout <<" test CellFilter!!!!\n";
+      std::set<int> s_temp;
+      for (int i = 0; i < gridManager.grid().size(0); ++i) 
+        s_temp.insert(i);
+
+      CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+     // CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), s_temp); 
+      // u = semiImplicit_CG_BDDC_SDC( gridManager,
+      //                               F_BDDC_SDC,
+      //                               Cellfltr,
+      //                               variableSetDesc,
+      //                               spaces,
+      //                               gridManager.grid(),
+      //                               u,
+      //                               index2Cells_cellFilter,
+      //                               options,
+      //                               statistics,
+      //                               out,
+      //                               uAll,
+      //                               index2IndexsSet,
+      //                               cg_semi,
+      //                               direct,
+      //                               matlab_dir,
+      //                               sol_BDDC_SDC,
+      //                               sharedDofsKaskade,
+      //                               interfaceTypes,
+      //                               n_subdomains,
+      //                               A_,
+      //                               M_,
+      //                               K_,
+      //                               As,
+      //                               Ms,
+      //                               Ks,
+      //                               IGamma,
+      //                               dof_set, 
+      //                               II, 
+      //                               GammaGamma, 
+      //                               gamma_nbrs, 
+      //                               sequanceOfsubdomains,
+      //                               weights,
+      //                               Fs,
+      //                               cg_solver,
+      //                               iter_cg_with_bddc,
+      //                               local2Global,
+      //                               global2Local,
+      //                               map_index_to_subdomain,
+      //                               tol,
+      //                               sub_length_var,
+      //                               map_indices,
+      //                               BDDC_SDC_with_initial,
+      //                               BDDC_verbose);
     }  
   }
 

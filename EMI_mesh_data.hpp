@@ -1481,7 +1481,11 @@ void construct_As(std::vector<int> arr_extra,
                   std::map<int, int> map_indices,
                   std::string matlab_dir, bool write_to_file,
                   std::vector<Matrix> subMatrices,
+                  std::vector<Matrix> subMatrices_M,
+                  std::vector<Matrix> subMatrices_K,
                   std::vector<Matrix> &subMatrices_kaskade,
+                  std::vector<Matrix> &subMatrices_kaskade_Ms,
+                  std::vector<Matrix> &subMatrices_kaskade_Ks,
                   std::vector<Vector> &Fs,
                   std::vector<vector<int>> &IG_seq,
                   std::vector<std::vector<LocalDof>> &sharedDofsKaskade,
@@ -1505,6 +1509,8 @@ void construct_As(std::vector<int> arr_extra,
 
 
     Matrix subMatrix  = subMatrices[subIdx];
+    Matrix subMatrix_M  = subMatrices_M[subIdx];
+    Matrix subMatrix_K  = subMatrices_K[subIdx];
 
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
     std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
@@ -1609,11 +1615,21 @@ void construct_As(std::vector<int> arr_extra,
     }
 
     Matrix subMatrix_kaskade_shrinked(creator_kaskade); 
+    Matrix subMatrix_kaskade_M_shrinked(creator_kaskade); 
+    Matrix subMatrix_kaskade_K_shrinked(creator_kaskade); 
     {
       auto IGAMMA_block = subMatrix(IG,IG);
       insertMatrixBlock(IGAMMA_block, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_shrinked,true);
+
+      auto IGAMMA_block_M = subMatrix_M(IG,IG);
+      insertMatrixBlock(IGAMMA_block_M, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_M_shrinked,true);
+
+      auto IGAMMA_block_K = subMatrix_K(IG,IG);
+      insertMatrixBlock(IGAMMA_block_K, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_K_shrinked,true);
     }
     subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
+    subMatrices_kaskade_Ms[subIdx] = subMatrix_kaskade_M_shrinked;
+    subMatrices_kaskade_Ks[subIdx] = subMatrix_kaskade_K_shrinked;
 
     // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // save sub_matrices for kaskade format

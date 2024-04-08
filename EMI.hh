@@ -52,6 +52,7 @@ using namespace Kaskade;
 #include "EMI_CG_BDDC.hpp"
 #include "EMI_CG_BDDC_fused.hpp"
 #include "EMI_CG_BDDC_SDC.hpp"
+#include "EMI_CG_Jacobi_SDC.hpp"
 
 using namespace std;
 

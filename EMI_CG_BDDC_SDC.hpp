@@ -190,6 +190,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
       }
       Stiff_bddc[subIndx].umv(tmp_bddc[subIndx],rhs_bddc[subIndx]);
 
+  
     }// end of subdomain   
     // ------------------------------------------------------------------------------------------------------------
     
@@ -200,7 +201,9 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
     for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
     {
       if(BDDC_SDC_with_initial) rhs_bddc[subIndx]-=du_bddc_initial[subIndx][i]; // previous increment is probably a good starting value
+      std::cout<< subIndx << " JJ[subIndx].N() = "<< JJ[subIndx].N() <<std::endl;
       subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ[subIndx],interfaces);
+      
     }
 
     std::vector<BddcSubdomain> subs;
@@ -413,16 +416,21 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
                                                             bool BDDC_SDC_with_initial,
                                                             bool BDDC_verbose)
 {
-  // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-  // {
-  //   std::unordered_map<int, int> global2Local_sub = global2Local[subIndx];
-  //   std::unordered_map<int, int>::iterator it;
-  //   for (it = global2Local_sub.begin(); it != global2Local_sub.end(); it++)
-  //   { 
-  //     std::cout <<"("<<it->first << "," << it->second << ")\n";
-  //   }
-  //   std::cout << "=====================================================\n";
-  // }
+  for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+  {
+    std::unordered_map<int, int> global2Local_sub = global2Local[subIndx];
+    std::unordered_map<int, int>::iterator it;
+    for (it = global2Local_sub.begin(); it != global2Local_sub.end(); it++)
+    { 
+      std::cout <<"("<<it->first << "," << it->second << ")\n";
+    }
+    std::cout << "=====================================================\n";
+  }
+
+  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  {
+    std::cout << "BDDC_SDC: As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
+  }
 
   using namespace boost::fusion;
   std::setprecision(16);
@@ -528,12 +536,10 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
   compressedIndex_bddc.resize(n_subdomains);
   expandedIndices_pre_bddc.resize(n_subdomains);
 
-  std::set<int> s_temp;
-  for (int i = 0; i < gridManager.grid().size(0); ++i)
-  {
-    s_temp.insert(i);
-  }
 
+  std::vector<int> s_vec;
+  s_vec.resize(gridManager.grid().size(0));std::iota(s_vec.begin(),s_vec.end(),0);
+  std::set<int> elementIdx(s_vec.begin(),s_vec.end());
 
   // --------------------------------------------------------------------------------------------
   // BDDC
@@ -675,7 +681,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
       sweep++;
       if (sweep==0)   
       { 
-        Cellfltr.set_cells(s_temp);
+        Cellfltr.set_cells(elementIdx);
       }
       
       // --------------------------------------------------------------------------------------------

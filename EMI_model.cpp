@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
-  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
+  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
-  ("write_to_file",            write_to_file,                       false,"write to matlab file")  
+  ("write_to_file",            write_to_file,                       true,"write to matlab file")  
   ("maxSteps",                 options.maxSteps,                    10,  "max number of time steps")
   ("vtk",                      options.writeVTK,                    1,  "write VTK output files 0=none, 1=time steps 2=sweeps")
   ("T_",                       options.T,                           0.01,  "final time[ms]")
@@ -563,15 +563,19 @@ int main(int argc, char* argv[])
                 sharedDofsKaskade_new,
                 T2Index);
   
-  // if(write_to_file)
-  // {
-  //   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  //   {
-  //     int tag = sequenceOfTags[subIdx];
-  //     std::string path = std::to_string(subIdx);
-  //     writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
-  //   }  
-  // }
+
+  if(write_to_file)
+  {
+    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    {
+
+      std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
+      // int tag = sequenceOfTags[subIdx];
+      // std::string path = std::to_string(subIdx);
+      // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+    }  
+  }
+
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods
@@ -624,6 +628,55 @@ int main(int argc, char* argv[])
     }
   }
 
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + SDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_SDC)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with SDC + CG                   " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Functional F_SDC( material,
+                  gridManager.grid(),
+                  spaces,
+                  penalty,
+                  sigma_i,
+                  sigma_e,
+                  C_m,  
+                  R,
+                  R_extra);
+      F_SDC.extracellular_materials(arr_extra);
+      CardiacIntegrationStatistics statistics;
+      F_SDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      if(options.plot) writeVTK(uAll,out+"/SDCInitial",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+      std::cout <<" test CellFilter!!!!\n";
+      std::set<int> s_temp;
+      for (int i = 0; i < gridManager.grid().size(0); ++i) 
+        s_temp.insert(i);
+
+      // CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), s_temp); 
+      CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+      u = semiImplicit_CG_Jacobi_SDC( gridManager,
+                                      F_SDC,
+                                      Cellfltr,
+                                      variableSetDesc,
+                                      spaces,
+                                      gridManager.grid(),
+                                      u,
+                                      i2e,
+                                      options,
+                                      statistics,
+                                      out,
+                                      uAll,
+                                      i2i
+                                      );
+    }
+  }
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG + BDDC methods

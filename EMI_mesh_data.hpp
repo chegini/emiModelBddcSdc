@@ -1101,7 +1101,7 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
                                 Vector b_,
                                 std::map<int, int> map_indices,
                                 std::vector<std::vector<LocalDof>> sharedDofsAll,
-                                std::vector<Vector> &Fs)
+                                std::map<int,Vector> &Fs)
 {
   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
   {
@@ -1226,11 +1226,11 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           int assemblyThreads,
                                                           bool write_to_file,
                                                           std::string matlab_dir,
-                                                          std::vector<Vector> &Fs_petcs,
-                                                          std::vector<Vector> &weights,
-                                                          std::vector<Matrix> &subMatrices,
-                                                          std::vector<Matrix> &subMatrices_M,
-                                                          std::vector<Matrix> &subMatrices_K)
+                                                          std::map<int,Vector> &Fs_petcs,
+                                                          std::map<int,Vector> &weights,
+                                                          std::map<int,Matrix> &subMatrices,
+                                                          std::map<int,Matrix> &subMatrices_M,
+                                                          std::map<int,Matrix> &subMatrices_K)
 {
   // ------------------------------------------------------------------------------------ 
   // construct sparsity patterns
@@ -1477,17 +1477,17 @@ void construct_As(std::vector<int> arr_extra,
                   std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
                   std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
                   Vector rhs_kaskade,
-                  std::vector<Vector> weights,
+                  std::map<int,Vector> weights,
                   std::map<int, int> map_indices,
                   std::string matlab_dir, bool write_to_file,
-                  std::vector<Matrix> subMatrices,
-                  std::vector<Matrix> subMatrices_M,
-                  std::vector<Matrix> subMatrices_K,
-                  std::vector<Matrix> &subMatrices_kaskade,
-                  std::vector<Matrix> &subMatrices_kaskade_Ms,
-                  std::vector<Matrix> &subMatrices_kaskade_Ks,
-                  std::vector<Vector> &Fs,
-                  std::vector<vector<int>> &IG_seq,
+                  std::map<int,Matrix> subMatrices,
+                  std::map<int,Matrix> subMatrices_M,
+                  std::map<int,Matrix> subMatrices_K,
+                  std::map<int,Matrix> &subMatrices_kaskade,
+                  std::map<int,Matrix> &subMatrices_kaskade_Ms,
+                  std::map<int,Matrix> &subMatrices_kaskade_Ks,
+                  std::map<int,Vector> &Fs,
+                  std::map<int,vector<int>> &IG_seq,
                   std::vector<std::vector<LocalDof>> &sharedDofsKaskade,
                   std::map<int,int> & T2Index)
 {
@@ -1712,7 +1712,7 @@ void merge_inner_interface_bddc_fused(
   std::map<int,std::set<int>> map_GammaGamma,
   std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
   std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
-  std::vector<Matrix> subMatrices,
+  std::map<int,Matrix> subMatrices,
   std::map<int,std::set<int>> & map_II_fused,
   std::map<int,std::set<int>> & map_GammaGamma_fused,
   std::map<int,std::set<int>> & map_GammaGamma_noDuplicate_fused,

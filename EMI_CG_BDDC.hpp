@@ -15,12 +15,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         Vector & sol_bddc,
                                                         std::vector<std::vector<LocalDof>> sharedDofsKaskade,
                                                         int interfaceTypes,
-                                                        std::vector<Matrix> As,
+                                                        std::map<int,Matrix> As,
                                                         std::vector<int> sequenceOfTags,          
                                                         std::map<int,std::set<int>> map_II,
                                                         std::map<int,std::set<int>> map_GammaGamma_noDuplicate,  
                                                         std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
-                                                        std::vector<Vector> weights,
+                                                        std::map<int,Vector> weights,
                                                         bool cg_solver,
                                                         int iter_cg_with_bddc,
                                                         std::map<int,std::unordered_map<int, int>> local2Global,
@@ -28,7 +28,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         std::map<int, int> map_t2l,
                                                         std::map<int, int> map_indices,
                                                         bool BDDC_verbose,
-                                                        std::vector<std::vector<int>> IG_seq,
+                                                        std::map<int,std::vector<int>> IG_seq,
                                                         std::string matlab_dir,
                                                         bool write_to_file
                                                         )

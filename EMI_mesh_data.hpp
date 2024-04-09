@@ -1166,8 +1166,7 @@ void insertMatrixBlock(Matrix A_block, int x, int y,  std::vector<int> IG, std::
 
       int k_n = map_Petsc2Kaskade[IG[k]];
       int l_n = map_Petsc2Kaskade[IG[l]];
-      double value = *ca;
-      // if(value!=0.0)    
+      double value = *ca;    
       As_[k_n+x][l_n+y] = *ca; 
     }
   }
@@ -1386,7 +1385,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       Cellfltr.select_based_on_tag(true);
       assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
       K_ = assembler.template get<Matrix>(false);
-      K_*=(-dt);
+      K_*=(-dt); 
       exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
       subMatrix+=subMatrix_stiffness;
       // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
@@ -1504,6 +1503,7 @@ void construct_As(std::vector<int> arr_extra,
                   std::map<int,Matrix> subMatrices,
                   std::map<int,Matrix> subMatrices_M,
                   std::map<int,Matrix> subMatrices_K,
+                  double dt,
                   std::map<int,Matrix> &subMatrices_kaskade,
                   std::map<int,Matrix> &subMatrices_kaskade_Ms,
                   std::map<int,Matrix> &subMatrices_kaskade_Ks,
@@ -1648,6 +1648,7 @@ void construct_As(std::vector<int> arr_extra,
       auto IGAMMA_block_K = subMatrix_K(IG,IG);
       insertMatrixBlock(IGAMMA_block_K, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_K_shrinked,true);
     }
+
     subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
     subMatrices_kaskade_Ms[subIdx] = subMatrix_kaskade_M_shrinked;
     subMatrices_kaskade_Ks[subIdx] = subMatrix_kaskade_K_shrinked;

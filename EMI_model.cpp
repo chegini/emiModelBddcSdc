@@ -54,10 +54,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh_new.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular_new.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular_new.txt","subdomain definition")
@@ -66,10 +66,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -105,8 +105,8 @@ int main(int argc, char* argv[])
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
@@ -136,9 +136,9 @@ int main(int argc, char* argv[])
   ("CG_shift",                 options.CG_shift,                    true,  "shift the cg update")
   ("SDC_TOL",                  options.SDC_TOL,                     1e-5,  "SDC tolerance")
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
-  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               false,  "BDDC with initial guess from previous collocation sol") 
+  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
-  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
+  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    true,  "SDC tolerance") 
   )) return 0;
   tol =  options.cgTol;
   if (mkdir("output", 0777) == -1)
@@ -560,6 +560,7 @@ int main(int argc, char* argv[])
                 subMatrices,
                 subMatrices_M,
                 subMatrices_K, 
+                options.dt,
                 As, 
                 Ms,
                 Ks,
@@ -574,7 +575,7 @@ int main(int argc, char* argv[])
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
 
-      std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
+      //std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
       // int tag = sequenceOfTags[subIdx];
       // std::string path = std::to_string(subIdx);
       // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      

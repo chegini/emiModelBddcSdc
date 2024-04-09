@@ -149,12 +149,15 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       int counter_kasakde = IG.size();
       Vector Fs_subIdx(counter_kasakde);  
       { 
+        // std::cout << subIdx << " : ";
         for (int i = 0; i < counter_kasakde; ++i)
         {
           int index = IG[i];
           float coef = weights[subIdx][index];
+          // std::cout << "("<< index<< ","<< coef << "), ";
           Fs_subIdx[i] = coef*rhs_petsc_test[index];
         }
+        // std::cout << "\n";
       }
       Fs[subIdx] = Fs_subIdx;
     }

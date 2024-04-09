@@ -23,6 +23,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
                                                 std::map<int,Vector> weights,
                                                 std::map<int, int> map_indices,
                                                 Matrix const& A,
+                                                double dt,
                                                 std::vector<size_t> const& expandedIndices,
                                                 std::map<int, int> map_index_to_subdomain,
                                                 std::vector<int> sequenceOfTags,
@@ -106,6 +107,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
         initial_temp[ej] = du_bddc[subIndx][i-1][global2Local[tag][ej]]; 
       }
       initial *= 0;
+      //  initial = initial+A * initial_temp.
       A.umv(initial_temp,initial);
       
       Vector rhs_petsc_test(A.N());
@@ -122,7 +124,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
           {
             int index = IG[c];
             float coef = weights[subIdx][index];
-            Fs_subIdx[c] = coef*rhs_petsc_test[index];
+            Fs_subIdx[c] = coef*rhs_petsc_test[index]*Shat[i-1][i];
           }
         }
         du_bddc_initial[subIdx][i] = Fs_subIdx; // for each collocation
@@ -331,12 +333,15 @@ void computeRHS_BDDC(int step,
         int counter_kasakde = IG.size();
         Vector Fs_subIdx(counter_kasakde);  
         { 
+          // std::cout << subIdx << " : ";
           for (int i = 0; i < counter_kasakde; ++i)
           {
             int index = IG[i];
             float coef = weights[subIdx][index];
             Fs_subIdx[i] = coef*rhs_petsc_test[index];
+            // std::cout << Fs_subIdx[i] << ", ";
           }
+          // std::cout << "\n";
         }
         Fs[subIdx] = Fs_subIdx;
       }
@@ -816,6 +821,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
                                                             weights,
                                                             map_indices,
                                                             A_,
+                                                            options.dt,
                                                             expandedIndices,
                                                             map_index_to_subdomain,
                                                             sequenceOfTags,

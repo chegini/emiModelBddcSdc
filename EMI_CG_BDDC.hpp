@@ -101,7 +101,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
   {
     int tag = sequenceOfTags[subIdx];
-    std::cout << subIdx << " -> " << tag << std::endl;
+    // std::cout << subIdx << " -> " << tag << std::endl;
     subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
   }
 

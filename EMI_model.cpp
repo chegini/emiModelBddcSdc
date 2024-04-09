@@ -38,10 +38,10 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
-  // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
@@ -66,10 +66,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -122,8 +122,8 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   5,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   5,  "maximal number of SDC sweeps")
+  ("sweeps",                   options.minSweeps,                   7,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   7,  "maximal number of SDC sweeps")
   ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
   ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
   ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
-  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    true,  "SDC tolerance") 
+  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
   )) return 0;
   tol =  options.cgTol;
   if (mkdir("output", 0777) == -1)
@@ -962,7 +962,7 @@ int main(int argc, char* argv[])
         s_temp.insert(i);
 
       CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
-      u = semiImplicit_CG_BDDC_SDC_allColocations_once( gridManager,
+      u = semiImplicit_CG_BDDC_SDC_allCollocations_once( gridManager,
                                     F_BDDC_SDC,
                                     Cellfltr,
                                     variableSetDesc,

@@ -544,7 +544,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
   for (int subIndx=0; subIndx<n_subdomains; ++subIndx){
     int tag =  sequenceOfTags[subIndx];
     subdomSize[subIndx] = Ms[subIndx].N();
-    std::cout << "Ms[subIndx].N() "<< Ms[subIndx].N()  << std::endl;
+    // std::cout << "Ms[subIndx].N() "<< Ms[subIndx].N()  << std::endl;
   }
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
@@ -630,7 +630,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
       std::iota(expandedIndices_pre_sub.begin(),expandedIndices_pre_sub.end(),0);
       expandedIndices_pre_bddc[subIndx] = expandedIndices_pre_sub;
 
-      std::cout << "subIndx: "<< subIndx << " local2Global[tag].size(): "<<local2Global[tag].size()<< std::endl;
+      // std::cout << "subIndx: "<< subIndx << " local2Global[tag].size(): "<<local2Global[tag].size()<< std::endl;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -666,7 +666,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
 
-    std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";   
+    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n";   
 
     do
     {
@@ -948,10 +948,11 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
 
       if (sweepNorm_bddc.size()>1)
       {
-        double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm.size()-2];
+        double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm_bddc.size()-2];
         sdcContraction = std::sqrt(c*sdcContraction);
       }
-      std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
+      // std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
+      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction <<"\n";   
 
       // // --------------------------------------------------------------------------------------------  
       // // select degrees of freedom to take into account in the next sweep. This is a 
@@ -1154,7 +1155,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
 
     }
     //while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || !accurate) );
-    while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || sweepNorm.back()*sdcContraction/(1-sdcContraction)>options.aTol || !accurate) );
+    while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || sweepNorm_bddc.back()*sdcContraction/(1-sdcContraction)>options.aTol || !accurate) );
     // while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps) );
     
 

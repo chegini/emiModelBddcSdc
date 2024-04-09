@@ -10,19 +10,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef INTEGRATE_CG_BDDC_SDC_ALL_COLL_HH
-#define INTEGRATE_CG_BDDC_SDC_ALL_COLL_HH
+#ifndef INTEGRATE_CG_BDDC_SDC_allCollocations_once_HH
+#define INTEGRATE_CG_BDDC_SDC_allCollocations_once_HH
 
 using namespace Kaskade;
 
 template <class Interfaces, class Matrix, class Vectors, class Vector, class ReactionDerivatives>
-typename Matrix::field_type sdcIterationStepBDDC_allCollocs(bool BDDC_SDC_with_initial, bool BDDC_verbose, bool BDDC_SDC_verbose, int sweep, bool cg_solver, int iter_cg_with_bddc, double tol, std::string matlab_dir, Interfaces const& interfaces,int n_subdomains ,SDCTimeGrid const& grid, SDCTimeGrid::RealMatrix const& Shat,
+typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_SDC_with_initial, bool BDDC_verbose, bool BDDC_SDC_verbose, int sweep, bool cg_solver, int iter_cg_with_bddc, double tol, std::string matlab_dir, Interfaces const& interfaces,int n_subdomains ,SDCTimeGrid const& grid, SDCTimeGrid::RealMatrix const& Shat,
                                                 std::map<int,std::set<int>> map_II, 
                                                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                                                 std::vector<std::vector<LocalDof>> sharedDofsKaskade, 
                                                 std::map<int,Vector> weights,
                                                 std::map<int, int> map_indices,
                                                 Matrix const& A,
+                                                double dt,
                                                 std::vector<size_t> const& expandedIndices,
                                                 std::map<int, int> map_index_to_subdomain,
                                                 std::vector<int> sequenceOfTags,
@@ -106,6 +107,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocs(bool BDDC_SDC_with_i
         initial_temp[ej] = du_bddc[subIndx][i-1][global2Local[tag][ej]]; 
       }
       initial *= 0;
+      //  initial = initial+A * initial_temp.
       A.umv(initial_temp,initial);
       
       Vector rhs_petsc_test(A.N());
@@ -122,7 +124,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocs(bool BDDC_SDC_with_i
           {
             int index = IG[c];
             float coef = weights[subIdx][index];
-            Fs_subIdx[c] = coef*rhs_petsc_test[index];
+            Fs_subIdx[c] = coef*rhs_petsc_test[index]*Shat[i-1][i];
           }
         }
         du_bddc_initial[subIdx][i] = Fs_subIdx; // for each collocation
@@ -235,7 +237,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocs(bool BDDC_SDC_with_i
 } 
 
 template <class State, class StateUe, class TimeGrid, class Vector, class Eq,class EqSemi, class Assem, class elementType, class CellFilter, class Options>
-void computeRHS_BDDC_allCollocs(int step, 
+void computeRHS_BDDC_allCollocations_once(int step, 
                 State const& x,
                 CellFilter & Cellfltr,
                 int number_cells,
@@ -331,12 +333,15 @@ void computeRHS_BDDC_allCollocs(int step,
         int counter_kasakde = IG.size();
         Vector Fs_subIdx(counter_kasakde);  
         { 
+          // std::cout << subIdx << " : ";
           for (int i = 0; i < counter_kasakde; ++i)
           {
             int index = IG[i];
             float coef = weights[subIdx][index];
             Fs_subIdx[i] = coef*rhs_petsc_test[index];
+            // std::cout << Fs_subIdx[i] << ", ";
           }
+          // std::cout << "\n";
         }
         Fs[subIdx] = Fs_subIdx;
       }
@@ -361,7 +366,7 @@ void computeRHS_BDDC_allCollocs(int step,
 }
 
 template <class Grid, class Equation, class VariableSet, class Spaces, class elementType, class CellFilter, class Options, class OptionStatistics, class Matrix, class Vector>
-typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( GridManager<Grid>& gridManager,
+typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once( GridManager<Grid>& gridManager,
                                                             Equation& eq,
                                                             CellFilter & Cellfltr,  
                                                             VariableSet const& variableSet, 
@@ -539,7 +544,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
   for (int subIndx=0; subIndx<n_subdomains; ++subIndx){
     int tag =  sequenceOfTags[subIndx];
     subdomSize[subIndx] = Ms[subIndx].N();
-    std::cout << "Ms[subIndx].N() "<< Ms[subIndx].N()  << std::endl;
+    // std::cout << "Ms[subIndx].N() "<< Ms[subIndx].N()  << std::endl;
   }
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
@@ -625,7 +630,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
       std::iota(expandedIndices_pre_sub.begin(),expandedIndices_pre_sub.end(),0);
       expandedIndices_pre_bddc[subIndx] = expandedIndices_pre_sub;
 
-      std::cout << "subIndx: "<< subIndx << " local2Global[tag].size(): "<<local2Global[tag].size()<< std::endl;
+      // std::cout << "subIndx: "<< subIndx << " local2Global[tag].size(): "<<local2Global[tag].size()<< std::endl;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -661,7 +666,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
 
-    std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";   
+    // std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";  
+        std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n";  
 
     do
     {
@@ -692,7 +698,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
       // --------------------------------------------------------------------------------------------  
       assemblyRhsTimer.resume();
       
-      computeRHS_BDDC_allCollocs(steps,x,
+      computeRHS_BDDC_allCollocations_once(steps,x,
                       Cellfltr,
                       number_cells,
                       collocationU,
@@ -805,7 +811,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
       // writeVTKFile(x,output + "/x-step-"+paddedString(steps));
       // printuAll(x,uAll,options, output + "/x-step-"+paddedString(steps),"u_pre");
       std::string name = "test_steps_"+paddedString(steps)+"_sweep_"+paddedString(sweep);
-      sweepNorm_bddc.push_back( sdcIterationStepBDDC_allCollocs(BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose, sweep, cg_solver,iter_cg_with_bddc,tol,matlab_dir,
+      sweepNorm_bddc.push_back( sdcIterationStepBDDC_allCollocations_once(BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose, sweep, cg_solver,iter_cg_with_bddc,tol,matlab_dir,
                                                             ifa,
                                                             n_subdomains,
                                                             grid,
@@ -816,6 +822,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
                                                             weights,
                                                             map_indices,
                                                             A_,
+                                                            options.dt,
                                                             expandedIndices,
                                                             map_index_to_subdomain,
                                                             sequenceOfTags,
@@ -942,7 +949,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
 
       if (sweepNorm_bddc.size()>1)
       {
-        double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm.size()-2];
+        double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm_bddc.size()-2];
         sdcContraction = std::sqrt(c*sdcContraction);
       }
       std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
@@ -1148,7 +1155,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
 
     }
     //while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || !accurate) );
-    while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || sweepNorm.back()*sdcContraction/(1-sdcContraction)>options.aTol || !accurate) );
+    while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps ||  sdcContraction>1 || sweepNorm_bddc.back()*sdcContraction/(1-sdcContraction)>options.aTol || !accurate) );
     // while ( sweep+1<options.maxSweeps && (sweep+1<options.minSweeps) );
     
 
@@ -1201,7 +1208,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allColocations_once( 
   statistics.sdcTime = sdcTimer.elapsed().wall;
   std::cout<< "statistics.sdcTime:  "<< statistics.sdcTime << std::endl;
   printuAll(x,uAll,options.order, output+"/emiSDCBDDCLast","u");
-  writeVectorTofile(x,"matlab_dir/emiSDCBDDCLastAllColl");  
+  writeVectorTofile(x,"matlab_dir/emiSDCBDDCLast");  
  return x;
 }
 

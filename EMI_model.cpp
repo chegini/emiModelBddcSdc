@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
   std::string inputfile, early_excited, extra_set, intra_set, dir_out, matlab_dir;
   bool cg_semi, plot, withSplitFace,cg_solver;
   bool test_mesh_data, write_to_file;
-  bool BDDC_SDC_with_initial, BDDC_verbose;
+  bool BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose;
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh_old.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular_old.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular_old.txt","subdomain definition")
@@ -52,10 +52,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh_new.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular_new.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular_new.txt","subdomain definition")
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
   ("write_to_file",            write_to_file,                       true,"write to matlab file")  
-  ("maxSteps",                 options.maxSteps,                    10,  "max number of time steps")
+  ("maxSteps",                 options.maxSteps,                    5,  "max number of time steps")
   ("vtk",                      options.writeVTK,                    1,  "write VTK output files 0=none, 1=time steps 2=sweeps")
   ("T_",                       options.T,                           0.01,  "final time[ms]")
   ("dt",                       options.dt,                          0.01,  "time step size[ms]")
@@ -118,10 +118,10 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   1000,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   1000,  "maximal number of SDC sweeps")
-  ("nColloc",                  options.nCollocU,                    1,  "number of collocation points in time")
-  ("nCollocStart",             options.nCollocUstart,               1,  "start sweeps with that many collocation points")
+  ("sweeps",                   options.minSweeps,                   5,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   5,  "maximal number of SDC sweeps")
+  ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
+  ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
   ("sweepType",                options.sweepType,                   1,  "0: Euler, 1: LU")
   ("nReactionSweeps",          options.nReactionSweeps,             0,  "number of post-sweep Euler steps for reaction nonlinearity")
@@ -132,8 +132,9 @@ int main(int argc, char* argv[])
   ("CG_shift",                 options.CG_shift,                    true,  "shift the cg update")
   ("SDC_TOL",                  options.SDC_TOL,                     1e-5,  "SDC tolerance")
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
-  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
+  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               false,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
+  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
   )) return 0;
   tol =  options.cgTol;
   if (mkdir("output", 0777) == -1)
@@ -917,7 +918,8 @@ int main(int argc, char* argv[])
                                     map_t2l, 
                                     map_indices,
                                     BDDC_SDC_with_initial,
-                                    BDDC_verbose);
+                                    BDDC_verbose,
+                                    BDDC_SDC_verbose);
 
     }  
   }

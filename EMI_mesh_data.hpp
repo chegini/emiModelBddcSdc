@@ -596,6 +596,12 @@ void local2GlobalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, std::
     local2Global_subdomain.insert(pair<int, int>(index,gamma[i]));     
     index++;  
   }
+  
+  for (int i = 0; i < Interface_nbr.size(); ++i)
+  {
+    local2Global_subdomain.insert(pair<int, int>(index,Interface_nbr[i]));     
+    index++;  
+  }
 }
 
 void global2LocalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, std::vector<int> Interface_nbr, 
@@ -613,6 +619,12 @@ void global2LocalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, std::
     global2Local_subdomain.insert(pair<int, int>(gamma[i], index));     
     index++;  
   }
+
+  for (int i = 0; i < Interface_nbr.size(); ++i)
+  {
+    global2Local_subdomain.insert(pair<int, int>(Interface_nbr[i], index));     
+    index++;  
+  }
 }
 
 void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma, std::vector<int> Interface_nbr, 
@@ -628,6 +640,12 @@ void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma, std::ve
   for (int i = 0; i < gamma.size(); ++i)
   {
     globalIndices_subdomain.push_back(gamma[i]); 
+    index++;  
+  }
+
+  for (int i = 0; i < Interface_nbr.size(); ++i)
+  {
+    globalIndices_subdomain.push_back(Interface_nbr[i]); 
     index++;  
   }
 }

@@ -70,8 +70,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 	auto du(u);
   auto step_test(u);
 	du *= 0;
-  auto du_cg(u);
-  du_cg *= 0;
+  auto u_pre(u);
 
 	Vector u_semi(nDofs);
 
@@ -154,7 +153,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
         {
           int index = IG[i];
           float coef = weights[subIdx][index];
-          // std::cout << "("<< index<< ","<< coef << "), ";
+          // std::cout << "("<< index<< ","<< coef << "), ";          
           Fs_subIdx[i] = coef*rhs_petsc_test[index];
         }
         // std::cout << "\n";
@@ -168,7 +167,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       {
         int tag = sequenceOfTags[subIdx];
         std::string path = std::to_string(tag);
-        // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+        writeToMatlabPath_matlab(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
       }  
     }
     
@@ -236,7 +235,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   }
   writeVTK(uAll,out+"/emiBDDCLast",
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
-  writeVectorTofile(u,"matlab_dir/emiBDDCLast");
 	return u;
 }
 #endif

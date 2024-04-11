@@ -1723,7 +1723,7 @@ void construct_As(std::vector<int> arr_extra,
         f << "\n";
       }
     }
-  } 
+  }
 }
 
 template<class Matrix> 

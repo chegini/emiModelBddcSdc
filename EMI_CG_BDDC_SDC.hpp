@@ -1207,8 +1207,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
   statistics.avgDofs = dofCount / (double)steps;
   statistics.sdcTime = sdcTimer.elapsed().wall;
   std::cout<< "statistics.sdcTime:  "<< statistics.sdcTime << std::endl;
-  printuAll(x,uAll,options.order, output+"/emiSDCBDDCLast","u");
-  writeVectorTofile(x,"matlab_dir/emiSDCBDDCLast");  
+  printuAll(x,uAll,options.order, output+"/emiSDCBDDCLast","u");  
  return x;
 }
 

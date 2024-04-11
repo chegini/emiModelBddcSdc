@@ -92,17 +92,17 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
 
-  // parallelFor(0,n_subdomains,[&](int i)
-  // {
-  //   int tag = sequenceOfTags[i];
-  //   subsptr[i] = std::make_unique<BddcSubdomain>(i,As[tag],ifa);
-  // });
-  for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
+  parallelFor(0,n_subdomains,[&](int subIdx)
   {
     int tag = sequenceOfTags[subIdx];
-    // std::cout << subIdx << " -> " << tag << std::endl;
     subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
-  }
+  });
+  // for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
+  // {
+  //   int tag = sequenceOfTags[subIdx];
+  //   // std::cout << subIdx << " -> " << tag << std::endl;
+  //   subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
+  // }
 
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {

@@ -1157,7 +1157,7 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
 template<class Matrix, class Matrix_>
 void insertMatrixBlock(Matrix A_block, int x, int y,  std::vector<int> IG, std::map<int, int> map_Petsc2Kaskade, Matrix_ &As_, bool test)
 {
-  for (int k = 0; k < A_block.N(); ++k)
+  parallelFor(0,A_block.N(),[&](int k)
   {
     auto row  = A_block[k];
     for (auto ca=row.begin(); ca!=row.end(); ++ca)
@@ -1169,13 +1169,13 @@ void insertMatrixBlock(Matrix A_block, int x, int y,  std::vector<int> IG, std::
       double value = *ca;    
       As_[k_n+x][l_n+y] = *ca; 
     }
-  }
+  });
 }
 
 template<class Matrix, class Matrix_>
 void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices ,std::vector<int> Interior, std::vector<int> Interface, Matrix_ &As_)
 {
-  for (int k = 0; k < A_block.N(); ++k)
+  parallelFor(0,A_block.N(),[&](int k)
   {
     auto row  = A_block[k];
     for (auto ca=row.begin(); ca!=row.end(); ++ca)
@@ -1183,7 +1183,7 @@ void insertMatrixBlock_extra(Matrix A_block, std::map<int,int> map_indices ,std:
       int const l = ca.index();
       As_[map_indices[Interior[k]]][map_indices[Interface[l]]] = *ca; 
     }
-  }
+  });
 }
 
 template<class Matrix, class Matrix_>

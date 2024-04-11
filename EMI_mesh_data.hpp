@@ -1336,7 +1336,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
         F.set_row_col_subdomain(row,col);
         assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
         Matrix sub_M_ = assembler.template get<Matrix>(false);
-        for (int k = 0; k < sub_M_.N(); ++k)
+        parallelFor(0,sub_M_.N(),[&](int k)
         {
           auto row_ = sub_M_[k];
           for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
@@ -1344,7 +1344,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
             int const l = ca.index();
             M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
           }
-        }
+        });
         subMatrix_mass+=M_sub;
       }
 
@@ -1354,7 +1354,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
         assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
         Matrix sub_M_ = assembler.template get<Matrix>(false);
 
-        for (int k = 0; k < sub_M_.N(); ++k)
+        parallelFor(0,sub_M_.N(),[&](int k)
         {
           auto row_ = sub_M_[k];
           for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
@@ -1362,7 +1362,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
             int const l = ca.index();
             M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
           }
-        }
+        });
         subMatrix_mass+=M_sub;
       }
     }

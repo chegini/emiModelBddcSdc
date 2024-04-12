@@ -38,14 +38,14 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
-  ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_join_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_join_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_join_list_intracellular.txt","subdomain definition")
@@ -109,8 +109,8 @@ int main(int argc, char* argv[])
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
@@ -126,10 +126,10 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   1,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   1,  "maximal number of SDC sweeps")
-  ("nColloc",                  options.nCollocU,                    1,  "number of collocation points in time")
-  ("nCollocStart",             options.nCollocUstart,               1,  "start sweeps with that many collocation points")
+  ("sweeps",                   options.minSweeps,                   6,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   6,  "maximal number of SDC sweeps")
+  ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
+  ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
   ("sweepType",                options.sweepType,                   1,  "0: Euler, 1: LU")
   ("nReactionSweeps",          options.nReactionSweeps,             0,  "number of post-sweep Euler steps for reaction nonlinearity")
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
   ("CG_shift",                 options.CG_shift,                    true,  "shift the cg update")
   ("SDC_TOL",                  options.SDC_TOL,                     1e-5,  "SDC tolerance")
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
-  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               false,  "BDDC with initial guess from previous collocation sol") 
+  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
   ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
   )) return 0;
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
   timer.start("reading FE grid");
   VTKReader vtk(inputfile);
   GridManager<Grid> gridManager(vtk.createGrid<Grid>());
-  gridManager.enforceConcurrentReads(true);
+  gridManager.enforceConcurrentReads(false);
   using H1SpaceMaterial = FEFunctionSpace<DiscontinuousLagrangeMapper<double,LeafView>>;
   using cellMaterial = H1SpaceMaterial::Element<1>::type;
   H1SpaceMaterial materialSpace(gridManager,gridManager.grid().leafGridView(), 0);
@@ -909,7 +909,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC,
-                                    sharedDofsKaskade,
+                                    sharedDofsKaskade_new,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,
@@ -996,7 +996,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC_all_coll,
-                                    sharedDofsKaskade,
+                                    sharedDofsKaskade_new,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,
@@ -1082,7 +1082,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC_small_coll,
-                                    sharedDofsKaskade,
+                                    sharedDofsKaskade_new,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,

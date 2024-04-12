@@ -200,7 +200,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
 
     std::vector<BddcSubdomain> subs;
     for (auto& sp: subsptr)
-      subs.push_back(std::move(*sp));
+      subs.push_back(*sp);
 
     BDDCSolver<BddcSubdomain> bddcSolver(subs,interfaces.coarseConstraints(),cg_solver, BDDC_SDC_verbose);
     bddcSolver.update_rhs(rhs_bddc);

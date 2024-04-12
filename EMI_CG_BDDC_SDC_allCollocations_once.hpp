@@ -10,13 +10,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef INTEGRATE_CG_BDDC_SDC_allCollocations_once_HH
-#define INTEGRATE_CG_BDDC_SDC_allCollocations_once_HH
+#ifndef INTEGRATE_CG_BDDC_SDC_all_dt_HH
+#define INTEGRATE_CG_BDDC_SDC_all_dt_HH
 
 using namespace Kaskade;
 
-template <class Interfaces, class Matrix, class Vectors, class Vector, class ReactionDerivatives>
-typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_SDC_with_initial, bool BDDC_verbose, bool BDDC_SDC_verbose, int sweep, bool cg_solver, int iter_cg_with_bddc, double tol, std::string matlab_dir, Interfaces const& interfaces,int n_subdomains ,SDCTimeGrid const& grid, SDCTimeGrid::RealMatrix const& Shat,
+template <class Interfaces, class Matrix, class Vectors, class Vector, class ReactionDerivatives, class BddcSubdomain>
+typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool reassemble, bool BDDC_SDC_with_initial, bool BDDC_verbose, bool BDDC_SDC_verbose, int sweep, bool cg_solver, int iter_cg_with_bddc, double tol, std::string matlab_dir, Interfaces const& interfaces,int n_subdomains ,SDCTimeGrid const& grid, SDCTimeGrid::RealMatrix const& Shat,
                                                 std::map<int,std::set<int>> map_II, 
                                                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                                                 std::vector<std::vector<LocalDof>> sharedDofsKaskade, 
@@ -32,6 +32,8 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
                                                 std::map<int,std::vector<int>> IG_seq,
                                                 std::vector<Matrix> const& M_bddc,                //matMuu_bddc
                                                 std::vector<Matrix> const& Stiff_bddc,            //matStiffuu_bddc
+                                                std::vector<std::vector<Matrix>> &JJ_all,
+                                                std::vector<std::vector<BddcSubdomain>> & subs_all,
                                                 std::vector<Vectors> & rUi_bddc,                  //ru_bddc
                                                 std::vector<ReactionDerivatives> const& rDu_bddc, //allMatFu_bddc
                                                 std::vector<Vectors> const& Mdu_bddc,             //matMdiffu_bddc
@@ -67,10 +69,9 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
   // perform n Euler steps
   typename Matrix::field_type norm = 0;
 
-  std::vector<Matrix> JJ(n_subdomains);
+
   for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
   {
-    JJ[subIndx] = M_bddc[subIndx];
     // initialize correction at starting point to zero
     du_bddc[subIndx][0] = 0.0; // for each subdomain
     du_bddc_initial[subIndx][0] = 0.0;
@@ -83,8 +84,8 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
   std::cout << "\t\t\t\t\t\t\t\t\t\t========================================================\n";
   }
 
-  using TransmissionScalar = double;
-  using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  // using TransmissionScalar = double;
+  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   // for each collocation point
   for (int i=1; i<=n; i++)
   { 
@@ -92,7 +93,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
     std::cout << "\t\t\t\t\t\t\t\t\t\tcol \t" << i <<"\n";
     std::cout << "\t\t\t\t\t\t\t\t\t\t========================================================" <<std::endl;
     }
-    std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
+    // std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
 
     // -----------------------------------------------------------------------
     // set initial guess from previpus collocation point
@@ -135,33 +136,6 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
     for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
     {
       // ---------------------------------------------------------------------
-      // LHS: left-hand side for linear system
-      // ---------------------------------------------------------------------
-      // matrix J = M - Shat_i-1,i*(A+f_u)
-      // ---------------------------------------------------------------------
-      for (size_t row=0; row<JJ[subIndx].N(); ++row)
-      {
-        auto colJ = JJ[subIndx][row].begin(); 
-        auto end = JJ[subIndx][row].end();
-        auto colM = M_bddc[subIndx][row].begin();
-        auto colA = Stiff_bddc[subIndx][row].begin();
-        auto colR = rDu_bddc[subIndx][i][row].begin();
-        auto endR = rDu_bddc[subIndx][i][row].end();
-         
-        while (colJ != end)
-        {
-          *colJ = *colM - Shat[i-1][i] * *colA;
-          
-          if (colR != endR && colJ.index() == colR.index()) // f_u can have subset of sparsity pattern
-          {
-            *colJ -= std::min(0.5* *colM, Shat[i-1][i] * *colR); // guarantee M - Shat*fu is nonnegative -- reduce by at most 50%
-            ++colR;
-          }
-          ++colJ; ++colM; ++colA;           
-        }
-      }
-
-      // ---------------------------------------------------------------------
       // RHS:  right-hand side for linear system
       // ---------------------------------------------------------------------
       // M * ( u_i^{k} - u_{i+1}^k + du_i) = Mdiffu + Mdu
@@ -188,21 +162,13 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
     }// end of subdomain   
     // ------------------------------------------------------------------------------------------------------------
     
-
-
-
     // ------------------------------------------------------------------------------------------------------------
     for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
     {
       if(BDDC_SDC_with_initial) rhs_bddc[subIndx]-=du_bddc_initial[subIndx][i]; // previous increment is probably a good starting value
-      subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ[subIndx],interfaces);
     }
 
-    std::vector<BddcSubdomain> subs;
-    for (auto& sp: subsptr)
-      subs.push_back(std::move(*sp));
-
-    BDDCSolver<BddcSubdomain> bddcSolver(subs,interfaces.coarseConstraints(),cg_solver, BDDC_SDC_verbose);
+    BDDCSolver<BddcSubdomain> bddcSolver(subs_all[i-1],interfaces.coarseConstraints(),cg_solver, BDDC_SDC_verbose);
     bddcSolver.update_rhs(rhs_bddc);
 
     std::vector<double> resNorm;
@@ -216,7 +182,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool BDDC_
     // update the solution
     for (int subIndx=0; subIndx<n_subdomains; ++subIndx)
     {
-        auto ui = subs[subIndx].getSolution();
+        auto ui = subs_all[i-1][subIndx].getSolution();
         du_bddc[subIndx][i] = ui; // fix me!
         if(BDDC_SDC_with_initial) du_bddc[subIndx][i]+=du_bddc_initial[subIndx][i];
     } 
@@ -548,6 +514,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
   }
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
+  using TransmissionScalar = double;
+  using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+
   // --------------------------------------------------------------------------------------------
   // time stepping loop
   // --------------------------------------------------------------------------------------------
@@ -587,6 +556,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
     // spectral time grid for defect correction methods with Radau points
     // --------------------------------------------------------------------------------------------
     RadauTimeGrid grid(options.nCollocUstart,eq.time(),end_T); // start sweep with 
+    std::vector<std::vector<Matrix>> JJ_all(grid.points().N()-1); // for each time step.
+    std::vector<std::vector<BddcSubdomain>> subs_all(grid.points().N()-1);
+    std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_coll(grid.points().N()-1);
     // std::cerr << "time points are: " << grid.points() << '\n';
     // --------------------------------------------------------------------------------------------
     // # size of all varialbles & size of variable u
@@ -666,8 +638,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
 
-    // std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";  
-        std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n";  
+    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n";   
 
     do
     {
@@ -805,13 +776,87 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         allMatFu_bddc[subIndx] = allMatFu_sub;
       }
       assemblyReactionTimer.stop();
+
+
+
+
+      
+      // -------------------------------------------------------------------------------------------- 
+      // perform SDC sweep
+      // -------------------------------------------------------------------------------------------- 
+
+      if (reassemble)
+      {
+
+        // ---------------------------------------------------------------------
+        // LHS: left-hand side for linear system
+        // ---------------------------------------------------------------------
+        // matrix J = M - Shat_i-1,i*(A+f_u)
+        // ---------------------------------------------------------------------
+
+        int n_grid = grid.points().N()-1;
+        for (int i=1; i<=n_grid; i++)
+        {
+          std::vector<Matrix> JJ(n_subdomains);
+          JJ_all[i-1] = JJ;
+          for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          {
+            JJ_all[i-1][subIndx] = matMuu_bddc[subIndx];
+          }
+        }
+
+        for (int i=1; i<=n_grid; i++) // for each collocation points
+        { 
+
+          for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          {
+            for (size_t row=0; row<JJ_all[i-1][subIndx].N(); ++row)
+            {
+              auto colJ = JJ_all[i-1][subIndx][row].begin(); 
+              auto end = JJ_all[i-1][subIndx][row].end();
+              auto colM = matMuu_bddc[subIndx][row].begin();
+              auto colA = matStiffuu_bddc[subIndx][row].begin();
+              auto colR = allMatFu_bddc[subIndx][i][row].begin();
+              auto endR = allMatFu_bddc[subIndx][i][row].end();
+               
+              while (colJ != end)
+              {
+                *colJ = *colM - Shat[i-1][i] * *colA;
+                
+                if (colR != endR && colJ.index() == colR.index()) // f_u can have subset of sparsity pattern
+                {
+                  *colJ -= std::min(0.5* *colM, Shat[i-1][i] * *colR); // guarantee M - Shat*fu is nonnegative -- reduce by at most 50%
+                  ++colR;
+                }
+                ++colJ; ++colM; ++colA;           
+              }
+            }
+          }
+
+          std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
+          for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          {
+            subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
+          }
+          // subsptr_coll[i-1] = subsptr;
+          std::vector<BddcSubdomain> subs;
+          for (auto& sp: subsptr){
+            subs.push_back(*sp);
+          }
+          subs_all[i-1] = subs;
+        }
+        // reassemble = false;
+      }
+      //else{
+
+      // }
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
       // -------------------------------------------------------------------------------------------- 
       // writeVTKFile(x,output + "/x-step-"+paddedString(steps));
       // printuAll(x,uAll,options, output + "/x-step-"+paddedString(steps),"u_pre");
       std::string name = "test_steps_"+paddedString(steps)+"_sweep_"+paddedString(sweep);
-      sweepNorm_bddc.push_back( sdcIterationStepBDDC_allCollocations_once(BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose, sweep, cg_solver,iter_cg_with_bddc,tol,matlab_dir,
+      sweepNorm_bddc.push_back( sdcIterationStepBDDC_allCollocations_once(reassemble, BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose, sweep, cg_solver,iter_cg_with_bddc,tol,matlab_dir,
                                                             ifa,
                                                             n_subdomains,
                                                             grid,
@@ -831,6 +876,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
                                                             IG_seq,
                                                             matMuu_bddc,
                                                             matStiffuu_bddc,
+                                                            JJ_all,
+                                                            subs_all,
                                                             ru_bddc,
                                                             allMatFu_bddc,
                                                             matMdiffu_bddc,
@@ -952,7 +999,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm_bddc.size()-2];
         sdcContraction = std::sqrt(c*sdcContraction);
       }
-      std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
+      // std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
+      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction <<"\n";   
 
       // // --------------------------------------------------------------------------------------------  
       // // select degrees of freedom to take into account in the next sweep. This is a 
@@ -1168,7 +1216,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
     component<0>(updated_sol) -= component<0>(step_test);
     sol_BDDC_SDC *= 0;
     updated_sol.write(sol_BDDC_SDC.begin());
-
     // // --------------------------------------------------------------------------------------------
     // // perform mesh coarsening
     // // --------------------------------------------------------------------------------------------
@@ -1212,8 +1259,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
   statistics.avgDofs = dofCount / (double)steps;
   statistics.sdcTime = sdcTimer.elapsed().wall;
   std::cout<< "statistics.sdcTime:  "<< statistics.sdcTime << std::endl;
-  printuAll(x,uAll,options.order, output+"/emiSDCBDDCLast","u");
-  writeVectorTofile(x,"matlab_dir/emiSDCBDDCLast");  
+  printuAll(x,uAll,options.order, output+"/emiSDCBDDCLast","u");  
  return x;
 }
 

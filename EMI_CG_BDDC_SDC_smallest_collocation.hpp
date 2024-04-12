@@ -382,7 +382,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
                                                             bool cg_semi, 
                                                             bool direct,
                                                             std::string matlab_dir,
-                                                            Vector & sol_semi,
+                                                            Vector & sol_BDDC_SDC,
                                                             std::vector<std::vector<LocalDof>> sharedDofsKaskade,
                                                             int interfaceTypes,
                                                             int n_subdomains,
@@ -1164,7 +1164,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
     // --------------------------------------------------------------------------------------------
     // extract final-time value
     // --------------------------------------------------------------------------------------------   
+    auto step_test(x);
     component<0>(x) = collocationU.back();
+    auto updated_sol(x);
+    component<0>(updated_sol) -= component<0>(step_test);
+    sol_BDDC_SDC *= 0;
+    updated_sol.write(sol_BDDC_SDC.begin());
 
     // // --------------------------------------------------------------------------------------------
     // // perform mesh coarsening

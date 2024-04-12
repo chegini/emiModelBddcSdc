@@ -38,10 +38,10 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
-  // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
@@ -70,10 +70,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -105,10 +105,10 @@ int main(int argc, char* argv[])
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
-  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
+  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
-  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
   ("CG_shift",                 options.CG_shift,                    true,  "shift the cg update")
   ("SDC_TOL",                  options.SDC_TOL,                     1e-5,  "SDC tolerance")
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
-  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
+  ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               false,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
   ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
   )) return 0;
@@ -648,6 +648,7 @@ int main(int argc, char* argv[])
       std::cout << "---------------------------------------------" << std::endl;
       std::cout << "semi implicit with SDC + CG                   " << std::endl;
       std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_SDC(nDofs);
       Functional F_SDC( material,
                   gridManager.grid(),
                   spaces,
@@ -678,6 +679,7 @@ int main(int argc, char* argv[])
                                       variableSetDesc,
                                       spaces,
                                       gridManager.grid(),
+                                      sol_SDC,
                                       u,
                                       i2e,
                                       options,
@@ -686,6 +688,10 @@ int main(int argc, char* argv[])
                                       uAll,
                                       i2i
                                       );
+      Vector sol_sdc_to_petsc(sol_SDC);
+      sol_sdc_to_petsc = 0; 
+      petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_SDC,sol_sdc_to_petsc);
+      if(write_to_file) writeSolution(sol_sdc_to_petsc,matlab_dir+"/sol_sdc"); 
     }
   }
 
@@ -931,6 +937,12 @@ int main(int argc, char* argv[])
                                     BDDC_verbose,
                                     BDDC_SDC_verbose);
 
+    Vector sol_bddc_sdc_step(sol_BDDC_SDC);
+    sol_bddc_sdc_step = 0; 
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC,sol_bddc_sdc_step);
+    if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc"); 
+
+
     }  
   }
 
@@ -941,9 +953,9 @@ int main(int argc, char* argv[])
     if(run_implicit_CG_SDC_BDDC_all_collocation_once)
     {
       std::cout << "---------------------------------------------" << std::endl;
-      std::cout << "semi implicit with SDC + BDDC + CG           " << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG  all collocations         " << std::endl;
       std::cout << "---------------------------------------------" << std::endl;
-      Vector sol_BDDC_SDC(nDofs);
+      Vector sol_BDDC_SDC_all_coll(nDofs);
       Functional F_BDDC_SDC(material,
                             gridManager.grid(),
                             spaces,
@@ -983,7 +995,7 @@ int main(int argc, char* argv[])
                                     cg_semi,
                                     direct,
                                     matlab_dir,
-                                    sol_BDDC_SDC,
+                                    sol_BDDC_SDC_all_coll,
                                     sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
@@ -1012,6 +1024,11 @@ int main(int argc, char* argv[])
                                     BDDC_verbose,
                                     BDDC_SDC_verbose);
 
+    Vector sol_bddc_sdc_step(sol_BDDC_SDC_all_coll);
+    sol_bddc_sdc_step = 0; 
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC_all_coll,sol_bddc_sdc_step);
+    if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc_small_all_coll"); 
+
     }  
   }
 
@@ -1022,9 +1039,9 @@ int main(int argc, char* argv[])
     if(run_implicit_CG_SDC_BDDC_smallest_collocation)
     {
       std::cout << "---------------------------------------------" << std::endl;
-      std::cout << "semi implicit with SDC + BDDC + CG           " << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG  smallest collocation         " << std::endl;
       std::cout << "---------------------------------------------" << std::endl;
-      Vector sol_BDDC_SDC(nDofs);
+      Vector sol_BDDC_SDC_small_coll(nDofs);
       Functional F_BDDC_SDC(material,
                             gridManager.grid(),
                             spaces,
@@ -1064,7 +1081,7 @@ int main(int argc, char* argv[])
                                     cg_semi,
                                     direct,
                                     matlab_dir,
-                                    sol_BDDC_SDC,
+                                    sol_BDDC_SDC_small_coll,
                                     sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
@@ -1092,6 +1109,11 @@ int main(int argc, char* argv[])
                                     BDDC_SDC_with_initial,
                                     BDDC_verbose,
                                     BDDC_SDC_verbose);
+
+    Vector sol_bddc_sdc_step(sol_BDDC_SDC_small_coll);
+    sol_bddc_sdc_step = 0; 
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC_small_coll,sol_bddc_sdc_step);
+    if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc_small_coll"); 
 
     }  
   }

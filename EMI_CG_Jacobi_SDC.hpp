@@ -163,11 +163,12 @@ void computeRHS(int step,
 }
 
 
-template <class Grid, class Equation, class VariableSet, class Spaces, class elementType, class CellFilter, class Options, class OptionStatistics>
+template <class Grid, class Equation, class VariableSet, class Spaces, class elementType, class CellFilter, class Options, class OptionStatistics, class Vector>
 typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>& gridManager,
                                                               Equation& eq,
                                                               CellFilter & Cellfltr,  VariableSet const& variableSet, Spaces const& spaces,
                                                               Grid const& grid,
+                                                              Vector & sol_SDC,
                                                               typename VariableSet::VariableSet x,
                                                               std::vector<std::set<int>> index2Cells_new,
                                                               Options const& options, OptionStatistics& statistics,
@@ -269,7 +270,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
   // --------------------------------------------------------------------------------------------
   typedef typename Assembler::field_type field_type;
   typedef Kaskade::NumaBCRSMatrix<Dune::FieldMatrix<field_type,1,1>> SparseMatrix;
-  typedef typename Dune::BlockVector<Dune::FieldVector<double,1>> Vector;
+  // typedef typename Dune::BlockVector<Dune::FieldVector<double,1>> Vector;
   
   SparseMatrix  matMu;
   SparseMatrix  matStiffu;
@@ -825,7 +826,12 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
     // --------------------------------------------------------------------------------------------
     // extract final-time value
     // --------------------------------------------------------------------------------------------   
+    auto step_test(x);
     component<0>(x) = collocationUe.back();
+    auto updated_sol(x);
+    component<0>(updated_sol) -= component<0>(step_test);
+    sol_SDC *= 0;
+    updated_sol.write(sol_SDC.begin());
 
     // // --------------------------------------------------------------------------------------------
     // // perform mesh coarsening

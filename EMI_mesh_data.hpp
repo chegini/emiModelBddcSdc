@@ -1283,7 +1283,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   }
 
   if(write_to_file)
-    writeToMatlabPath_matlab(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
+    writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
   // ------------------------------------------------------------------------------------ 
   // construct submatrices
@@ -1395,7 +1395,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     subMatrices[subIdx] = subMatrix;
     subMatrices_M[subIdx] = subMatrix_mass;
     subMatrices_K[subIdx] = subMatrix_stiffness;
-    if(write_to_file) writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
   }
 
   // -------------------------------------

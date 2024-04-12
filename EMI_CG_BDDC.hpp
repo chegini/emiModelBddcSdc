@@ -161,13 +161,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       Fs[subIdx] = Fs_subIdx;
     }
 
-     if(write_to_file)
+     if(write_to_file and false)
     {
       for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
       {
-        int tag = sequenceOfTags[subIdx];
-        std::string path = std::to_string(tag);
-        writeToMatlabPath_matlab(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+        std::string path = std::to_string(subIdx);
+        writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+subIdx,matlab_dir, true);      
       }  
     }
     

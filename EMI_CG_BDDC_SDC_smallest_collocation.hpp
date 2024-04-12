@@ -94,7 +94,7 @@ typename Matrix::field_type sdcIterationStepBDDC_smallest_collocation(bool reass
     std::cout << "\t\t\t\t\t\t\t\t\t\t========================================================" <<std::endl;
     }
     // std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-
+    // std::cout<< "Shat[i-1][i] = " << Shat[i-1][i] <<std::endl;
     // -----------------------------------------------------------------------
     // set initial guess from previpus collocation point
     // -----------------------------------------------------------------------
@@ -788,6 +788,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
       if (reassemble)
       {
 
+        double smallest_dt = 1e+10;
         // ---------------------------------------------------------------------
         // LHS: left-hand side for linear system
         // ---------------------------------------------------------------------
@@ -795,6 +796,18 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
         // ---------------------------------------------------------------------
 
         int n_grid = grid.points().N()-1;
+
+        for (int i=1; i<=n_grid; i++) // for each collocation points
+        {
+          if(smallest_dt>Shat[i-1][i])
+          {
+            smallest_dt = Shat[i-1][i];
+          }
+          // smallest_dt = (smallest_dt+ Shat[n_grid-1][n_grid])/2;
+        }
+          smallest_dt = Shat[n_grid-2][n_grid-1];
+        // std::cout << "smallest_dt: " << smallest_dt <<std::endl;
+
         for (int i=1; i<=n_grid; i++)
         {
           std::vector<Matrix> JJ(n_subdomains);
@@ -821,11 +834,11 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
                
               while (colJ != end)
               {
-                *colJ = *colM - Shat[i-1][i] * *colA;
+                *colJ = *colM - smallest_dt * *colA;
                 
                 if (colR != endR && colJ.index() == colR.index()) // f_u can have subset of sparsity pattern
                 {
-                  *colJ -= std::min(0.5* *colM, Shat[i-1][i] * *colR); // guarantee M - Shat*fu is nonnegative -- reduce by at most 50%
+                  *colJ -= std::min(0.5* *colM, smallest_dt * *colR); // guarantee M - Shat*fu is nonnegative -- reduce by at most 50%
                   ++colR;
                 }
                 ++colJ; ++colM; ++colA;           

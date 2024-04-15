@@ -192,11 +192,13 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
 
 
     // ------------------------------------------------------------------------------------------------------------
-    for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+    // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+    // {
+    parallelFor(0,n_subdomains,[&](int subIndx)
     {
       if(BDDC_SDC_with_initial) rhs_bddc[subIndx]-=du_bddc_initial[subIndx][i]; // previous increment is probably a good starting value
       subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ[subIndx],interfaces);
-    }
+    });
 
     std::vector<BddcSubdomain> subs;
     for (auto& sp: subsptr)

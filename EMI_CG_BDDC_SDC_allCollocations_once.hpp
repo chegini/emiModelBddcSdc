@@ -834,10 +834,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
           }
 
           std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-          for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          // {
+          parallelFor(0,n_subdomains,[&](int subIndx)
           {
             subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
-          }
+          });
           // subsptr_coll[i-1] = subsptr;
           std::vector<BddcSubdomain> subs;
           for (auto& sp: subsptr){

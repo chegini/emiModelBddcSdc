@@ -42,10 +42,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_join_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_join_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_join_list_intracellular.txt","subdomain definition")
@@ -58,10 +58,6 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/twoCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/twoCells3d_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/twoCells3d_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/twoCells3d_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/twoCells3d_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/twoCells3d_mesh_new.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/twoCells3d_list_extracellular_new.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/twoCells3d_list_intracellular_new.txt","subdomain definition")
@@ -70,10 +66,22 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/tenCells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/tenCells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/tenCells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/tenCells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/20Cells3d_20extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/40Cells3d_40extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/40Cells3d_40extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/40Cells3d_40extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/40Cells3d_40extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -105,17 +113,17 @@ int main(int argc, char* argv[])
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
-  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
+  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
-  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
-  ("write_to_file",            write_to_file,                       true,"write to matlab file")  
+  ("write_to_file",            write_to_file,                       false,"write to matlab file")  
   ("maxSteps",                 options.maxSteps,                    5,  "max number of time steps")
   ("vtk",                      options.writeVTK,                    1,  "write VTK output files 0=none, 1=time steps 2=sweeps")
   ("T_",                       options.T,                           0.01,  "final time[ms]")
@@ -171,7 +179,7 @@ int main(int argc, char* argv[])
   timer.start("reading FE grid");
   VTKReader vtk(inputfile);
   GridManager<Grid> gridManager(vtk.createGrid<Grid>());
-  gridManager.enforceConcurrentReads(false);
+  gridManager.enforceConcurrentReads(true);
   using H1SpaceMaterial = FEFunctionSpace<DiscontinuousLagrangeMapper<double,LeafView>>;
   using cellMaterial = H1SpaceMaterial::Element<1>::type;
   H1SpaceMaterial materialSpace(gridManager,gridManager.grid().leafGridView(), 0);
@@ -180,7 +188,7 @@ int main(int argc, char* argv[])
 
   if(refinements) std::cout << "---------- refinements ---------- "<< std::endl;
   gridManager.globalRefine(refinements);
-  writeVTK(material,out+"/Materials",IoOptions(),"conductivity");
+  if(options.plot) writeVTK(material,out+"/Materials",IoOptions(),"conductivity");
   timer.stop("reading FE grid");
 
   // ------------------------------------------------------------------------------------------------------------
@@ -197,18 +205,21 @@ int main(int argc, char* argv[])
   std::ifstream file_extra_list(extra_set);
   int n_extra_set;
   file_extra_list >> n_extra_set;
+  std::cout<< "n_extra_set: " << n_extra_set <<std::endl;
   std::vector<int> arr_extra(n_extra_set);
   getSubdomain(arr_extra, file_extra_list);
 
   std::ifstream file_intra_list(intra_set);
   int n_intra_set;
   file_intra_list >> n_intra_set;
+  std::cout<< "n_intra_set: " << n_intra_set <<std::endl;
   std::vector<int> arr_intra_set(n_intra_set);
   getSubdomain(arr_intra_set, file_intra_list);
 
   std::ifstream file_excited_region(early_excited);
   int n_excited_region;
   file_excited_region >> n_excited_region;
+    std::cout<< "n_excited_region: " << n_excited_region <<std::endl;
   std::vector<int> arr_excited_region(n_excited_region);
   getSubdomain(arr_excited_region, file_excited_region);
 
@@ -294,7 +305,7 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------
   F.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
   uAll = component<0>(u);
-  writeVTK(uAll,out+"/initialTest",
+  if(options.plot) writeVTK(uAll,out+"/initialTest",
                IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
   dt = options.dt;
   SemiImplicitEulerStep<Functional>  eq(&F,dt);
@@ -606,7 +617,7 @@ int main(int argc, char* argv[])
       F_semi.extracellular_materials(arr_extra);
       F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
       uAll = component<0>(u);
-      writeVTK(uAll,out+"/initialSemiF",
+      if(options.plot) writeVTK(uAll,out+"/initialSemiF",
                IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
       timer.start("linearly semi implicit method");
       std::cout << "---------------------------------------------" << std::endl;

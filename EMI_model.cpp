@@ -113,12 +113,12 @@ int main(int argc, char* argv[])
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
-  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
+  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
-  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
@@ -134,8 +134,8 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   20,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   20,  "maximal number of SDC sweeps")
+  ("sweeps",                   options.minSweeps,                   5,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   5,  "maximal number of SDC sweeps")
   ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
   ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in petsc!" << std::endl;
-  std::map<int,Vector> Fs_petcs;
+  std::vector<Vector> Fs_petcs(n_subdomains);
   petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
 
   std::vector<int> cells(gridManager.grid().size(0)); // vector with size ints.
@@ -507,10 +507,10 @@ int main(int argc, char* argv[])
   std::set<int> cells_set(cells.begin(),cells.begin());
   CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
 
-  std::map<int,Matrix> subMatrices;
-  std::map<int,Matrix> subMatrices_M;
-  std::map<int,Matrix> subMatrices_K;
-  std::map<int,Vector> weights; 
+  std::vector<Matrix> subMatrices(n_subdomains);
+  std::vector<Matrix> subMatrices_M(n_subdomains);
+  std::vector<Matrix> subMatrices_K(n_subdomains);
+  std::vector<Vector> weights(n_subdomains);
   construct_submatrices_petsc(arr_extra,
                               map_nT2oT,
                               gridManager,
@@ -553,11 +553,11 @@ int main(int argc, char* argv[])
   // compute submatrices and rhs based on Kaskade structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in kaskade!" << std::endl;
-  std::map<int,Matrix> As;
-  std::map<int,Matrix> Ms;
-  std::map<int,Matrix> Ks;
+  std::vector<Matrix> As(n_subdomains);
+  std::vector<Matrix> Ms(n_subdomains);
+  std::vector<Matrix> Ks(n_subdomains);
 
-  std::map<int,Vector> Fs;
+  std::vector<Vector> Fs(n_subdomains);
   std::map<int,std::vector<int>> IG_seq;
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
   std::map<int,int> T2Index;
@@ -765,110 +765,110 @@ int main(int argc, char* argv[])
     }  
   }
 
-  // ------------------------------------------------------------------------------------
-  // semi implicit + CG + BDDC methods Fused
-  // ------------------------------------------------------------------------------------
-  {
-    // if(run_implicit_CG_BDDC_Fused)
-    // {
-    //   std::map<int,std::set<int>> map_II_fused;                        // II
-    //   std::map<int,std::set<int>> map_GammaGamma_fused;                // GammaGamma
-    //   std::map<int,std::set<int>> map_GammaGamma_noDuplicate_fused;    // GammaGamma_nodup
-    //   std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate_fused;  // GammaGamma only nbr without out the extra neighors...
-    //   std::map<int,Matrix> subMatrices_fused;
-    //   std::map<int, int> map_t2l_fused;                                    //map: tag to lenth
-    //   merge_inner_interface_bddc_fused( sequenceOfTags_extra,
-    //                                     T2Index,
-    //                                     map_II,
-    //                                     map_GammaGamma,
-    //                                     map_GammaGamma_noDuplicate,
-    //                                     map_GammaNbr_Nbr_noDuplicate,
-    //                                     subMatrices,
-    //                                     map_II_fused,
-    //                                     map_GammaGamma_fused,
-    //                                     map_GammaGamma_noDuplicate_fused,
-    //                                     map_GammaNbr_Nbr_noDuplicate_fused,
-    //                                     map_t2l_fused,
-    //                                     subMatrices_fused);
+  // // ------------------------------------------------------------------------------------
+  // // semi implicit + CG + BDDC methods Fused
+  // // ------------------------------------------------------------------------------------
+  // {
+  //   // if(run_implicit_CG_BDDC_Fused)
+  //   // {
+  //   //   std::map<int,std::set<int>> map_II_fused;                        // II
+  //   //   std::map<int,std::set<int>> map_GammaGamma_fused;                // GammaGamma
+  //   //   std::map<int,std::set<int>> map_GammaGamma_noDuplicate_fused;    // GammaGamma_nodup
+  //   //   std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate_fused;  // GammaGamma only nbr without out the extra neighors...
+  //   //   std::map<int,Matrix> subMatrices_fused;
+  //   //   std::map<int, int> map_t2l_fused;                                    //map: tag to lenth
+  //   //   merge_inner_interface_bddc_fused( sequenceOfTags_extra,
+  //   //                                     T2Index,
+  //   //                                     map_II,
+  //   //                                     map_GammaGamma,
+  //   //                                     map_GammaGamma_noDuplicate,
+  //   //                                     map_GammaNbr_Nbr_noDuplicate,
+  //   //                                     subMatrices,
+  //   //                                     map_II_fused,
+  //   //                                     map_GammaGamma_fused,
+  //   //                                     map_GammaGamma_noDuplicate_fused,
+  //   //                                     map_GammaNbr_Nbr_noDuplicate_fused,
+  //   //                                     map_t2l_fused,
+  //   //                                     subMatrices_fused);
 
 
 
 
 
-    //   std::vector<Matrix> As_fused(n_subdomains);
-    //   std::vector<Vector> Fs_fused(n_subdomains);
-    //   std::vector<std::vector<int>> IG_seq_fused(n_subdomains);
-    //   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new_fused;
-    //   construct_As_fused( arr_extra, 
-    //                       sequenceOfTags_extra, 
-    //                       map_II_fused, 
-    //                       map_GammaGamma_fused, 
-    //                       map_GammaGamma_noDuplicate_fused, 
-    //                       map_GammaNbr_Nbr_noDuplicate_fused, 
-    //                       rhs_petsc_test, 
-    //                       weights, 
-    //                       map_indices, 
-    //                       matlab_dir,
-    //                       write_to_file,
-    //                       subMatrices_fused, 
-    //                       As_fused, 
-    //                       Fs_fused, 
-    //                       IG_seq_fused, 
-    //                       sharedDofsKaskade_new_fused);
-    //   std::cout << "---------------------------------------------" << std::endl;
-    //   std::cout << "semi implicit with CG + BDDC + Fused subdomain" << std::endl;
-    //   std::cout << "---------------------------------------------" << std::endl;
-    //   Vector sol_BDDC(nDofs);
-    //   Functional F_BDDC(  material,
-    //                       gridManager.grid(),
-    //                       spaces,
-    //                       penalty,
-    //                       sigma_i,
-    //                       sigma_e,
-    //                       C_m,  
-    //                       R,
-    //                       R_extra);
-    //   F_BDDC.extracellular_materials(arr_extra);
-    //   F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
-    //   uAll = component<0>(u);
+  //   //   std::vector<Matrix> As_fused(n_subdomains);
+  //   //   std::vector<Vector> Fs_fused(n_subdomains);
+  //   //   std::vector<std::vector<int>> IG_seq_fused(n_subdomains);
+  //   //   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new_fused;
+  //   //   construct_As_fused( arr_extra, 
+  //   //                       sequenceOfTags_extra, 
+  //   //                       map_II_fused, 
+  //   //                       map_GammaGamma_fused, 
+  //   //                       map_GammaGamma_noDuplicate_fused, 
+  //   //                       map_GammaNbr_Nbr_noDuplicate_fused, 
+  //   //                       rhs_petsc_test, 
+  //   //                       weights, 
+  //   //                       map_indices, 
+  //   //                       matlab_dir,
+  //   //                       write_to_file,
+  //   //                       subMatrices_fused, 
+  //   //                       As_fused, 
+  //   //                       Fs_fused, 
+  //   //                       IG_seq_fused, 
+  //   //                       sharedDofsKaskade_new_fused);
+  //   //   std::cout << "---------------------------------------------" << std::endl;
+  //   //   std::cout << "semi implicit with CG + BDDC + Fused subdomain" << std::endl;
+  //   //   std::cout << "---------------------------------------------" << std::endl;
+  //   //   Vector sol_BDDC(nDofs);
+  //   //   Functional F_BDDC(  material,
+  //   //                       gridManager.grid(),
+  //   //                       spaces,
+  //   //                       penalty,
+  //   //                       sigma_i,
+  //   //                       sigma_e,
+  //   //                       C_m,  
+  //   //                       R,
+  //   //                       R_extra);
+  //   //   F_BDDC.extracellular_materials(arr_extra);
+  //   //   F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+  //   //   uAll = component<0>(u);
 
-    //   u = semiImplicit_CG_BDDC_fused( gridManager,
-    //                             F_BDDC,
-    //                             variableSetDesc,
-    //                             spaces,
-    //                             gridManager.grid(),
-    //                             options,
-    //                             out,
-    //                             direct,
-    //                             u,
-    //                             uAll,
-    //                             sol_BDDC,
-    //                             sharedDofsKaskade_new_fused,
-    //                             interfaceTypes,
-    //                             As,               // pass the right one 
-    //                             sequenceOfTags,   // sequenceOfTags for fused!
-    //                             sequenceOfTags_extra, 
-    //                             map_II_fused,                          // update 
-    //                             map_GammaGamma_noDuplicate_fused,      // update
-    //                             map_GammaNbr_Nbr_noDuplicate_fused,    // update 
-    //                             weights,
-    //                             cg_solver,
-    //                             iter_cg_with_bddc,
-    //                             local2Global,  // update
-    //                             tol,
-    //                             map_t2l_fused,       // update 
-    //                             map_indices,
-    //                             BDDC_verbose,
-    //                             IG_seq_fused,        // update
-    //                             matlab_dir,
-    //                             write_to_file
-    //                             );  
-    //     Vector sol_bddc_to_petsc(sol_BDDC);
-    //     sol_bddc_to_petsc = 0; 
-    //     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
-    //     if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
-    // }  
-  }
+  //   //   u = semiImplicit_CG_BDDC_fused( gridManager,
+  //   //                             F_BDDC,
+  //   //                             variableSetDesc,
+  //   //                             spaces,
+  //   //                             gridManager.grid(),
+  //   //                             options,
+  //   //                             out,
+  //   //                             direct,
+  //   //                             u,
+  //   //                             uAll,
+  //   //                             sol_BDDC,
+  //   //                             sharedDofsKaskade_new_fused,
+  //   //                             interfaceTypes,
+  //   //                             As,               // pass the right one 
+  //   //                             sequenceOfTags,   // sequenceOfTags for fused!
+  //   //                             sequenceOfTags_extra, 
+  //   //                             map_II_fused,                          // update 
+  //   //                             map_GammaGamma_noDuplicate_fused,      // update
+  //   //                             map_GammaNbr_Nbr_noDuplicate_fused,    // update 
+  //   //                             weights,
+  //   //                             cg_solver,
+  //   //                             iter_cg_with_bddc,
+  //   //                             local2Global,  // update
+  //   //                             tol,
+  //   //                             map_t2l_fused,       // update 
+  //   //                             map_indices,
+  //   //                             BDDC_verbose,
+  //   //                             IG_seq_fused,        // update
+  //   //                             matlab_dir,
+  //   //                             write_to_file
+  //   //                             );  
+  //   //     Vector sol_bddc_to_petsc(sol_BDDC);
+  //   //     sol_bddc_to_petsc = 0; 
+  //   //     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
+  //   //     if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
+  //   // }  
+  // }
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG + SDC + BDDC methods

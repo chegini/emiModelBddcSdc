@@ -4,7 +4,7 @@
 #  stdout (console output) and stderr (error messages) are passed together into one output textfile
 #PBS -j oe
 #  One node and 56 processor cores are requested on this node (maximum 128 processor cores are possible).
-#PBS -l nodes=1:ppn=128
+#PBS -l nodes=1:ppn=56
 #  Maximum computing time of the job in hours:minutes:seconds.
 #PBS -l walltime=1-23:00:00
 # It is assumed that the program is called myfile and is located in the directory /home/htc/myname/myfolder.
@@ -21,7 +21,7 @@ pwd
 # The -n1 specification causes exactly one instance of the program myfile to be started (which is typical for the present Kaskade7 applications - other specifications for the -n value could make sense e.g. for MPI programs).
 # Just use this like you would use your console to start your program.
 
-srun -B *:*:* -n1 ./emiModel --refine 4
+srun -B *:*:* -n1 ./emiModel 
 
 
 #srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_mesh.vtu" --extra_set "./input/robin_extracellular.txt" --intra_set "./input/robin_intracellular.txt" --excited "./input/robin_early_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_matlab_dir"  

@@ -20,7 +20,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
                                                 std::map<int,std::set<int>> map_II, 
                                                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                                                 std::vector<std::vector<LocalDof>> sharedDofsKaskade, 
-                                                std::map<int,Vector> weights,
+                                                std::vector<Vector> weights,
                                                 std::map<int, int> map_indices,
                                                 Matrix const& A,
                                                 double dt,
@@ -257,7 +257,7 @@ void computeRHS_BDDC(int step,
                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
                 int n_subdomains, 
                 std::vector<std::vector<LocalDof>> sharedDofsKaskade, 
-                std::map<int,Vector> weights,
+                std::vector<Vector> weights,
                 std::vector<int> sequenceOfTags,
                 std::map<int,std::vector<int>> IG_seq,
                 int nDofs,
@@ -325,7 +325,7 @@ void computeRHS_BDDC(int step,
       // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
       // fill the sub matrices for kaskade format
       // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-      std::map<int,Vector> Fs;
+      std::vector<Vector> Fs(n_subdomains);
       for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
       {
         int tag = sequenceOfTags[subIdx];
@@ -389,16 +389,16 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
                                                             Matrix A_,
                                                             Matrix M_,
                                                             Matrix K_,
-                                                            std::map<int,Matrix> As,
-                                                            std::map<int,Matrix> Ms,
-                                                            std::map<int,Matrix> Ks,
+                                                            std::vector<Matrix> As,
+                                                            std::vector<Matrix> Ms,
+                                                            std::vector<Matrix> Ks,
                                                             std::map<int,std::vector<int>> IG_seq,
                                                             std::map<int,std::set<int>> IGamma,
                                                             std::vector<int> sequenceOfTags, 
                                                             std::map<int,std::set<int>> map_II, 
                                                             std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
-                                                            std::map<int,Vector> weights,
-                                                            std::map<int,Vector> Fs,
+                                                            std::vector<Vector> weights,
+                                                            std::vector<Vector> Fs,
                                                             bool cg_solver,
                                                             int iter_cg_with_bddc,
                                                             std::map<int,std::unordered_map<int, int>> local2Global,

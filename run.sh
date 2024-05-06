@@ -21,9 +21,16 @@ pwd
 # The -n1 specification causes exactly one instance of the program myfile to be started (which is typical for the present Kaskade7 applications - other specifications for the -n value could make sense e.g. for MPI programs).
 # Just use this like you would use your console to start your program.
 
-srun -B *:*:* -n1 ./emiModel 
+srun -B *:*:* -n1 ./emiModel --refine 1
 
+# srun -B *:*:* -n1 ./emiModel --input "./input/pepe_combi_domi.vtu" --dir "./output_rescaled0" --matlab_dir "./matlab_dir_rescaled0"
+# srun -B *:*:* -n1 ./emiModel --input "./input/pepe_combi_domi_smaller.vtu" --dir "./output_rescaled1" --matlab_dir "./matlab_dir_rescaled1"
+# srun -B *:*:* -n1 ./emiModel --input "./input/pepe_combi_domi_smaller_more.vtu" --dir "./output_rescaled2" --matlab_dir "./matlab_dir_rescaled2"
 
+#srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_combi_domi.vtu" --extra_set "./input/robin_combi_domi_extracellular.txt" --intra_set "./input/robin_combi_domi_intracellular.txt" --excited "./input/robin_combi_domi_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_combi_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_combi_matlab_dir"  
+#srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_combi_domi_smaller.vtu" --extra_set "./input/robin_combi_domi_extracellular.txt" --intra_set "./input/robin_combi_domi_intracellular.txt" --excited "./input/robin_combi_domi_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_combi_smaller_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_combi_smaller_matlab_dir"  
+#srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_sep_domi.vtu" --extra_set "./input/robin_sep_domi_extracellular.txt" --intra_set "./input/robin_sep_domi_intracellular.txt" --excited "./input/robin_sep_domi_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_sep_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_sep_matlab_dir"  
+#srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_sep_domi_smaller.vtu" --extra_set "./input/robin_sep_domi_extracellular.txt" --intra_set "./input/robin_sep_domi_intracellular.txt" --excited "./input/robin_sep_domi_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_sep_smaller_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_sep_smaller_matlab_dir"  
 #srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/robin_mesh.vtu" --extra_set "./input/robin_extracellular.txt" --intra_set "./input/robin_intracellular.txt" --excited "./input/robin_early_excited.txt" --dir "/scratch/htc/fchegini/robin/robin_output" --matlab_dir "/scratch/htc/fchegini/robin/robin_matlab_dir"  
 
 #srun -B *:*:* -n1 ./emiModel --write_to_file false --input "./input/kermit_mesh.vtu" --extra_set "./input/kermit_extracellular.txt" --intra_set "./input/kermit_intracellular.txt" --excited "./input/kermit_early_excited.txt" --dir "/scratch/htc/fchegini/kermit/kermit_output" --matlab_dir "/scratch/htc/fchegini/kermit/kermit_matlab_dir" 

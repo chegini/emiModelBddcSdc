@@ -589,7 +589,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC( GridManager<Grid>& g
     // spectral time grid for defect correction methods with Radau points
     // --------------------------------------------------------------------------------------------
     RadauTimeGrid grid(options.nCollocUstart,eq.time(),end_T); // start sweep with 
-    // std::cerr << "time points are: " << grid.points() << '\n';
+    std::cerr << "time points are: " << grid.points() << '\n';
     // --------------------------------------------------------------------------------------------
     // # size of all varialbles & size of variable u
     // --------------------------------------------------------------------------------------------

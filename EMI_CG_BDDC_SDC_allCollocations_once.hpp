@@ -62,6 +62,13 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool reass
     tmp_bddc[subIndx] = tmp;
   }
 
+  std::vector<int> activeIds;
+  activeIds.resize(n_subdomains);
+  parallelFor(0,n_subdomains,[&](int subIdx)
+  {
+    activeIds[subIdx] = subIdx;
+  });
+
   Vector initial(A.N()), initial_temp(A.N());
   initial *= 0;
   initial_temp *=0;  
@@ -168,7 +175,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool reass
       if(BDDC_SDC_with_initial) rhs_bddc[subIndx]-=du_bddc_initial[subIndx][i]; // previous increment is probably a good starting value
     }
 
-    BDDCSolver<BddcSubdomain> bddcSolver(subs_all[i-1],interfaces.coarseConstraints(),cg_solver, BDDC_SDC_verbose);
+    BDDCSolver<BddcSubdomain> bddcSolver(subs_all[i-1],interfaces.coarseConstraints(),activeIds,cg_solver, BDDC_SDC_verbose);
     bddcSolver.update_rhs(rhs_bddc);
 
     std::vector<double> resNorm;

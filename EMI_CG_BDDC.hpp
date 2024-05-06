@@ -87,7 +87,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
 
 
-  using TransmissionScalar = double;
+  using TransmissionScalar = float;
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
@@ -103,6 +103,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   //   // std::cout << subIdx << " -> " << tag << std::endl;
   //   subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
   // }
+
+  std::vector<int> activeIds;
+  activeIds.resize(n_subdomains);
+  parallelFor(0,n_subdomains,[&](int subIdx)
+  {
+    activeIds[subIdx] = subIdx;
+  });
 
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {
@@ -182,7 +189,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     timer.stop("alg subdom creation");
   
     timer.start("bddc creation");
-    BDDCSolver<BddcSubdomain> bddcSolver(subs,ifa.coarseConstraints(),cg_solver,BDDC_verbose );
+    BDDCSolver<BddcSubdomain> bddcSolver(subs,ifa.coarseConstraints(),activeIds,cg_solver,BDDC_verbose );
     bddcSolver.update_rhs(Fs);
     timer.stop("bddc creation");
 

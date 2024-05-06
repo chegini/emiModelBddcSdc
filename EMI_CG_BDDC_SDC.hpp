@@ -60,6 +60,14 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
     tmp_bddc[subIndx] = tmp;
   }
 
+  std::vector<int> activeIds;
+  activeIds.resize(n_subdomains);
+  parallelFor(0,n_subdomains,[&](int subIdx)
+  {
+    activeIds[subIdx] = subIdx;
+  });
+
+
   Vector initial(A.N()), initial_temp(A.N());
   initial *= 0;
   initial_temp *=0;  
@@ -204,7 +212,7 @@ typename Matrix::field_type sdcIterationStepBDDC(bool BDDC_SDC_with_initial, boo
     for (auto& sp: subsptr)
       subs.push_back(*sp);
 
-    BDDCSolver<BddcSubdomain> bddcSolver(subs,interfaces.coarseConstraints(),cg_solver, BDDC_SDC_verbose);
+    BDDCSolver<BddcSubdomain> bddcSolver(subs,interfaces.coarseConstraints(),activeIds,cg_solver, BDDC_SDC_verbose);
     bddcSolver.update_rhs(rhs_bddc);
 
     std::vector<double> resNorm;

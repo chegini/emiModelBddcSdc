@@ -1018,6 +1018,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
                              std::vector<int> & sequenceOfTags, 
                              std::vector<int> & sequenceOfTags_extra,
                              std::map<int,int> & startingIndexOfTag, 
+                             std::map<int,int> & Tag2IndexSub,
                              std::map<int,int> & map_nT2oT)
 {  
   int start = 0;
@@ -1027,6 +1028,7 @@ void computed_sequenceOfTags(std::map<int, int> map_t2l,
   for ( const auto &IGamma : map_IGamma_noDuplicate ) {
     int tag = IGamma.first;
     sequenceOfTags[index] = tag;
+    Tag2IndexSub[tag] = index;
     if(tag%2==0) {
       sequenceOfTags_extra[index_even] = tag;
       index_even++;

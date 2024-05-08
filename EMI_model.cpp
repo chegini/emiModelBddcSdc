@@ -420,7 +420,8 @@ int main(int argc, char* argv[])
   std::vector<int> sequenceOfTags_extra(n_extra_set); // only extra cellular
   // extracellular is only even number
   std::map<int,int> startingIndexOfTag;
-  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, map_nT2oT);
+  std::map<int,int> Tag2IndexSub;
+  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, Tag2IndexSub, map_nT2oT);
   if(false)
   {
   std::cout <<"==========================\n";
@@ -1070,6 +1071,8 @@ int main(int argc, char* argv[])
                                     IG_seq,
                                     map_IGamma,
                                     sequenceOfTags,
+                                    Tag2IndexSub,
+                                    i2Tag,
                                     map_II, 
                                     map_GammaGamma_noDuplicate, 
                                     weights,

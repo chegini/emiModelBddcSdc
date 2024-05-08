@@ -804,6 +804,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_smallest_collocation(
         // ---------------------------------------------------------------------
 
         int n_grid = grid.points().N()-1;
+        // JJ_all.resize(n_grid);
+        // subs_all.resize(n_grid); 
 
         for (int i=1; i<=n_grid; i++) // for each collocation points
         {

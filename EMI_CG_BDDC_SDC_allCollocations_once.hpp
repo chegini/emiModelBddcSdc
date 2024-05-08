@@ -566,7 +566,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
     std::vector<std::vector<Matrix>> JJ_all(grid.points().N()-1); // for each time step.
     std::vector<std::vector<BddcSubdomain>> subs_all(grid.points().N()-1);
     std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_coll(grid.points().N()-1);
-    // std::cerr << "time points are: " << grid.points() << '\n';
+    std::cerr << "time points are: " << grid.points() << '\n';
     // --------------------------------------------------------------------------------------------
     // # size of all varialbles & size of variable u
     // --------------------------------------------------------------------------------------------
@@ -645,7 +645,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
 
-    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n";   
+    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcCon\t\t"<< "||u||\t\t" <<"#coll\t\t"<<"\n";   
 
     do
     {
@@ -722,6 +722,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
       // compute restricted rhs contributions. Note that we need the WHOLE residual, hence working with the restricted
       // matMuu would not work. Hence we implement the matrix-vector multiplication (with all columns but a row subset)
       // on our own: M*(u_i-u_{i+1})
+
       std::vector<std::vector<Vector>> matMdiffu_bddc;
       std::vector<std::vector<Vector>> initial_bddc;
       std::vector<std::vector<Vector>> duVec_bddc;
@@ -753,6 +754,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         }
         matMdiffu_bddc[subIndx] = matMdiffu_sub;
       }
+
       // -------------------------------------------------------------------------------------------- 
       // compute restricted matrices
       // -------------------------------------------------------------------------------------------- 
@@ -771,6 +773,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         matStiffuu_bddc[subIndx] = matStiffuu_sub;
       }
 
+
       // -------------------------------------------------------------------------------------------- 
       // Reaction matrix f_u. Only the restricted subgrid dofs are considered
       // -------------------------------------------------------------------------------------------- 
@@ -783,10 +786,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         allMatFu_bddc[subIndx] = allMatFu_sub;
       }
       assemblyReactionTimer.stop();
-
-
-
-
       
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
@@ -802,6 +801,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         // ---------------------------------------------------------------------
 
         int n_grid = grid.points().N()-1;
+        JJ_all.resize(n_grid);
+        subs_all.resize(n_grid); 
         for (int i=1; i<=n_grid; i++)
         {
           std::vector<Matrix> JJ(n_subdomains);
@@ -1009,7 +1010,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         sdcContraction = std::sqrt(c*sdcContraction);
       }
       // std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";   
-      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction <<"\n";   
+      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t\t"<<sdcContraction << "\t\t" << Cellfltr.get_size() <<"\t\t" << grid.points().size()<< "\n";   
 
       // // --------------------------------------------------------------------------------------------  
       // // select degrees of freedom to take into account in the next sweep. This is a 
@@ -1187,6 +1188,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
           }
         }
         collocationU.swap(newUe);
+
+
         for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
         {
           ru_bddc[subIndx].push_back(ru_bddc[subIndx].front());     
@@ -1196,7 +1199,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
           initial_bddc[subIndx].push_back(initial_bddc[subIndx].front()); 
         }
 
-        std::cerr << "time points in ladder method " << grid.points() << '\n';
+        // std::cerr << "time points in ladder method " << grid.points() << '\n';
+
       }
 
       if(sweepNorm_bddc.back() < options.SDC_TOL){

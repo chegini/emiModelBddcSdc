@@ -1018,119 +1018,124 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
       // // --------------------------------------------------------------------------------------------  
       int count = 0;
       int discount = 0;
-      // if (options.tolSelect > 0)
-      // {
-      //   std::map<int, int> map_expanded_indices;
+      if (options.tolSelect > 0)
+      {
+        std::map<int, int> map_expanded_indices;
 
-      //   State markSelectedDOF(x);
-      //   markSelectedDOF*=0;
+        State markSelectedDOF(x);
+        markSelectedDOF*=0;
 
-      //   std::vector<size_t> newExpandedIndices;
-      //   std::vector<size_t> newCompressedIndex;
-      //   std::set<size_t> set_ExpandedIndices;
+        std::vector<size_t> newExpandedIndices;
+        std::vector<size_t> newCompressedIndex;
+        std::set<size_t> set_ExpandedIndices;
       
-      //   expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
+        expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
 
-      //   newCompressedIndex.resize(compressedIndex.size(),compressedIndex.size());
-      //   compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
+        newCompressedIndex.resize(compressedIndex.size(),compressedIndex.size());
+        compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
 
-      //   for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-      //   {
-      //     for (int ii=0; ii<duVec_bddc[subIndx].back().size(); ++ii)
-      //     {
-      //       double duMax = 0;
-      //       for (auto const& duj: duVec_bddc[subIndx])
-      //         duMax = std::max(duMax,std::abs(duj[ii]));
+        for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+        {
+          for (int ii=0; ii<duVec_bddc[subIndx].back().size(); ++ii)
+          {
+            double duMax = 0;
+            for (auto const& duj: duVec_bddc[subIndx])
+              duMax = std::max(duMax,std::abs(duj[ii]));
 
-      //       //if(sdcContraction>=1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
-      //       if(sdcContraction>1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
-      //       {
-      //         size_t ej = expandedIndices[ii];
-      //         std::set<int> s = index2IndexsSet[local2Global[subIndx][ej]];
-      //         std::set<int>::iterator it;
-      //         for (it = s.begin(); it != s.end(); ++it) {
-      //           set_ExpandedIndices.insert(*it);
-      //         }
-      //       }
-      //     }
-      //   }
+            //if(sdcContraction>=1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
+            if(sdcContraction>1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
+            {
+              size_t ej = expandedIndices[ii];
+              std::set<int> s = index2IndexsSet[local2Global[subIndx][ej]];
+              std::set<int>::iterator it;
+              for (it = s.begin(); it != s.end(); ++it) {
+                set_ExpandedIndices.insert(*it);
+              }
+            }
+          }
+        }
         
-      //   std::set<size_t>::iterator it;
-      //   for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
-      //     newExpandedIndices.push_back(*it);
-      //   }
+        std::set<size_t>::iterator it;
+        for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
+          newExpandedIndices.push_back(*it);
+          std::cout <<*it << " ";
+        }
+        std::cout <<"\n";
+        std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;
 
+        size_e_adaptivity = 0;
 
-      //   size_e_adaptivity = 0;
-
-      //   for (int i = 0; i < newExpandedIndices.size(); ++i)
-      //   {          
-      //     size_t ej_next = newExpandedIndices[i];
+        for (int i = 0; i < newExpandedIndices.size(); ++i)
+        {          
+          size_t ej_next = newExpandedIndices[i];
         
-      //     std::set<int> cell_set = index2Cells_new[ej_next];
-      //     std::set<int> selected_cell_idx;
-      //     selected_cell_idx.insert(cell_set.begin(), cell_set.end());
-      //     Cellfltr.set_cells(selected_cell_idx);
-      //     at_c<0>(markSelectedDOF.data).coefficients()[ej_next] = 1.0;
-      //     size_e_adaptivity++;
-      //   }
-      //   expandedIndices.assign(newExpandedIndices.begin(),newExpandedIndices.end());
+          std::set<int> cell_set = index2Cells_new[ej_next];
+          std::set<int> selected_cell_idx;
+          selected_cell_idx.insert(cell_set.begin(), cell_set.end());
+          Cellfltr.set_cells(selected_cell_idx);
+          at_c<0>(markSelectedDOF.data).coefficients()[ej_next] = 1.0;
+          size_e_adaptivity++;
+        }
+        expandedIndices.assign(newExpandedIndices.begin(),newExpandedIndices.end());
 
 
 
-      //   for (int i = 0; i < expandedIndices.size(); ++i)
-      //   {
-      //     // std::cout << expandedIndices[i] <<std::endl;
-      //     compressedIndex[expandedIndices[i]] = i;
-      //   }
-      //   count = expandedIndices.size();
-      //   discount = compressedIndex.size()-expandedIndices.size();
+        for (int i = 0; i < expandedIndices.size(); ++i)
+        {
+          // std::cout << expandedIndices[i] <<std::endl;
+          compressedIndex[expandedIndices[i]] = i;
+        }
+        count = expandedIndices.size();
+        discount = compressedIndex.size()-expandedIndices.size();
       
-      //   if(options.plot and compressedIndex.size()!=expandedIndices.size()) printuAll(markSelectedDOF,uAll,options.order, output + "/Selected-steps_"+paddedString(steps)+"-sweep_"+paddedString(sweep),"SelectedDOF");
+        if(options.plot and compressedIndex.size()!=expandedIndices.size()) printuAll(markSelectedDOF,uAll,options.order, output + "/Selected-steps_"+paddedString(steps)+"-sweep_"+paddedString(sweep),"SelectedDOF");
 
-      //   expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
+        expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
 
 
-      //   for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-      //   {
+        for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+        {
 
-      //     std::vector<size_t> newCompressedIndex_bddc;
-      //     newCompressedIndex_bddc.resize(compressedIndex_bddc[subIndx].size(),compressedIndex_bddc[subIndx].size());
-      //     compressedIndex_bddc[subIndx].assign(newCompressedIndex_bddc.begin(),newCompressedIndex_bddc.end());
+          std::vector<size_t> newCompressedIndex_bddc;
+          newCompressedIndex_bddc.resize(compressedIndex_bddc[subIndx].size(),compressedIndex_bddc[subIndx].size());
+          compressedIndex_bddc[subIndx].assign(newCompressedIndex_bddc.begin(),newCompressedIndex_bddc.end());
 
-      //     std::set<size_t> newExpandedIndices_bddc;
+          std::cout << "compressedIndex_bddc.size() => "<< subIndx << "\t"<<compressedIndex_bddc[subIndx].size() << std::endl;
 
-      //     std::unordered_map<int, int>::iterator it; 
-      //     for (int i = 0; i < expandedIndices.size(); ++i)
-      //     {
-      //       size_t ej = expandedIndices[i];
-      //       it = global2Local[subIndx].find(ej);
-      //       if (it != global2Local[subIndx].end()){
-      //         newExpandedIndices_bddc.insert(global2Local[subIndx][ej]);
-      //       }
-      //     }
+          std::set<size_t> newExpandedIndices_bddc;
 
-      //     expandedIndices_bddc[subIndx].assign(newExpandedIndices_bddc.begin(),newExpandedIndices_bddc.end());
+          std::unordered_map<int, int>::iterator it; 
+          for (int i = 0; i < expandedIndices.size(); ++i)
+          {
+            size_t ej = expandedIndices[i];
+            it = global2Local[subIndx].find(ej);
 
-      //     for (int i = 0; i < expandedIndices_bddc[subIndx].size(); ++i)
-      //     {
-      //       compressedIndex_bddc[subIndx][expandedIndices_bddc[subIndx][i]] = i;
-      //     }
+            if (it != global2Local[subIndx].end()){
+              newExpandedIndices_bddc.insert(global2Local[subIndx][ej]);
+            }
+          }
 
-      //     // for (int i = 0; i < expandedIndices_bddc[subIndx].size(); ++i)
-      //     // {
-      //     //   std::cout<< i << ": "<< expandedIndices_bddc[subIndx][i]<<std::endl;
-      //     // }
+          expandedIndices_bddc[subIndx].assign(newExpandedIndices_bddc.begin(),newExpandedIndices_bddc.end());
+
+          for (int i = 0; i < expandedIndices_bddc[subIndx].size(); ++i)
+          {
+            compressedIndex_bddc[subIndx][expandedIndices_bddc[subIndx][i]] = i;
+          }
+
+          // for (int i = 0; i < expandedIndices_bddc[subIndx].size(); ++i)
+          // {
+          //   std::cout<< i << ": "<< expandedIndices_bddc[subIndx][i]<<std::endl;
+          // }
        
-      //     // for (int i = 0; i < compressedIndex_bddc[subIndx].size(); ++i)
-      //     // {
-      //     //   std::cout<< "compressedIndex_bddc" << ": "<< compressedIndex_bddc[subIndx][i]<<std::endl;
-      //     // }
+          // for (int i = 0; i < compressedIndex_bddc[subIndx].size(); ++i)
+          // {
+          //   std::cout<< "compressedIndex_bddc" << ": "<< compressedIndex_bddc[subIndx][i]<<std::endl;
+          // }
 
-      //    // std::cout << "==============================================\n"; 
-      //   }
-      //   std::cout << "size_e_adaptivity " << size_e_adaptivity <<std::endl;
-      // }
+         // std::cout << "==============================================\n"; 
+        }
+        std::cout << "size_e_adaptivity " << size_e_adaptivity <<std::endl;
+      }
       eq.time(t+dt);
 
       // // --------------------------------------------------------------------------------------------  

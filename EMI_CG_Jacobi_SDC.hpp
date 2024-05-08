@@ -670,8 +670,6 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       if (options.tolSelect > 0)
       {
         cellsMarked.clear();
-        std::map<int, int> map_expanded_indices;
-
         State markSelectedDOF(x);
         markSelectedDOF*=0;
 
@@ -684,6 +682,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         newCompressedIndex.resize(compressedIndex.size(),compressedIndex.size());
         compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
 
+        // select the dof for the next sweep
         for (int ii=0; ii<duVec.back().size(); ++ii)
         {
           double duMax = 0;
@@ -702,11 +701,14 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
           }
         }
         
+        // collect the the dof for the next sweep
         std::set<size_t>::iterator it;
         for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
           newExpandedIndices.push_back(*it);
+          std::cout <<*it << " ";
         }
-
+        std::cout <<"\n";
+        std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;
 
         size_e_adaptivity = 0;
 

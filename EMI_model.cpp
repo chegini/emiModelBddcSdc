@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
   bool run_implicit_CG, run_implicit_CG_SDC, run_implicit_CG_BDDC, run_implicit_CG_SDC_BDDC, run_implicit_CG_BDDC_Fused, run_implicit_CG_SDC_BDDC_first_Sweep;
   bool run_implicit_CG_SDC_BDDC_all_collocation_once;
   bool run_implicit_CG_SDC_BDDC_smallest_collocation;
+  bool run_implicit_CG_SDC_BDDC_all_collocation_once_update;
   std::string inputfile, early_excited, extra_set, intra_set, dir_out, matlab_dir;
   bool cg_semi, plot, withSplitFace,cg_solver;
   bool test_mesh_data, write_to_file;
@@ -162,7 +163,8 @@ int main(int argc, char* argv[])
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once_update,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
@@ -175,7 +177,7 @@ int main(int argc, char* argv[])
   ("dt",                       options.dt,                          0.01,  "time step size[ms]")
   ("orderU",                   options.order,                       1,  "FE ansatz order for transmembrane voltage & action potential")
   ("atol",                     options.aTol,                        1e-15,  "absolute L^2 tolerance")
-  ("stol",                     options.tolSelect,                   0.0,  "L^inf tol for DoF selection")
+  ("stol",                     options.tolSelect,                   1e-4,  "L^inf tol for DoF selection")
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
@@ -1002,6 +1004,92 @@ int main(int argc, char* argv[])
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC,sol_bddc_sdc_step);
     if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc"); 
 
+
+    }  
+  }
+
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG + SDC + BDDC methods all collocation_once
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_SDC_BDDC_all_collocation_once_update)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG  all collocations  update       " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC_SDC_all_coll(nDofs);
+      Functional F_BDDC_SDC(material,
+                            gridManager.grid(),
+                            spaces,
+                            penalty,
+                            sigma_i,
+                            sigma_e,
+                            C_m,  
+                            R,
+                            R_extra);
+      F_BDDC_SDC.extracellular_materials(arr_extra);
+      CardiacIntegrationStatistics statistics;
+      F_BDDC_SDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      if(options.plot) writeVTK(uAll,out+"/emiSDCBDDCInitial",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+      std::cout <<" test CellFilter!!!!\n";
+      std::set<int> s_temp;
+      for (int i = 0; i < gridManager.grid().size(0); ++i) 
+        s_temp.insert(i);
+
+      CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+      u = semiImplicit_CG_BDDC_SDC_allCollocations_once_update( gridManager,
+                                    F_BDDC_SDC,
+                                    Cellfltr,
+                                    variableSetDesc,
+                                    spaces,
+                                    gridManager.grid(),
+                                    u,
+                                    i2e,
+                                    options,
+                                    statistics,
+                                    out,
+                                    uAll,
+                                    i2i,
+                                    cg_semi,
+                                    direct,
+                                    matlab_dir,
+                                    sol_BDDC_SDC_all_coll,
+                                    sharedDofsKaskade_new,
+                                    interfaceTypes,
+                                    n_subdomains,
+                                    A_,
+                                    M_,
+                                    K_,
+                                    As,
+                                    Ms,
+                                    Ks,
+                                    IG_seq,
+                                    map_IGamma,
+                                    sequenceOfTags,
+                                    map_II, 
+                                    map_GammaGamma_noDuplicate, 
+                                    weights,
+                                    Fs_petcs,
+                                    cg_solver,
+                                    iter_cg_with_bddc,
+                                    local2Global,
+                                    global2Local,
+                                    map_index_to_subdomain,
+                                    tol,
+                                    map_t2l, 
+                                    map_indices,
+                                    BDDC_SDC_with_initial,
+                                    BDDC_verbose,
+                                    BDDC_SDC_verbose);
+
+    Vector sol_bddc_sdc_step(sol_BDDC_SDC_all_coll);
+    sol_bddc_sdc_step = 0; 
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC_all_coll,sol_bddc_sdc_step);
+    if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc_small_all_coll"); 
 
     }  
   }

@@ -312,29 +312,30 @@ void computeRHS_BDDC_allCollocations_once_update(int step,
           {
             int index = IG[i];
             float coef = weights[subIdx][index];
-            Fs_subIdx[i] = coef*rhs_petsc_test[index];
+            Fs_subIdx[i] = (1/dt)*coef*rhs_petsc_test[index];
             // std::cout << Fs_subIdx[i] << ", ";
           }
           // std::cout << "\n";
         }
         Fs[subIdx] = Fs_subIdx;
+        ru_bddc[subIdx][ii] = Fs_subIdx;
       }
 
       
-      for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-      {
-        std::vector<size_t> expandedIndices_sub = expandedIndices_bddc[subIndx];
-        // CoefficientVectorsU rs(Fs[subIndx]); 
-        size_t nDofs_sub = expandedIndices_sub.size();
+      // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+      // {
+      //   std::vector<size_t> expandedIndices_sub = expandedIndices_bddc[subIndx];
+      //   // CoefficientVectorsU rs(Fs[subIndx]); 
+      //   size_t nDofs_sub = expandedIndices_sub.size();
 
-        ru_bddc[subIndx][ii] = Vector(nDofs_sub);
+      //   ru_bddc[subIndx][ii] = Vector(nDofs_sub);
 
-        for (size_t j=0; j<expandedIndices_sub.size(); ++j)
-        {
-          size_t ej = expandedIndices_sub[j];// for each subdoamin the local indices are saved in expandedIndices_sub
-          ru_bddc[subIndx][ii][j] = Fs[subIndx][ej]*(1/dt); 
-        }
-      }
+      //   for (size_t j=0; j<expandedIndices_sub.size(); ++j)
+      //   {
+      //     size_t ej = expandedIndices_sub[j];// for each subdoamin the local indices are saved in expandedIndices_sub
+      //     ru_bddc[subIndx][ii][j] = Fs[subIndx][ej]*(1/dt); 
+      //   }
+      // }
     }
   }
 }
@@ -740,7 +741,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
       {
         int tag =  sequenceOfTags[subIndx];
-        std::vector<Vector> matMdiffu_sub(grid.points().N(),Vector(expandedIndices_bddc[subIndx].size()));//local2Global[subIndx].size())); // 
+        //std::vector<Vector> matMdiffu_sub(grid.points().N(),Vector(expandedIndices_bddc[subIndx].size()));//local2Global[subIndx].size())); // 
+        std::vector<Vector> matMdiffu_sub(grid.points().N(),Vector(Ms[subIndx].N()));//local2Global[subIndx].size())); // 
+
         duVec_bddc[subIndx] = matMdiffu_sub;
         initial_bddc[subIndx] = matMdiffu_sub;
         for (int j=0; j<expandedIndices_bddc[subIndx].size(); ++j)
@@ -772,10 +775,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       std::vector<SparseMatrix> matStiffuu_bddc;
       matStiffuu_bddc.resize(n_subdomains);
 
+      // std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" <<std::endl;
       for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
       {
-        SparseMatrix matMuu_sub(expandedIndices_bddc[subIndx],compressedIndex_bddc[subIndx],Ms[subIndx]);
-        SparseMatrix matStiffuu_sub(expandedIndices_bddc[subIndx],compressedIndex_bddc[subIndx],Ks[subIndx]);
+        SparseMatrix matMuu_sub = Ms[subIndx];// (expandedIndices_bddc[subIndx],compressedIndex_bddc[subIndx],Ms[subIndx]);
+        SparseMatrix matStiffuu_sub = Ks[subIndx]; //(expandedIndices_bddc[subIndx],compressedIndex_bddc[subIndx],Ks[subIndx]);
+        // std::cout << subIndx << ":" << Ms[subIndx].N() << "-> "<< matMuu_sub.N()<<std::endl;
         matMuu_bddc[subIndx] = matMuu_sub;
         matStiffuu_sub *=(-1.0/options.dt); // cancle out the dt coeffient -dt
         matStiffuu_bddc[subIndx] = matStiffuu_sub;
@@ -790,7 +795,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       std::vector<std::vector<DiagonalMatrix>> allMatFu_bddc(n_subdomains);
       for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
       {
-        std::vector<DiagonalMatrix> allMatFu_sub(grid.points().N(),DiagonalMatrix(expandedIndices_bddc[subIndx].size()));
+        //std::vector<DiagonalMatrix> allMatFu_sub(grid.points().N(),DiagonalMatrix(expandedIndices_bddc[subIndx].size()));
+        std::vector<DiagonalMatrix> allMatFu_sub(grid.points().N(),DiagonalMatrix(matStiffuu_bddc[subIndx].N()));
         allMatFu_bddc[subIndx] = allMatFu_sub;
       }
       assemblyReactionTimer.stop();
@@ -1070,9 +1076,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
           // std::cout <<*it  << "-> " << i2Tag[*it] << "->" <<Tag2IndexSub[i2Tag[*it]] << " \n";
           BDDCSubIdx.insert(Tag2IndexSub[i2Tag[*it]]);
         }
-        std::cout <<"\n";
-        std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;
-
+ 
         size_e_adaptivity = 0;
 
         for (int i = 0; i < newExpandedIndices.size(); ++i)
@@ -1098,6 +1102,10 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
         count = expandedIndices.size();
         discount = compressedIndex.size()-expandedIndices.size();
       
+        std::cout <<"\n";
+        std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << " count: "<< count << std::endl;
+
+
         if(options.plot and compressedIndex.size()!=expandedIndices.size()) printuAll(markSelectedDOF,uAll,options.order, output + "/Selected-steps_"+paddedString(steps)+"-sweep_"+paddedString(sweep),"SelectedDOF");
 
         expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
@@ -1110,7 +1118,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
           newCompressedIndex_bddc.resize(compressedIndex_bddc[subIndx].size(),compressedIndex_bddc[subIndx].size());
           compressedIndex_bddc[subIndx].assign(newCompressedIndex_bddc.begin(),newCompressedIndex_bddc.end());
 
-          std::cout << "compressedIndex_bddc.size() => "<< subIndx << "\t"<<compressedIndex_bddc[subIndx].size() << std::endl;
+          // std::cout << "compressedIndex_bddc.size() => "<< subIndx << "\t"<<compressedIndex_bddc[subIndx].size() << std::endl;
 
           std::set<size_t> newExpandedIndices_bddc;
 

@@ -1311,7 +1311,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   auto du(u);
   for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
   {
-    std::cout<<subIdx <<std::endl;
+    // std::cout<<subIdx <<std::endl;
     int tag = sequenceOfTags[subIdx]; 
     std::string path = std::to_string(subIdx);
     du *= 0;

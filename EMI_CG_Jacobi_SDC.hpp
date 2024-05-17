@@ -705,7 +705,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         std::set<size_t>::iterator it;
         for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
           newExpandedIndices.push_back(*it);
-          std::cout <<*it << " ";
+          // std::cout <<*it << " ";
         }
         std::cout <<"\n";
         std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;

@@ -60,6 +60,8 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once_update( bo
     tmp_bddc[subIndx] = tmp;
   }
 
+  if(sweep>0)
+    iter_cg_with_bddc = 3;
   std::vector<int> activeIds(BDDCSubIdx.begin(),BDDCSubIdx.end());
 
   Vector initial(A.N()), initial_temp(A.N());

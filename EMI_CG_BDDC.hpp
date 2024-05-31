@@ -91,11 +91,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-
+  std::vector<int> activeIds;
   parallelFor(0,n_subdomains,[&](int subIdx)
   {
     int tag = sequenceOfTags[subIdx];
     subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
+    if(subIdx<38) activeIds.push_back(subIdx);
   });
   // for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
   // {
@@ -104,12 +105,11 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   //   subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
   // }
 
-  std::vector<int> activeIds;
-  activeIds.resize(n_subdomains);
-  parallelFor(0,n_subdomains,[&](int subIdx)
-  {
-    activeIds[subIdx] = subIdx;
-  });
+  
+  // parallelFor(0,n_subdomains,[&](int subIdx)
+  // {
+  //   activeIds.push_back(subIdx);
+  // });
 
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {

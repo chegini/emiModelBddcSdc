@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   using namespace boost::fusion;
 
   std::cout << "Start subdomain tutorial program" << std::endl;
-
+  
   constexpr int dim = SPACEDIM;
   int refinements, order, solver, refinements_sol, interfaceTypes, iter_cg_with_bddc;
   double penalty, sigma_i, sigma_e, C_m, R, R_extra, tol, dt;
@@ -39,6 +39,14 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
+  // ("input",                    inputfile,                           "./input/example4subc_3extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_3extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_3extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_3extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example3subc_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example3subc_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example3subc_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example3subc_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
@@ -90,10 +98,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/20Cells3d_20extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/20Cells3d_20extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/40Cells3d_40extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/40Cells3d_40extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40Cells3d_40extra_list_intracellular.txt","subdomain definition")
@@ -106,24 +114,24 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/40cells3D_early_excitedtxt.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40cells3D_list_extracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/40cells3D_list_intracellular.txt","subdomain definition")
-//  ("input",                    inputfile,                           "./input/pepe_combi_domi.vtu","subdomain definition")
+ // ("input",                    inputfile,                           "./input/pepe_combi_domi.vtu","subdomain definition")
 // //("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
 //   // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
-//   ("extra_set",                extra_set,                           "./input/pepe_combi_domi_extracellular.txt","subdomain definition")
-//   ("intra_set",                intra_set,                           "./input/pepe_combi_domi_intracellular.txt","subdomain definition")
-//   ("excited",                  early_excited,                       "./input/pepe_combi_domi_excited.txt","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/pepe_combi_domi_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/pepe_combi_domi_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/pepe_combi_domi_excited.txt","subdomain definition")
   //  ("input",                    inputfile,                           "./input/pepe_sep_domi.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/pepe_sep_domi_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/pepe_sep_domi_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/pepe_sep_domi_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
+  ("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
 //  ("input",                    inputfile,                           "./input/robin_combi_domi_smaller.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_combi_domi_smaller_more.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/robin_combi_domi_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/robin_combi_domi_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/robin_combi_domi_excited.txt","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/robin_combi_domi_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/robin_combi_domi_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/robin_combi_domi_excited.txt","subdomain definition")
   //   ("input",                    inputfile,                           "./input/robin_sep_domi.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/robin_sep_domi_smaller.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/robin_sep_domi_smaller_more.vtu","subdomain definition")
@@ -155,7 +163,7 @@ int main(int argc, char* argv[])
   ("onlyLowerTriangle",        onlyLowerTriangle,                   true, "onlyLowerTriangle")
   ("interfacetypes",           interfaceTypes,                      7,"bit flags for coarse interfaces to include: 1 corner 2 edge 3 face")
   ("vtk",                      vtk_,                                true,"write VTK output")
-  ("iter_cg_bddc",             iter_cg_with_bddc,                   1000,"number of BDDC iterations")
+  ("iter_cg_bddc",             iter_cg_with_bddc,                   100,"number of BDDC iterations")
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
@@ -177,7 +185,7 @@ int main(int argc, char* argv[])
   ("dt",                       options.dt,                          0.01,  "time step size[ms]")
   ("orderU",                   options.order,                       1,  "FE ansatz order for transmembrane voltage & action potential")
   ("atol",                     options.aTol,                        1e-15,  "absolute L^2 tolerance")
-  ("stol",                     options.tolSelect,                   0.0,  "L^inf tol for DoF selection")
+  ("stol",                     options.tolSelect,                   1e-5,  "L^inf tol for DoF selection")
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
@@ -232,7 +240,6 @@ int main(int argc, char* argv[])
   H1SpaceMaterial materialSpace(gridManager,gridManager.grid().leafGridView(), 0);
   cellMaterial material(materialSpace);
   vtk.getCoefficients("domain",material);
-
   std::cout << "---------- refinements ---------- "<< std::endl;
 
   std::cout << "sigma_i = " << sigma_i << " sigma_e = "<< sigma_e << std::endl;
@@ -422,6 +429,7 @@ int main(int argc, char* argv[])
   std::map<int,int> startingIndexOfTag;
   std::map<int,int> Tag2IndexSub;
   computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, Tag2IndexSub, map_nT2oT);
+
   if(false)
   {
   std::cout <<"==========================\n";
@@ -460,8 +468,8 @@ int main(int argc, char* argv[])
   std::map<int, int> map_indices;
   std::map<int, int> map_index_to_subdomain;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices, map_index_to_subdomain);
- 
-
+  std::cout <<"DONE!!!" <<std::endl;
+  // return 0;
 
   std::set<std::set<int>> i2iSet_;
   removeInnerIndices_i2i(i2i);
@@ -637,19 +645,18 @@ int main(int argc, char* argv[])
                 T2Index);
   
 
-  if(write_to_file)
+  //if(write_to_file)
   {
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
 
       // std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
-      //std::cout << subIdx << " As[subIdx].N()-> "<< As[subIdx].N() << std::endl;
-      // int tag = sequenceOfTags[subIdx];
-      // std::string path = std::to_string(subIdx);
-      // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+      // std::cout << subIdx << " As[subIdx].N()-> "<< As[subIdx].N() << std::endl;
+      int tag = sequenceOfTags[subIdx];
+      std::string path = std::to_string(subIdx);
+      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
   }
-
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods

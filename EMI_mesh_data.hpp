@@ -96,6 +96,7 @@ void writeToMatlabPath_matlab(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockV
   int n = Entry::rows;
   int m = Entry::cols;
 
+  // std::cout << "nnnnnn " << n << " mmmmmm " << m << std::endl;
 
   for (auto row = A.begin(); row!=A.end(); ++row)
   {
@@ -203,7 +204,7 @@ void writeToMatlabPath(NumaBCRSMatrix<Entry,Index> const& A, Dune::BlockVector<V
   // write matrix in triplet format
   int n = Entry::rows;
   int m = Entry::cols;
-
+  // std::cout << "nnnnnn " << n << " mmmmmm " << m << std::endl;
   int nnz = 0;
   nnz = A.nonzeroes();
   // std::cout << "number of nonzero: " << nnz <<std::endl;
@@ -678,6 +679,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
     local2Global[tag] = local2Global_subIdx;
     global2Local[tag] = global2Local_subIdx;
     globalIndices[tag] = globalIndices_subIdx;
+    // std::cout << "tag: " << tag << " local2Global[tag].size(): " << local2Global[tag].size() <<std::endl;
   }
 }
 
@@ -1289,6 +1291,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   if(write_to_file)
     writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
 
+
+  writeToMatlabPath_matlab(A_petsc,rhs_petsc_test,"resultBDDCTEST",matlab_dir, true);
   // ------------------------------------------------------------------------------------ 
   // construct submatrices
   // ------------------------------------------------------------------------------------ 

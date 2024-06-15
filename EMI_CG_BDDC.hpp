@@ -72,7 +72,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 	du *= 0;
   auto u_pre(u);
 
-	Vector u_semi(nDofs);
+  auto temp_ui(u);
+  auto temp_corr(u);
+  auto temp_RawCorr(u);
+  auto temp_res(u);
+  auto temp_resRes(u);
+	
+  Vector u_semi(nDofs);
 
   assembler.assemble(SemiLinearization(eq,u,u,du),options.assemblyThreads);
   AssembledGalerkinOperator<Assembler> A(assembler);
@@ -96,7 +102,10 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   {
     int tag = sequenceOfTags[subIdx];
     subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
-    if(subIdx<38) activeIds.push_back(subIdx);
+    //if(subIdx!=3) activeIds.push_back(subIdx);
+    //if(subIdx<38) activeIds.push_back(subIdx);
+    //if(subIdx!=0) 
+    activeIds.push_back(subIdx);
   });
   // for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
   // {
@@ -203,6 +212,50 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       timer.start("BDDC solve");
       resNorm.push_back(bddcSolver.solve());      
       timer.stop("BDDC solve");
+      if(false)
+      {
+        for (int subIdx=0; subIdx<n_subdomains; ++subIdx)
+        {
+          int tag = sequenceOfTags[subIdx];
+          auto ui = subs[subIdx].getSolution();
+          auto corr = ui; subs[subIdx].getCorrection(corr);
+          auto rawCorr = ui; subs[subIdx].getRawCorrection(rawCorr);
+          auto res = ui; subs[subIdx].getResidual(res);
+          auto resRes = ui; resRes = subs[subIdx].getRestrictedResidual();
+
+
+          int subIdx_size = map_t2l[tag];     
+          for (int local = 0; local < subIdx_size; ++local)
+          {
+            component<0>(temp_ui).coefficients()[local2Global[tag][local]] = ui[local];
+            component<0>(temp_corr).coefficients()[local2Global[tag][local]] = corr[local];
+            component<0>(temp_RawCorr).coefficients()[local2Global[tag][local]] = rawCorr[local];
+            component<0>(temp_res).coefficients()[local2Global[tag][local]] = res[local];
+            component<0>(temp_resRes).coefficients()[local2Global[tag][local]] = resRes[local];
+          }
+        }
+        uAll = component<0>(temp_ui);
+        writeVTK(uAll,out+"/emiBDDC_Sol"+paddedString(time_step,2)+"_itr_"+paddedString(k,2),
+         IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+        uAll = component<0>(temp_corr); 
+        writeVTK(uAll,out+"/emiBDDC_Corr"+paddedString(time_step,2)+"_itr_"+paddedString(k,2),
+         IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+        uAll = component<0>(temp_RawCorr); 
+        writeVTK(uAll,out+"/emiBDDC_RawCorr"+paddedString(time_step,2)+"_itr_"+paddedString(k,2),
+         IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+        uAll = component<0>(temp_res);
+        writeVTK(uAll,out+"/emiBDDC_Res"+paddedString(time_step,2)+"_itr_"+paddedString(k,2),
+         IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+        uAll = component<0>(temp_resRes);
+        writeVTK(uAll,out+"/emiBDDC_resRes"+paddedString(time_step,2)+"_itr_"+paddedString(k,2),
+         IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");        
+      }
+
+
       if(resNorm.back()<tol)
         break;
     } 

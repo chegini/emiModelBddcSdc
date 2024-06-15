@@ -33,9 +33,9 @@ depend:
 	   /data/numerik/people/fchegini/kaskade7/tools/remove_install_deps Makefile
 
 clean:
-	rm -f gccerr.txt *.o emiModel EMI_model-*.vtu sol-*.vtu cor-*.vtu *.txt *.m  *.vtu
+	rm -f gccerr.txt *.o emiModel EMI_model-*.vtu sol-*.vtu cor-*.vtu *.txt *.m 
 
 # DO NOT DELETE
 
 %.o: %.cpp
-	$(CXX) $(FLAGS) -std=c++17 $(HAVE_UG) $(INCLUDE) $(CLANGINC) $< -c -o $@ 2> gccerr.txt
+	$(CXX) $(FLAGS) -std=c++17 $(HAVE_UG) $(INCLUDE) $(CLANGINC) $< -c -o $@ 2> gccerr.txt 

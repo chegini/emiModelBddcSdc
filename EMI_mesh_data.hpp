@@ -1012,6 +1012,24 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
     }
   }
 
+  if(write_to_file)
+  {
+    std::vector<std::vector<double>> indexCoordinates_petsc(dof_size);
+    double precision = 16;
+    std::string fname = matlab_dir+"/coordinates_original.txt";
+    std::ofstream f(fname.c_str());
+    f.precision(precision);
+    for (int i = 0; i < coord_globalIndex.size(); ++i)
+      indexCoordinates_petsc[i] = coord_globalIndex[i];
+
+    for (int j = 0; j < coord_globalIndex.size(); ++j){
+      if(dim==2) 
+        f << indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< 0.0 << "\n";
+      if(dim==3) 
+        f <<indexCoordinates_petsc[j][0] << " "<< indexCoordinates_petsc[j][1] << " "<< indexCoordinates_petsc[j][2] << "\n";
+    }
+  }
+
 }
 
 void computed_sequenceOfTags(std::map<int, int> map_t2l, 
@@ -1308,6 +1326,9 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
   std::set<int>::iterator itr;
 
+
+  Matrix Matrix_mass_petsc(creator);
+  Matrix Matrix_stiffness_petsc(creator);
   // ------------------------------------------------------------------------------------
   // construct mass and stiffness matrix from semi-implicit structure
   // ------------------------------------------------------------------------------------  
@@ -1404,8 +1425,14 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
     subMatrices[subIdx] = subMatrix;
     subMatrices_M[subIdx] = subMatrix_mass;
     subMatrices_K[subIdx] = subMatrix_stiffness;
+    Matrix_mass_petsc+=subMatrix_mass;
+    Matrix_stiffness_petsc+=subMatrix_stiffness;
     if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+    writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
+    writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
   }
+  writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
+  writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
 
   // -------------------------------------
   // compute the weight for each subdomain to update the rhs

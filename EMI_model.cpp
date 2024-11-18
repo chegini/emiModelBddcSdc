@@ -39,6 +39,18 @@ int main(int argc, char* argv[])
   int verbose, assemblyThreads;
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
+  // ("input",                    inputfile,                           "./input/coarse_4elem.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/coarse_4elem_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/coarse_4elem_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/coarse_4elem_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/coarse_emi.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/coarse_emi_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/coarse_emi_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/coarse_emi_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/coarse_kaskade_e.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/coarse_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/coarse_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/coarse_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_3extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_3extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_3extra_list_intracellular.txt","subdomain definition")
@@ -78,13 +90,57 @@ int main(int argc, char* argv[])
   // ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition")    
+  // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/cube3D.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/cube3D_extra.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/cube3D_intra.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/cube3D_early_eacited.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/emiGrid.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/emiGrid_extraCellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/emiGrid_intraCellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid3nx1ny1nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular3nx1ny1nz.txt","subdomain definition")
+    // ("intra_set",                intra_set,                           "./input/intracellular3nx1ny1nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid3nx3ny1nz.vtu","subdomain definition")
+    // ("intra_set",                intra_set,                           "./input/extracellular3nx3ny1nz.txt","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/intracellular3nx3ny1nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid3nx3ny2nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular3nx3ny2nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular3nx3ny2nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid3nx3ny3nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular3nx3ny3nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular3nx3ny3nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid4nx4ny4nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular4nx4ny4nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular4nx4ny4nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid5nx5ny5nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular5nx5ny5nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular5nx5ny5nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid6nx6ny6nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular6nx6ny6nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular6nx6ny6nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid7nx7ny7nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular7nx7ny7nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular7nx7ny7nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+    // ("input",                    inputfile,                           "./input/emiGrid8nx8ny8nz.vtu","subdomain definition")
+    // ("extra_set",                extra_set,                           "./input/extracellular8nx8ny8nz.txt","subdomain definition")
+    // ("intra_set",                extra_set,                           "./input/intracellular8nx8ny8nz.txt","subdomain definition")
+    // ("excited",                  early_excited,                       "./input/emiGrid_earlyExited.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/emiGridnx5ny1nz1.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/emiGridnx5ny1nz1_extraCellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/emiGridnx5ny1nz1_intraCellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/emiGridnx5ny1nz1_earlyExited.txt","subdomain definition")       
   // ("input",                    inputfile,                           "./input/Materials.vtu","subdomain definition")
-  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")make cle
-  //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
-  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
-  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
-     // ("input",                    inputfile,                           "./input/perturbed_inner_new.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/perturbed_inner_new.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/perturbed_gap_new.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/perturbed_gap_membrane_new.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/perturbed_gap_membrane_inner_new.vtu","subdomain definition")
@@ -95,9 +151,13 @@ int main(int argc, char* argv[])
   // ("input",                    inputfile,                           "./input/perturbed_gap_membrane_inner.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/perturbed_x.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/perturbed_all.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")
+  //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
+  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
@@ -126,12 +186,12 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/pepe_sep_domi_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/pepe_sep_domi_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/pepe_sep_domi_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
+//  ("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
 //  ("input",                    inputfile,                           "./input/robin_combi_domi_smaller.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_combi_domi_smaller_more.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/robin_combi_domi_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/robin_combi_domi_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/robin_combi_domi_excited.txt","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/robin_combi_domi_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/robin_combi_domi_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/robin_combi_domi_excited.txt","subdomain definition")
   //   ("input",                    inputfile,                           "./input/robin_sep_domi.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/robin_sep_domi_smaller.vtu","subdomain definition")
   // // ("input",                    inputfile,                           "./input/robin_sep_domi_smaller_more.vtu","subdomain definition")
@@ -276,7 +336,7 @@ int main(int argc, char* argv[])
   std::ifstream file_excited_region(early_excited);
   int n_excited_region;
   file_excited_region >> n_excited_region;
-    std::cout<< "n_excited_region: " << n_excited_region <<std::endl;
+  std::cout<< "n_excited_region: " << n_excited_region <<std::endl;
   std::vector<int> arr_excited_region(n_excited_region);
   getSubdomain(arr_excited_region, file_excited_region);
 
@@ -362,7 +422,8 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------
   F.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
   uAll = component<0>(u);
-  if(options.plot) writeVTK(uAll,out+"/initialTest",
+  //if(options.plot) 
+  writeVTK(uAll,out+"/initialTest",
                IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
   dt = options.dt;
   SemiImplicitEulerStep<Functional>  eq(&F,dt);
@@ -370,7 +431,9 @@ int main(int argc, char* argv[])
   eq.setTau(tau);
   auto du(u);
   du *= 0;
+  std::cout << "Start: assembler.assemble(SemiLinearization "<<std::endl;
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
+  std::cout << "END: assembler.assemble(SemiLinearization "<<std::endl;
   auto rhs_oiginal = assembler.rhs();
   // ------------------------------------------------------------------------------------
   // Extract the mesh data
@@ -517,16 +580,22 @@ int main(int argc, char* argv[])
   Matrix K_;
 
   A_ = assembler.template get<Matrix>(false);
+  {
+    assembler.assemble(SemiLinearization(eq,u,u,du),options.assemblyThreads);
+    auto rhs = assembler.rhs();
+    writeToMatlab(assembler,matlab_dir+"/matrixA_RHS_", "A");  
+  }
+
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs = assembler.rhs();
-  // writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+  writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
 
   F.Mass_stiff(1);
   SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
   eqM.setTau(0);
   assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX, options.assemblyThreads);  
   M_ = assembler.template get<Matrix>(false);
-  // writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
+  writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
 
   // get stiffness 
   F.Mass_stiff(0);
@@ -535,7 +604,7 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
   K_ = assembler.template get<Matrix>(false);
   K_*=(-options.dt);
-  // writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
+  writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
   
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -647,15 +716,25 @@ int main(int argc, char* argv[])
 
   //if(write_to_file)
   {
+    
+    int max_subdomain = 0;
+    int min_subdomain = 1e10;
     for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
     {
 
-      // std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
-      // std::cout << subIdx << " As[subIdx].N()-> "<< As[subIdx].N() << std::endl;
+      //std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
+      //std::cout << subIdx << " As[subIdx].N()-> "<< As[subIdx].N() << std::endl;
+      if(As[subIdx].N()>max_subdomain)
+        max_subdomain = As[subIdx].N();
+
+      if(As[subIdx].N()<min_subdomain)
+        min_subdomain = As[subIdx].N();
+
       int tag = sequenceOfTags[subIdx];
       std::string path = std::to_string(subIdx);
       writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
+    std::cout << "A_.N() = " <<A_.N() << " max_subdomain "<< max_subdomain<< " max_subdomain "<< min_subdomain<< std::endl;
   }
 
   // ------------------------------------------------------------------------------------
@@ -696,8 +775,12 @@ int main(int argc, char* argv[])
                                   direct,
                                   u,
                                   uAll,
-                                  sol_semi
-                                  );  
+                                  sol_semi,
+                                  matlab_dir,
+                                  sequenceOfTags, 
+                                  map_indices, 
+                                  map_II, 
+                                  map_GammaGamma_noDuplicate);  
       timer.stop("linearly semi implicit method");
 
       {

@@ -1,6 +1,21 @@
 #ifndef INTEGRATE_BDDC_CG_HH
 #define INTEGRATE_BDDC_CG_HH
 
+template <class VEntry>
+void writeSolution_test(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
+{
+  std::string fname = basename + ".m";
+  std::ofstream f(fname.c_str());
+  f.precision(precision);
+  
+  // Write vector.
+  f << "function [b] = " << "sol" << '\n'
+  << " b = [\n";
+  for (size_t i=0; i<b.N(); ++i)
+    f << b[i] << std::endl;
+  f << "];\n";
+}
+
 template <class Grid, class Functional, class VariableSet, class Spaces, class elementType, class Vector, class Options, class Matrix>
 typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridManager,
   			                                                Functional& F,
@@ -97,23 +112,24 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-  std::vector<int> activeIds;
-  parallelFor(0,n_subdomains,[&](int subIdx)
-  {
-    int tag = sequenceOfTags[subIdx];
-    subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
-    //if(subIdx!=3) activeIds.push_back(subIdx);
-    //if(subIdx<38) activeIds.push_back(subIdx);
-    //if(subIdx!=0) 
-    activeIds.push_back(subIdx);
-  });
-  // for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
+  std::vector<int> activeIds(n_subdomains);
+  std::iota(activeIds.begin(), activeIds.end(), 0);
+  // parallelFor(0,n_subdomains,[&](int subIdx)
   // {
   //   int tag = sequenceOfTags[subIdx];
-  //   // std::cout << subIdx << " -> " << tag << std::endl;
   //   subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
-  // }
-
+  //   //if(subIdx!=3) activeIds.push_back(subIdx);
+  //   //if(subIdx<38) 
+  //   activeIds.push_back(subIdx);
+  //   // if(subIdx!=3) activeIds.push_back(subIdx);
+  // });
+  for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
+  {
+    int tag = sequenceOfTags[subIdx];
+    std::cout << subIdx << " -> " << tag << " -> "<< activeIds[subIdx] << std::endl;
+    subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
+    //activeIds[subIdx] = subIdx;
+  }
   
   // parallelFor(0,n_subdomains,[&](int subIdx)
   // {
@@ -152,7 +168,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     rhs.write(rhs_petsc_test.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_test, rhs_petsc_test);
-
+    writeSolution_test(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
     std::vector<Vector> Fs(n_subdomains);
         // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // fill the sub matrices for kaskade format

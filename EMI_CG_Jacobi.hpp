@@ -1,6 +1,22 @@
 #ifndef INTEGRATE_CG_JACOBI_HH
 #define INTEGRATE_CG_JACOBI_HH
 
+template <class VEntry>
+void writeSolution_test2(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
+{
+  std::string fname = basename + ".m";
+  std::ofstream f(fname.c_str());
+  f.precision(precision);
+  
+  // Write vector.
+  f << "function [b] = " << "sol" << '\n'
+  << " b = [\n";
+  for (size_t i=0; i<b.N(); ++i)
+    f << b[i] << std::endl;
+  f << "];\n";
+}
+
+
 template <class Grid, class Functional, class VariableSet, class Spaces, class elementType, class Vector, class Options>
 typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gridManager,
         	                                                Functional& F,
@@ -13,7 +29,12 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
         	                                                bool direct,
         	                                                typename VariableSet::VariableSet u,
         	                                                elementType & uAll,
-                                                          Vector & sol_semi)
+                                                          Vector & sol_semi,
+                                                          std::string matlab_dir,
+                                                          std::vector<int> sequenceOfTags, 
+                                                          std::map<int, int> map_indices, 
+                                                          std::map<int,std::set<int>> map_II, 
+                                                          std::map<int,std::set<int>> map_GammaGamma_noDuplicate)
 {
 
   double dt = options.dt;
@@ -73,6 +94,12 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     Vector rhs_temp(nDofs), step_temp(nDofs); 
     rhs.write(rhs_temp.begin());
     step.write(step_temp.begin());
+
+    Vector rhs_petsc_test(nDofs);
+    rhs.write(rhs_petsc_test.begin());
+
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_temp, rhs_petsc_test);
+    writeSolution_test2(rhs_petsc_test,matlab_dir+"/rhs_"+std::to_string(time_step)); 
 
     Vector rhs_vec(nDofs);
     rhs.write(rhs_vec.begin());

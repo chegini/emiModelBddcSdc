@@ -33,7 +33,7 @@ depend:
 	   /data/numerik/people/fchegini/kaskade7/tools/remove_install_deps Makefile
 
 clean:
-	rm -f gccerr.txt *.o emiModel EMI_model-*.vtu sol-*.vtu cor-*.vtu *.txt *.m 
+	rm -f gccerr.txt *.o emiModel EMI_model-*.vtu sol-*.vtu cor-*.vtu *.txt *.m ./output/* ./matlab_dir/*
 
 # DO NOT DELETE
 

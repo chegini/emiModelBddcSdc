@@ -17,6 +17,38 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <thread>
+
+// A sample function representing work on a subdomain
+void processSubdomain(int subdomainId) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate work
+    std::cout << "Processed subdomain: " << subdomainId << " on thread: "
+              << std::this_thread::get_id() << "\n";
+}
+
+template<class i3tuple>
+void processSubdomain(int subIdx, const std::vector<int>& sequenceOfTags, 
+                      const std::map<int, std::vector<int>>& sequanceOfsubdomainsKaskade,std::map<int, std::vector<i3tuple>> & MapSharedDofsKaskadeTuple, std::mutex& mapMutex) {
+    int tag = sequenceOfTags[subIdx];  // Get the tag for the current subdomain
+    const std::vector<int>& tmp = sequanceOfsubdomainsKaskade.at(tag);  // Get the list of subdomains for the tag
+
+    for (int i = 0; i < tmp.size(); ++i) {
+        auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);  // Find the subdomain in the map
+        
+        std::lock_guard<std::mutex> lock(mapMutex); // Lock the map for thread safety
+
+        if (it != MapSharedDofsKaskadeTuple.end()) {
+            // If the subdomain already exists, add the new tuple
+            std::vector<i3tuple>& values = it->second;
+            values.push_back(i3tuple(subIdx, i, tmp[i]));
+        } else {
+            // Otherwise, create a new entry for the subdomain
+            MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(subIdx, i, tmp[i])};
+        }
+    }
+}
+
+
 int main(int argc, char* argv[])
 {
   using namespace Kaskade::BDDC;
@@ -288,6 +320,108 @@ int main(int argc, char* argv[])
 
   auto& timer = Timings::instance();
 
+  // ---------------------------------------------------------------------------------------
+  // REMOVE!!!
+  // ---------------------------------------------------------------------------------------
+  // unsigned int numThreads = std::thread::hardware_concurrency();
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+
+  if (numThreads == 0) {
+      std::cout << "Unable to detect the number of hardware threads.\n";
+  } else {
+      std::cout << "Number of hardware threads available: " << numThreads << "\n";
+  }
+
+  // int n = 10; // Total number of subdomains
+  // unsigned int m = numThreads;  // Number of threads
+
+  // {
+  //   std::mutex mapMutex; // Mutex to protect shared resource MapSharedDofsKaskadeTuple
+  //   typedef std::tuple<int, int, int> i3tuple; // Defining the i3tuple type
+
+  //   // Map to store the shared dofs kaskade tuples
+  //   std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
+
+  //   std::vector<int> sequenceOfTags = {0, 1, 2, 3, 4};  // Example sequence of tags
+  //   std::map<int, std::vector<int>> sequanceOfsubdomainsKaskade = {
+  //       {0, {0, 1, 2}}, {1, {3, 4, 5}}, {2, {6, 7, 8}},
+  //       {3, {9, 10, 11}}, {4, {12, 13, 14}}
+  //   }; // Example map of subdomains for each tag
+
+  //   int n = sequenceOfTags.size();
+  //   int m = 4; // Number of threads
+  //   std::vector<std::thread> threads;
+
+  //   // Launch threads to process subdomains concurrently
+  //   for (int subIdx = 0; subIdx < n; ++subIdx) {
+  //       threads.emplace_back([subIdx, &sequenceOfTags, &sequanceOfsubdomainsKaskade, &MapSharedDofsKaskadeTuple, &mapMutex]() {
+  //           processSubdomain(subIdx, sequenceOfTags, sequanceOfsubdomainsKaskade, MapSharedDofsKaskadeTuple, mapMutex);
+  //       });
+  //   }
+
+  //   // Wait for all threads to finish
+  //   for (auto& t : threads) {
+  //       if (t.joinable()) {
+  //           t.join();
+  //       }
+  //   }
+
+  //   // Optionally, print the contents of MapSharedDofsKaskadeTuple for debugging
+  //   for (const auto& entry : MapSharedDofsKaskadeTuple) {
+  //       std::cout << "Key: " << entry.first << "\n";
+  //       for (const auto& val : entry.second) {
+  //           std::cout << "  (" << std::get<0>(val) << ", " 
+  //                     << std::get<1>(val) << ", " 
+  //                     << std::get<2>(val) << ")\n";
+  //       }
+  //   }
+    
+  // }
+  // // Sequential execution
+  // auto sequentialStart = std::chrono::high_resolution_clock::now();
+
+  // for (int i = 0; i < n; ++i) {
+  //     processSubdomain(i); // Process each subdomain one by one
+  // }
+
+  // auto sequentialEnd = std::chrono::high_resolution_clock::now();
+  // std::chrono::duration<double> sequentialDuration = sequentialEnd - sequentialStart;
+  // std::cout << "Sequential execution took: " << sequentialDuration.count() << " seconds.\n";
+
+  // // Multithreaded execution
+  // auto parallelStart = std::chrono::high_resolution_clock::now();
+
+  // std::vector<std::thread> threads; // To manage threads
+  // int chunkSize = (n + m - 1) / m; // Calculate chunk size (ceil(n/m))
+
+  // for (int i = 0; i < m; ++i) {
+  //     int start = i * chunkSize;
+  //     int end = std::min(start + chunkSize, n);
+
+  //     // Launch a thread to process the range of subdomains
+  //     threads.emplace_back([start, end]() {
+  //         for (int j = start; j < end; ++j) {
+  //             processSubdomain(j);
+  //         }
+  //     });
+  // }
+
+  // // Wait for all threads to finish
+  // for (auto& t : threads) {
+  //     if (t.joinable()) {
+  //         t.join();
+  //     }
+  // }
+
+  // auto parallelEnd = std::chrono::high_resolution_clock::now();
+  // std::chrono::duration<double> parallelDuration = parallelEnd - parallelStart;
+  // std::cout << "Parallel execution took: " << parallelDuration.count() << " seconds.\n";
+
+  // // Comparing results
+  // double speedup = sequentialDuration.count() / parallelDuration.count();
+  // std::cout << "Speedup: " << speedup << "x\n";
+
+  // return 0;
   // ------------------------------------------------------------------------------------------------------------
   // get the material from the mesh  
   // ------------------------------------------------------------------------------------------------------------
@@ -435,6 +569,72 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   std::cout << "END: assembler.assemble(SemiLinearization "<<std::endl;
   auto rhs_oiginal = assembler.rhs();
+
+
+
+
+  // ------------------------------------------------------------------------------------
+  // semi implicit + CG methods
+  // ------------------------------------------------------------------------------------
+  // {
+  //   if(run_implicit_CG){
+
+  //     std::vector<int> sequenceOfTags(10);//n_subdomains);
+  //     std::map<int, int> map_indices;
+  //     std::map<int,std::set<int>> map_II;                            // II
+  //     std::map<int,std::set<int>> map_GammaGamma_noDuplicate;        // GammaGamma_nodup
+
+  //     Vector sol_semi(nDofs);
+  //     Functional F_semi( material,
+  //                 gridManager.grid(),
+  //                 spaces,
+  //                 penalty,
+  //                 sigma_i,
+  //                 sigma_e,
+  //                 C_m,  
+  //                 R,
+  //                 R_extra);
+  //     F_semi.extracellular_materials(arr_extra);
+  //     F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+  //     uAll = component<0>(u);
+  //     if(options.plot) writeVTK(uAll,out+"/initialSemiF",
+  //              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+  //     timer.start("linearly semi implicit method");
+  //     std::cout << "---------------------------------------------" << std::endl;
+  //     std::cout << "semi implict approach" << std::endl;
+  //     std::cout << "---------------------------------------------" << std::endl;
+
+
+  //     uAll = component<0>(u);
+  //     u = semiImplicit_CG_Jacobi( gridManager,
+  //                                 F_semi,
+  //                                 variableSetDesc,
+  //                                 spaces,
+  //                                 gridManager.grid(),
+  //                                 options,
+  //                                 out,
+  //                                 cg_semi, 
+  //                                 direct,
+  //                                 u,
+  //                                 uAll,
+  //                                 sol_semi,
+  //                                 matlab_dir,
+  //                                 sequenceOfTags, 
+  //                                 map_indices, 
+  //                                 map_II, 
+  //                                 map_GammaGamma_noDuplicate);  
+  //     timer.stop("linearly semi implicit method");
+
+  //     // {
+  //     //   Vector sol_semi_to_petsc(sol_semi);
+  //     //   sol_semi_to_petsc = 0;
+  //     //    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
+  //     //   if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
+  //     // }
+  //   }
+  // }
+  // return 0;
+
   // ------------------------------------------------------------------------------------
   // Extract the mesh data
   // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequenceOfsubdomains 
@@ -563,8 +763,9 @@ int main(int argc, char* argv[])
   marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, i2iSet, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
 
   std::cout << "write Dirichlet and coordinates!" << std::endl;
+  std::set<int> dofsDirichlet;
   int mesh_dim = SPACEDIM==2? 2:3;
-  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, arr_extra, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir);
+  write_Dirichlet_and_coordinates(boost::fusion::at_c<0>(u.data), material, arr_extra, e2i, map_indices, coord,coord_globalIndex, dof_size, mesh_dim, write_to_file, matlab_dir, dofsDirichlet);
   
 
   // ------------------------------------------------------------------------------------
@@ -639,7 +840,8 @@ int main(int argc, char* argv[])
   std::vector<Matrix> subMatrices_M(n_subdomains);
   std::vector<Matrix> subMatrices_K(n_subdomains);
   std::vector<Vector> weights(n_subdomains);
-  construct_submatrices_petsc(arr_extra,
+  // construct_submatrices_petsc
+  construct_submatrices_petsc_parallel(arr_extra,
                               map_nT2oT,
                               gridManager,
                               F,
@@ -690,6 +892,13 @@ int main(int argc, char* argv[])
   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
   std::map<int,int> T2Index;
 
+  // construct_As
+  // Sequential execution
+  auto sequentialStart_As = std::chrono::high_resolution_clock::now();
+
+  std::vector<int> dofsDirichlet_vec(dofsDirichlet.begin(), dofsDirichlet.end());
+
+  // construct_As_parallel
   construct_As( arr_extra, 
                 sequenceOfTags, 
                 map_II, 
@@ -710,9 +919,13 @@ int main(int argc, char* argv[])
                 Ks,
                 Fs, 
                 IG_seq, 
+                dofsDirichlet_vec,
                 sharedDofsKaskade_new,
                 T2Index);
   
+  auto sequentialEnd_AS = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> sequentialDuration_AS = sequentialEnd_AS - sequentialStart_As;
+  std::cout << "Sequential execution took: " << sequentialDuration_AS.count() << " seconds.\n";
 
   //if(write_to_file)
   {

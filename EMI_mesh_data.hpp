@@ -1477,7 +1477,6 @@ template<class Matrix, class Vector>
 void weight_and_rhs(int subIdx, 
                     std::vector<int> &sequenceOfTags,
                     Matrix &subMatrix, 
-                    std::vector<Matrix> &subMatrices, 
                     Matrix &A_petsc, 
                     Vector& rhs_petsc_test,
                     std::vector<Vector> &Fs_petcs, 
@@ -1486,13 +1485,12 @@ void weight_and_rhs(int subIdx,
   int tag = sequenceOfTags[subIdx]; 
   std::string path = std::to_string(subIdx+1);
   std::cout << "tag: " << tag <<" path: " << path << " subIdx: " << subIdx << std::endl;
-  // subMatrix = subMatrices[subIdx];
   Vector Fs_petcs_sub =  rhs_petsc_test;
-  Vector weights_sub(subMatrices[subIdx].N()); 
+  Vector weights_sub(subMatrix.N()); 
   // optimize it by iterating only on the interfaces
-  for (int k = 0; k < subMatrices[subIdx].N(); ++k)
+  for (int k = 0; k < subMatrix.N(); ++k)
   {
-    double subvalue = subMatrices[subIdx][k][k];
+    double subvalue = subMatrix[k][k];
     double originalvalue = A_petsc[k][k];
 
     double weight = (subvalue/originalvalue);
@@ -1717,10 +1715,11 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   int n = sequenceOfTags.size();
   // Divide the subdomains among threads
   for (size_t t = 0; t < numThreads; ++t) {
-    Matrix subMatrix(creator);
-    threads.emplace_back([t, n, numThreads, &sequenceOfTags, &subMatrix, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights]() {
+    threads.emplace_back([t, n, numThreads, &sequenceOfTags, &creator, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights]() {
       for (size_t subIdx = t; subIdx < n; subIdx += numThreads) {
-        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, subMatrices, A_petsc, rhs_petsc_test, Fs_petcs, weights);
+        Matrix subMatrix(creator);
+        subMatrix = subMatrices[subIdx];
+        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, A_petsc, rhs_petsc_test, Fs_petcs, weights);
       }
     });
   }

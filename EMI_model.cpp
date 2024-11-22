@@ -897,7 +897,7 @@ int main(int argc, char* argv[])
   auto sequentialStart_As = std::chrono::high_resolution_clock::now();
 
   std::vector<int> dofsDirichlet_vec(dofsDirichlet.begin(), dofsDirichlet.end());
-
+  std::cout << "=========================================================="<<std::endl;
   //construct_As_parallel
   construct_As_parallel( arr_extra, 
                 sequenceOfTags, 
@@ -922,7 +922,7 @@ int main(int argc, char* argv[])
                 dofsDirichlet_vec,
                 sharedDofsKaskade_new,
                 T2Index);
-  
+
   auto sequentialEnd_AS = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> sequentialDuration_AS = sequentialEnd_AS - sequentialStart_As;
   std::cout << "Sequential execution took: " << sequentialDuration_AS.count() << " seconds.\n";

@@ -2082,20 +2082,212 @@ template<class i3tuple>
 void computeSharedDofs(int subIdx, const std::vector<int>& sequenceOfTags, 
                       const std::map<int, std::vector<int>>& sequanceOfsubdomainsKaskade, std::map<int, std::vector<i3tuple>> & MapSharedDofsKaskadeTuple, std::mutex& mapMutex) {
   int tag = sequenceOfTags[subIdx];
-  std::vector<int> tmp = sequanceOfsubdomainsKaskade.at(tag); // Access with at() for safety
+  //std::vector<int> tmp = sequanceOfsubdomainsKaskade.at(tag); // Access with at() for safety
+  std::vector<int> tmp;
+  {
+    std::lock_guard<std::mutex> lock(mapMutex);
+    tmp = sequanceOfsubdomainsKaskade.at(tag);
+  }
 
   for (int i = 0; i < tmp.size(); ++i) {
       int key = tmp[i];
+      {
+        std::lock_guard<std::mutex> lock(mapMutex); // Lock during map access
+        auto it = MapSharedDofsKaskadeTuple.find(key);
 
-      std::lock_guard<std::mutex> lock(mapMutex); // Lock during map access
-      auto it = MapSharedDofsKaskadeTuple.find(key);
-
-      if (it != MapSharedDofsKaskadeTuple.end()) {
-          it->second.push_back(i3tuple(subIdx, i, key));
-      } else {
-          MapSharedDofsKaskadeTuple[key] = {i3tuple(subIdx, i, key)};
+        if (it != MapSharedDofsKaskadeTuple.end()) {
+            it->second.push_back(i3tuple(subIdx, i, key));
+        } else {
+            MapSharedDofsKaskadeTuple[key] = {i3tuple(subIdx, i, key)};
+        }
       }
   }
+}
+
+template<class Matrix, class Vector>
+void computeAsFs( int subIdx, const std::vector<int>& sequenceOfTags,  
+                  std::map<int,int> & T2Index, std::set<int> & arr_extra_set,
+                  std::vector<Matrix> &subMatrices,
+                  std::vector<Matrix> &subMatrices_M,
+                  std::vector<Matrix> &subMatrices_K,
+                  std::map<int,std::set<int>> &map_II,
+                  std::map<int,std::set<int>> &map_GammaGamma,
+                  std::map<int,std::set<int>> &map_GammaGamma_noDuplicate,
+                  std::map<int,std::set<int>> &map_GammaNbr_Nbr_noDuplicate,
+                  std::vector<Matrix> &subMatrices_kaskade,
+                  std::vector<Matrix> &subMatrices_kaskade_Ms,
+                  std::vector<Matrix> &subMatrices_kaskade_Ks,
+                  std::map<int,std::vector<int>> &sequanceOfsubdomainsKaskade,
+                  std::vector<Vector> &weights,
+                  std::vector<Vector> &Fs,
+                  Vector &rhs_kaskade,
+                  std::map<int, int> &map_indices,
+                  std::map<int,vector<int>> &IG_seq,
+                  std::mutex& mapMutex)
+{
+  int tag = sequenceOfTags[subIdx]; 
+  {
+    std::lock_guard<std::mutex> lock(mapMutex);
+    // Ensure the key exists before access
+    if (sequanceOfsubdomainsKaskade.find(tag) == sequanceOfsubdomainsKaskade.end()) {
+      sequanceOfsubdomainsKaskade[tag] = {};
+    }
+  }
+
+  T2Index[tag] = subIdx;
+  int count = 0;
+
+  std::set<int>::iterator itr_extra; 
+
+  bool extra = false;
+  itr_extra =arr_extra_set.find(tag);
+  if(itr_extra!=arr_extra_set.end())
+    extra = true;
+
+
+  Matrix subMatrix  = subMatrices[subIdx];
+  Matrix subMatrix_M  = subMatrices_M[subIdx];
+  Matrix subMatrix_K  = subMatrices_K[subIdx];
+
+  std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+  std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+  std::vector<int> Interface_noDup(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+  std::vector<int> Interface_nbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
+
+
+
+  std::set<int> diff;
+  std::set<int> Interface_nbr_diff;
+  if(Interface_noDup.size()!=Interface.size()){
+    
+    std::set_difference(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(), 
+                        map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
+                        std::inserter(diff, diff.end()));
+
+    std::set_difference(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end(), 
+                        diff.begin(), diff.end(),
+                        std::inserter(Interface_nbr_diff, Interface_nbr_diff.end()));
+
+    std::vector<int> Interface_nbr_shrinked(Interface_nbr_diff.begin(), Interface_nbr_diff.end());
+    Interface_nbr = Interface_nbr_shrinked;
+  }
+
+  std::map<int, int> map_Petsc2Kaskade;
+  std::map<int, int> map_petsc_diff;
+  std::vector<int> IG(Interior.size()+Interface_noDup.size()+ diff.size()+Interface_nbr.size()); // vector with size ints.
+  int counter_kaskade = 0;
+  {  
+    for (int k = 0; k < Interior.size(); ++k)
+    {
+      map_Petsc2Kaskade[map_indices[Interior[k]]] = k + counter_kaskade;
+      IG[k+counter_kaskade] = map_indices[Interior[k]];
+    }   
+
+    counter_kaskade += Interior.size();
+    for (int k = 0; k < Interface_noDup.size(); ++k)
+    {
+      map_Petsc2Kaskade[map_indices[Interface_noDup[k]]] = k + counter_kaskade;
+      IG[k+counter_kaskade] = map_indices[Interface_noDup[k]];
+    }    
+
+    counter_kaskade += Interface_noDup.size();
+    if(diff.size()>0)
+    {
+      std::vector<int> diff_vec(diff.begin(), diff.end());
+      for (int k = 0; k < diff_vec.size(); ++k)
+      {
+        map_Petsc2Kaskade[map_indices[diff_vec[k]]] = k + counter_kaskade;
+        IG[k+counter_kaskade] = map_indices[diff_vec[k]];
+        map_petsc_diff[map_indices[diff_vec[k]]] = k+counter_kaskade;
+      } 
+      counter_kaskade += diff.size();     
+    }
+    {
+      for (int k = 0; k < Interface_nbr.size(); ++k)
+      {
+        map_Petsc2Kaskade[map_indices[Interface_nbr[k]]] = k+counter_kaskade;
+        IG[k+counter_kaskade] = map_indices[Interface_nbr[k]];
+      }
+      counter_kaskade += Interface_nbr.size(); 
+    } 
+
+    if(false) std::cout << "\n";
+  }
+  IG_seq[subIdx] = IG;
+  if(false) std::cout <<"============================" << std::endl; 
+  if(false) std::cout << tag<<" -> "<< counter_kaskade << " diff " << diff.size() << " IG.size() "<< IG.size()<< std::endl;
+  if(false) std::cout <<"============================" << std::endl;
+  // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  // creator for kaskade structure, the shrinked version
+  // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  NumaCRSPatternCreator<> creator_kaskade(counter_kaskade,counter_kaskade,false);
+  std::map<int,int>::iterator it;
+  std::vector<int> diff_vec(diff.begin(), diff.end());
+  for (int k=0; k<subMatrix.N(); ++k)
+  {
+    it = map_Petsc2Kaskade.find(k);
+    if (it != map_Petsc2Kaskade.end())
+    {
+      auto row  = subMatrix[k];
+      for (auto ca=row.begin(); ca!=row.end(); ++ca)
+      {
+        int const l = ca.index();
+        int row_indx = map_Petsc2Kaskade[k];
+        it = map_Petsc2Kaskade.find(l);
+        if (it != map_Petsc2Kaskade.end()){
+          int col_indx = map_Petsc2Kaskade[l];
+          double val = *ca;
+          creator_kaskade.addElement(row_indx,col_indx);  
+        }  
+      }
+    }
+     if(diff.size()>0)
+     {
+      it = map_petsc_diff.find(k);
+      if (it != map_petsc_diff.end()){
+        int col_indx = map_petsc_diff[k];
+        creator_kaskade.addElement(col_indx,col_indx); 
+      }
+    } 
+  }
+
+  Matrix subMatrix_kaskade_shrinked(creator_kaskade); 
+  Matrix subMatrix_kaskade_M_shrinked(creator_kaskade); 
+  Matrix subMatrix_kaskade_K_shrinked(creator_kaskade); 
+  {
+    auto IGAMMA_block = subMatrix(IG,IG);
+    insertMatrixBlock(IGAMMA_block, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_shrinked,true);
+
+    auto IGAMMA_block_M = subMatrix_M(IG,IG);
+    insertMatrixBlock(IGAMMA_block_M, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_M_shrinked,true);
+
+    auto IGAMMA_block_K = subMatrix_K(IG,IG);
+    insertMatrixBlock(IGAMMA_block_K, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_K_shrinked,true);
+  }
+
+  subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
+  subMatrices_kaskade_Ms[subIdx] = subMatrix_kaskade_M_shrinked;
+  subMatrices_kaskade_Ks[subIdx] = subMatrix_kaskade_K_shrinked;
+
+  // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  // save sub_matrices for kaskade format
+  // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+  Vector Fs_subIdx(counter_kaskade);  
+  { 
+    for (int i = 0; i < counter_kaskade; ++i)
+    {
+      int index = IG[i]; 
+      {
+        std::lock_guard<std::mutex> lock(mapMutex);
+        sequanceOfsubdomainsKaskade[tag].push_back(index);
+
+      }
+      int coef = weights[subIdx][index];
+      Fs_subIdx[i] = coef*rhs_kaskade[index];
+      // std::cout << "tag: "<< tag<< " index:" << index <<std::endl;
+    }
+  }
+  Fs[subIdx] = Fs_subIdx;
 }
 
 template<class Matrix, class Vector>
@@ -2125,188 +2317,88 @@ void construct_As_parallel(std::vector<int> arr_extra,
 
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::cout << "numThreads: " << numThreads <<std::endl;
-
+  std::mutex mapMutex; 
   std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
+  // Initialize the map to ensure all keys exist
+  {
+    std::lock_guard<std::mutex> lock(mapMutex);
+    for (int tag : sequenceOfTags) {
+      if (sequanceOfsubdomainsKaskade.find(tag) == sequanceOfsubdomainsKaskade.end()) {
+        sequanceOfsubdomainsKaskade[tag] = {};
+      }
+    }
+  }
 
   std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end()); 
   std::set<int>::iterator itr_extra; 
-  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx]; 
-    T2Index[tag] = subIdx;
-    int count = 0;
-
-    bool extra = false;
-    itr_extra =arr_extra_set.find(tag);
-    if(itr_extra!=arr_extra_set.end())
-      extra = true;
-
-
-    Matrix subMatrix  = subMatrices[subIdx];
-    Matrix subMatrix_M  = subMatrices_M[subIdx];
-    Matrix subMatrix_K  = subMatrices_K[subIdx];
-
-    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-    std::vector<int> Interface_noDup(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
-    std::vector<int> Interface_nbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
+  int n = sequenceOfTags.size();
+  std::vector<std::thread> threads;
 
 
 
-    std::set<int> diff;
-    std::set<int> Interface_nbr_diff;
-    if(Interface_noDup.size()!=Interface.size()){
-      
-      std::set_difference(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(), 
-                          map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
-                          std::inserter(diff, diff.end()));
+  // Divide work among threads
+  for (int t = 0; t < numThreads; ++t) {
+    threads.emplace_back([t, n, numThreads, 
+                          &sequenceOfTags,  
+                          &T2Index, 
+                          &arr_extra_set,
+                          &subMatrices,
+                          &subMatrices_M,
+                          &subMatrices_K,
+                          &map_II,
+                          &map_GammaGamma,
+                          &map_GammaGamma_noDuplicate,
+                          &map_GammaNbr_Nbr_noDuplicate,
+                          &subMatrices_kaskade,
+                          &subMatrices_kaskade_Ms,
+                          &subMatrices_kaskade_Ks,
+                          &sequanceOfsubdomainsKaskade,
+                          &weights,
+                          &Fs,
+                          &rhs_kaskade,
+                          &map_indices,
+                          &IG_seq,
+                          &mapMutex]() {
+      for (int subIdx = t; subIdx < n; subIdx += numThreads) {
 
-      std::set_difference(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end(), 
-                          diff.begin(), diff.end(),
-                          std::inserter(Interface_nbr_diff, Interface_nbr_diff.end()));
-
-      std::vector<int> Interface_nbr_shrinked(Interface_nbr_diff.begin(), Interface_nbr_diff.end());
-      Interface_nbr = Interface_nbr_shrinked;
-    }
-
-    std::map<int, int> map_Petsc2Kaskade;
-    std::map<int, int> map_petsc_diff;
-    std::vector<int> IG(Interior.size()+Interface_noDup.size()+ diff.size()+Interface_nbr.size()); // vector with size ints.
-    int counter_kaskade = 0;
-    {  
-      for (int k = 0; k < Interior.size(); ++k)
-      {
-        map_Petsc2Kaskade[map_indices[Interior[k]]] = k + counter_kaskade;
-        IG[k+counter_kaskade] = map_indices[Interior[k]];
-      }   
-
-      counter_kaskade += Interior.size();
-      for (int k = 0; k < Interface_noDup.size(); ++k)
-      {
-        map_Petsc2Kaskade[map_indices[Interface_noDup[k]]] = k + counter_kaskade;
-        IG[k+counter_kaskade] = map_indices[Interface_noDup[k]];
-      }    
-
-      counter_kaskade += Interface_noDup.size();
-      if(diff.size()>0)
-      {
-        std::vector<int> diff_vec(diff.begin(), diff.end());
-        for (int k = 0; k < diff_vec.size(); ++k)
-        {
-          map_Petsc2Kaskade[map_indices[diff_vec[k]]] = k + counter_kaskade;
-          IG[k+counter_kaskade] = map_indices[diff_vec[k]];
-          map_petsc_diff[map_indices[diff_vec[k]]] = k+counter_kaskade;
-        } 
-        counter_kaskade += diff.size();     
+        computeAsFs(subIdx, 
+                    sequenceOfTags,  
+                    T2Index, 
+                    arr_extra_set,
+                    subMatrices,
+                    subMatrices_M,
+                    subMatrices_K,
+                    map_II,
+                    map_GammaGamma,
+                    map_GammaGamma_noDuplicate,
+                    map_GammaNbr_Nbr_noDuplicate,
+                    subMatrices_kaskade,
+                    subMatrices_kaskade_Ms,
+                    subMatrices_kaskade_Ks,
+                    sequanceOfsubdomainsKaskade,
+                    weights,
+                    Fs,
+                    rhs_kaskade,
+                    map_indices,
+                    IG_seq,
+                    mapMutex);
       }
-      {
-        for (int k = 0; k < Interface_nbr.size(); ++k)
-        {
-          map_Petsc2Kaskade[map_indices[Interface_nbr[k]]] = k+counter_kaskade;
-          IG[k+counter_kaskade] = map_indices[Interface_nbr[k]];
-        }
-        counter_kaskade += Interface_nbr.size(); 
-      } 
+    });
+  }
 
-      if(false) std::cout << "\n";
+  // Wait for all threads to finish
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+        thread.join();
     }
-    IG_seq[subIdx] = IG;
-    if(false) std::cout <<"============================" << std::endl; 
-    if(false) std::cout << tag<<" -> "<< counter_kaskade << " diff " << diff.size() << " IG.size() "<< IG.size()<< std::endl;
-    if(false) std::cout <<"============================" << std::endl;
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    // creator for kaskade structure, the shrinked version
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    NumaCRSPatternCreator<> creator_kaskade(counter_kaskade,counter_kaskade,false);
-    std::map<int,int>::iterator it;
-    std::vector<int> diff_vec(diff.begin(), diff.end());
-    for (int k=0; k<subMatrix.N(); ++k)
-    {
-      it = map_Petsc2Kaskade.find(k);
-      if (it != map_Petsc2Kaskade.end())
-      {
-        auto row  = subMatrix[k];
-        for (auto ca=row.begin(); ca!=row.end(); ++ca)
-        {
-          int const l = ca.index();
-          int row_indx = map_Petsc2Kaskade[k];
-          it = map_Petsc2Kaskade.find(l);
-          if (it != map_Petsc2Kaskade.end()){
-            int col_indx = map_Petsc2Kaskade[l];
-            double val = *ca;
-            creator_kaskade.addElement(row_indx,col_indx);  
-          }  
-        }
-      }
-       if(diff.size()>0)
-       {
-        it = map_petsc_diff.find(k);
-        if (it != map_petsc_diff.end()){
-          int col_indx = map_petsc_diff[k];
-          creator_kaskade.addElement(col_indx,col_indx); 
-        }
-      } 
-    }
-
-    Matrix subMatrix_kaskade_shrinked(creator_kaskade); 
-    Matrix subMatrix_kaskade_M_shrinked(creator_kaskade); 
-    Matrix subMatrix_kaskade_K_shrinked(creator_kaskade); 
-    {
-      auto IGAMMA_block = subMatrix(IG,IG);
-      insertMatrixBlock(IGAMMA_block, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_shrinked,true);
-
-      auto IGAMMA_block_M = subMatrix_M(IG,IG);
-      insertMatrixBlock(IGAMMA_block_M, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_M_shrinked,true);
-
-      auto IGAMMA_block_K = subMatrix_K(IG,IG);
-      insertMatrixBlock(IGAMMA_block_K, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_K_shrinked,true);
-    }
-
-    subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
-    subMatrices_kaskade_Ms[subIdx] = subMatrix_kaskade_M_shrinked;
-    subMatrices_kaskade_Ks[subIdx] = subMatrix_kaskade_K_shrinked;
-
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    // save sub_matrices for kaskade format
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    Vector Fs_subIdx(counter_kaskade);  
-    { 
-      for (int i = 0; i < counter_kaskade; ++i)
-      {
-        int index = IG[i]; 
-        sequanceOfsubdomainsKaskade[tag].push_back(index);
-        int coef = weights[subIdx][index];
-        Fs_subIdx[i] = coef*rhs_kaskade[index];
-      }
-    }
-    Fs[subIdx] = Fs_subIdx;
   }
 
 
   std::vector<std::thread> threads_sharedDofs;
-  int n = sequenceOfTags.size();
-
   typedef std::tuple<int,int,int> i3tuple;
   std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
 
-  // for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  // {
-  //   int tag = sequenceOfTags[subIdx];
-  //   std::vector<int> tmp = sequanceOfsubdomainsKaskade[tag];
-
-  //   for (int i = 0; i < tmp.size(); ++i)
-  //   {
-  //     auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);
-  //     if (it != MapSharedDofsKaskadeTuple.end()) {  
-  //       std::vector<i3tuple>& values = it->second;
-  //       values.push_back(i3tuple(subIdx,i, tmp[i]));
-  //     }else{
-  //       MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(subIdx,i, tmp[i])};
-  //     }
-  //   }
-  // }
-
-  std::mutex mapMutex; // Mutex for thread-safe access to the shared map
+  std::mutex mapMutex_shared; // Mutex for thread-safe access to the shared map
   // Divide work among threads
   for (int t = 0; t < numThreads; ++t) {
     threads_sharedDofs.emplace_back([t, n, numThreads, &sequenceOfTags, &sequanceOfsubdomainsKaskade, &MapSharedDofsKaskadeTuple, &mapMutex]() {

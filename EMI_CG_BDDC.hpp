@@ -138,7 +138,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {
-    // std::cout << "\n ---------- itr "<< time_step << " ---------- "<< std::endl;
+    std::cout << "\n ---------- itr "<< time_step << " ---------- "<< std::endl;
     // set nnz to the number of structural nonzero elements of the matrix to be assembled below
     size_t  nnz = assembler.nnz(0,neq,0,nvars,false);
     size_t  size = variableSet.degreesOfFreedom(0,nvars);

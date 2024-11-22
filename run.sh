@@ -24,6 +24,7 @@ pwd
 cd "${jobdir}"
 pwd
 
+#monday test
 
 # Luxemburg
 # srun -B *:*:* -n1 ./emiModel --input "./input/kermit_mesh.vtu" --extra_set "./input/kermit_extracellular.txt" --intra_set "./input/kermit_intracellular.txt" --excited "./input/kermit_early_excited.txt" --dir "/scratch/htc/fchegini/kemrit/output" --matlab_dir "/scratch/htc/fchegini/kemrit/matlab_dir" --interfacetypes 7 --T 50 --run_implicit_CG_BDDC false

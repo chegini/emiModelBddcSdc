@@ -8,6 +8,8 @@
 #include "mg/bddc.hh"
 #include "io/matlab.hh"
 
+#include <thread>
+#include <mutex>
 #include "timestepping/semieuler.hh"
 
 using namespace Kaskade;
@@ -1471,6 +1473,36 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
   return u;
 }
 
+template<class Matrix, class Vector>
+void weight_and_rhs(int subIdx, 
+                    std::vector<int> &sequenceOfTags,
+                    Matrix &subMatrix, 
+                    std::vector<Matrix> &subMatrices, 
+                    Matrix &A_petsc, 
+                    Vector& rhs_petsc_test,
+                    std::vector<Vector> &Fs_petcs, 
+                    std::vector<Vector> &weights){
+
+  int tag = sequenceOfTags[subIdx]; 
+  std::string path = std::to_string(subIdx+1);
+  std::cout << "tag: " << tag <<" path: " << path << " subIdx: " << subIdx << std::endl;
+  // subMatrix = subMatrices[subIdx];
+  Vector Fs_petcs_sub =  rhs_petsc_test;
+  Vector weights_sub(subMatrices[subIdx].N()); 
+  // optimize it by iterating only on the interfaces
+  for (int k = 0; k < subMatrices[subIdx].N(); ++k)
+  {
+    double subvalue = subMatrices[subIdx][k][k];
+    double originalvalue = A_petsc[k][k];
+
+    double weight = (subvalue/originalvalue);
+    Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
+    weights_sub[k] = weight;
+  }
+  Fs_petcs[subIdx] = Fs_petcs_sub;
+  weights[subIdx] = weights_sub;
+}
+
 template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
 typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::vector<int> arr_extra, 
                                                           std::map<int,int> map_nT2oT,
@@ -1510,6 +1542,10 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                                                           std::vector<Matrix> &subMatrices_M,
                                                           std::vector<Matrix> &subMatrices_K)
 {
+
+
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  std::cout << "numThreads: " << numThreads <<std::endl;
   // ------------------------------------------------------------------------------------ 
   // construct sparsity patterns
   // ------------------------------------------------------------------------------------ 
@@ -1677,29 +1713,50 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // - generate the submatrices with the writeToMatlabPath again
   // -------------------------------------
 
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx]; 
-    std::string path = std::to_string(subIdx+1);
+  std::vector<std::thread> threads;
+  int n = sequenceOfTags.size();
+  // Divide the subdomains among threads
+  for (size_t t = 0; t < numThreads; ++t) {
     Matrix subMatrix(creator);
-    subMatrix = subMatrices[subIdx];
-    Vector Fs_petcs_sub =  rhs_petsc_test;
-    Vector weights_sub(subMatrix.N()); 
-    // optimize it by iterating only on the interfaces
-    for (int k = 0; k < subMatrix.N(); ++k)
-    {
-      double subvalue = subMatrix[k][k];
-      double originalvalue = A_petsc[k][k];
-
-      double weight = (subvalue/originalvalue);
-      Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
-      weights_sub[k] = weight;
-    }
-    Fs_petcs[subIdx] = Fs_petcs_sub;
-    weights[subIdx] = weights_sub;
-    // std::cout<< " ===================================================== "<<std::endl;
-    // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
+    threads.emplace_back([t, n, numThreads, &sequenceOfTags, &subMatrix, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights]() {
+      for (size_t subIdx = t; subIdx < n; subIdx += numThreads) {
+        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, subMatrices, A_petsc, rhs_petsc_test, Fs_petcs, weights);
+      }
+    });
   }
+
+
+  // Wait for all threads to finish
+  for (auto& thread : threads) {
+      if (thread.joinable()) {
+          thread.join();
+      }
+  }
+
+
+  // for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  // {
+  //   int tag = sequenceOfTags[subIdx]; 
+  //   std::string path = std::to_string(subIdx+1);
+  //   Matrix subMatrix(creator);
+  //   subMatrix = subMatrices[subIdx];
+  //   Vector Fs_petcs_sub =  rhs_petsc_test;
+  //   Vector weights_sub(subMatrix.N()); 
+  //   // optimize it by iterating only on the interfaces
+  //   for (int k = 0; k < subMatrix.N(); ++k)
+  //   {
+  //     double subvalue = subMatrix[k][k];
+  //     double originalvalue = A_petsc[k][k];
+
+  //     double weight = (subvalue/originalvalue);
+  //     Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
+  //     weights_sub[k] = weight;
+  //   }
+  //   Fs_petcs[subIdx] = Fs_petcs_sub;
+  //   weights[subIdx] = weights_sub;
+  //   // std::cout<< " ===================================================== "<<std::endl;
+  //   // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
+  // }
 
   return u;
 }
@@ -2000,15 +2057,16 @@ void construct_As(std::vector<int> arr_extra,
           tmp.push_back({std::get<0>(value),std::get<1>(value)});
           tags_extra.push_back(std::get<0>(value));
           tags_extra_dofs.push_back(std::get<1>(value));
-          
         }
         bool extra_cellular_shared = isSubset(tags_extra,arr_extra);
         bool extra_cellular_shared_dirichlet = isSubset(tags_extra_dofs,dofsDirichlet);
 
 
-        if(!extra_cellular_shared and !extra_cellular_shared_dirichlet) sharedDofsKaskade.push_back(tmp);
+        //if(!extra_cellular_shared and !extra_cellular_shared_dirichlet) 
+        sharedDofsKaskade.push_back(tmp);
 
-        if(values.size()>1 and write_to_file and !extra_cellular_shared and !extra_cellular_shared_dirichlet){
+        //if(values.size()>1 and write_to_file and !extra_cellular_shared and !extra_cellular_shared_dirichlet){
+        if(values.size()>1){  
           //if(write_to_file){
           f << key << "-> ";
           for (const auto& value : values) {

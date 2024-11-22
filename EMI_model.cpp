@@ -898,8 +898,8 @@ int main(int argc, char* argv[])
 
   std::vector<int> dofsDirichlet_vec(dofsDirichlet.begin(), dofsDirichlet.end());
 
-  // construct_As_parallel
-  construct_As( arr_extra, 
+  //construct_As_parallel
+  construct_As_parallel( arr_extra, 
                 sequenceOfTags, 
                 map_II, 
                 map_GammaGamma, 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #  Job name is myjob, this will be displayed in the list of running jobs
-#PBS -N rhs
+#PBS -N r4
 #  stdout (console output) and stderr (error messages) are passed together into one output textfile
 #PBS -j sol
 #  One node and 56 processor cores are requested on this node (maximum 128 processor cores are possible).
@@ -10,10 +10,10 @@
 #PBS -l walltime=1-23:00:00
 # It is assumed that the program is called myfile and is located in the directory /home/htc/myname/myfolder.
 #####SBATCH --mem=32768 ls -l
-#SBATCH --mem=102400
-##SBATCH --mem=1000000
-#SBATCH --partition=big 
-##SBATCH --partition=high-mem
+##SBATCH --mem=102400
+#SBATCH --mem=1000000
+##SBATCH --partition=big 
+#SBATCH --partition=high-mem
 ##SBATCH --nodelist=htc-cmp023
 ##SBATCH --partition=cno
 
@@ -68,8 +68,14 @@ pwd
 # srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr1/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr1/matlab_dir" --interfacetypes 7 --refine 1
 # srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr2/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr2/matlab_dir" --interfacetypes 7 --refine 2
 # srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr3/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr3/matlab_dir" --interfacetypes 7 --refine 3
-srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr4/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr4/matlab_dir" --interfacetypes 7 --refine 4
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr4/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr4/matlab_dir" --interfacetypes 7 --refine 4
 
+
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nzr0/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nzr0/matlab_dir" --interfacetypes 7 --refine 0
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nzr1/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nzr1/matlab_dir" --interfacetypes 7 --refine 1
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nzr2/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nzr2/matlab_dir" --interfacetypes 7 --refine 2
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nzr3/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nzr3/matlab_dir" --interfacetypes 7 --refine 3
+srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nzr4/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nzr4/matlab_dir" --interfacetypes 7 --refine 4
 
 
 #srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny3nzr2o2/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny3nzr2o2/matlab_dir" --interfacetypes 7 --refine 2 --order 2

@@ -2246,7 +2246,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
   // writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
 
-     auto du_local(u);
+    auto du_local(u);
     for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
     {
     // std::cout<<subIdx <<std::endl;

@@ -1219,7 +1219,6 @@ void exctract_petsc_stiffness_blocks_moreExtracellular( std::vector<int> sequenc
                                             std::map<int,std::set<int>> map_II,
                                             std::map<int,std::set<int>> map_GammaGamma,
                                             Matrix K_,
-                                            std::vector<int> i2Tag,
                                             int subIdx,
                                             Matrix_ &Ks_)
 {
@@ -1263,7 +1262,6 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
                                                           std::map<int,bool> map_markCorners,
                                                           std::set<int> cells_set,
                                                           std::set<int> tags,
-                                                          std::vector<int> i2Tag,
                                                           std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
                                                           Matrix K_,
@@ -1419,7 +1417,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int>
       assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
       K_ = assembler.template get<Matrix>(false);
       K_*=(-dt); 
-      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
       subMatrix+=subMatrix_stiffness;
       // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
       Cellfltr.select_based_on_tag(false);
@@ -1524,7 +1522,6 @@ void construct_A_submatrix(int subIdx,
                            std::map<int,std::set<int>> map_II,
                            std::map<int,std::set<int>> map_GammaGamma,
                            int assemblyThreads,
-                           std::vector<int>& i2Tag,
                            Matrix &Matrix_mass_petsc, 
                            Matrix &Matrix_stiffness_petsc,
                            bool write_to_file,
@@ -1611,7 +1608,7 @@ void construct_A_submatrix(int subIdx,
     assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
     K_ = assembler.template get<Matrix>(false);
     K_*=(-dt); 
-    exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+    exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
     subMatrix+=subMatrix_stiffness;
     // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
     Cellfltr.select_based_on_tag(false);
@@ -1651,7 +1648,6 @@ void construct_A_submatrix(int subIdx,
 //                                                           std::map<int,bool> map_markCorners,
 //                                                           std::set<int> cells_set,
 //                                                           std::set<int> tags,
-//                                                           std::vector<int> i2Tag,
 //                                                           std::vector<std::set<int>> i2t, 
 //                                                           Matrix A_,
 //                                                           Matrix K_,
@@ -1811,7 +1807,7 @@ void construct_A_submatrix(int subIdx,
 //     assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
 //     K_ = assembler.template get<Matrix>(false);
 //     K_*=(-dt); 
-//     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+//     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
 //     subMatrix+=subMatrix_stiffness;
 //     Cellfltr.select_based_on_tag(false);
 //   }
@@ -1915,7 +1911,6 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                                                           std::map<int,bool> map_markCorners,
                                                           std::set<int> cells_set,
                                                           std::set<int> tags,
-                                                          std::vector<int> i2Tag,
                                                           std::vector<std::set<int>> i2t, 
                                                           Matrix A_,
                                                           Matrix K_,
@@ -2007,7 +2002,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // Parallelize the subdomain processing
   // for (size_t t = 0; t < numThreads; ++t) {
   //     threads_original.emplace_back([t, numThreads, &sequenceOfTags, &Cellfltr, &F, &subMatrices, &subMatrices_M, 
-  //                           &subMatrices_K, &map_GammaNbr, &map_GammaNbr_Nbr_noDuplicate, &i2Tag, &subMatricesMutex,
+  //                           &subMatrices_K, &map_GammaNbr, &map_GammaNbr_Nbr_noDuplicate, &subMatricesMutex,
   //                           &Fs_petcs, &map_indices, &map_II, &map_GammaGamma, &tags, &cells_set, &matlab_dir, 
   //                           &write_to_file, &creator, &du, &nDofs, &dt, &sequenceOfsubdomains, 
   //                           &arr_extra, &map_markCorners, &assembler, &u, &assemblyThreads, &subMatricesMutex, &K_]() {
@@ -2097,7 +2092,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   //               assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
   //               K_ = assembler.template get<Matrix>(false);
   //               K_*=(-dt); 
-  //               exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+  //               exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
   //               subMatrix+=subMatrix_stiffness;
   //               Cellfltr.select_based_on_tag(false);
   //             }
@@ -2218,7 +2213,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   //     }
   //     K_ = assembler.template get<Matrix>(false);
   //     K_*=(-dt); 
-  //     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+  //     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
   //     subMatrix+=subMatrix_stiffness;
   //     Cellfltr.select_based_on_tag(false);
   //   }
@@ -2327,7 +2322,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
       assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
       K_ = assembler.template get<Matrix>(false);
       K_*=(-dt); 
-      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, i2Tag, subIdx,subMatrix_stiffness); 
+      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
       subMatrix+=subMatrix_stiffness;
       Cellfltr.select_based_on_tag(false);
     }

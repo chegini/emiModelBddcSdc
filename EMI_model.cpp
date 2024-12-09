@@ -863,7 +863,6 @@ int main(int argc, char* argv[])
                               map_markCorners,
                               cells_set,
                               tags,
-                              i2Tag,
                               i2t,
                               A_,K_,M_,
                               rhs_petsc_test,

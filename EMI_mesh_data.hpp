@@ -2178,7 +2178,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                 // Optional: Write to file if needed
                 if (write_to_file) {
                     writeToMatlabPath(subMatrix, Fs_petcs_sub, "resultBDDC" + path, matlab_dir, false);
-                    writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
+                    // writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
                 }
 
               }
@@ -2776,7 +2776,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std
     Matrix_mass_petsc+=subMatrix_mass;
     Matrix_stiffness_petsc+=subMatrix_stiffness;
     if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-    if(write_to_file) writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
+    // if(write_to_file) writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
     
     // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
     // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);

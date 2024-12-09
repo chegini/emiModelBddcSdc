@@ -95,10 +95,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_join_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_join_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_join_list_intracellular.txt","subdomain definition")
@@ -119,10 +119,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/tenCells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/tenCells3d_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/tenCells3d_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition") 
   // ("input",                    inputfile,                           "./input/cube3D.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/cube3D_extra.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/cube3D_intra.txt","subdomain definition")
@@ -784,19 +784,19 @@ int main(int argc, char* argv[])
   {
     assembler.assemble(SemiLinearization(eq,u,u,du),options.assemblyThreads);
     auto rhs = assembler.rhs();
-    writeToMatlab(assembler,matlab_dir+"/matrixA_RHS_", "A");  
+    // writeToMatlab(assembler,matlab_dir+"/matrixA_RHS_", "A");  
   }
 
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   auto rhs = assembler.rhs();
-  writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
+  // writeToMatlab(assembler,matlab_dir+"/matrixA_", "A");  
 
   F.Mass_stiff(1);
   SemiImplicitEulerStep<Functional>  eqM(&F,options.dt);
   eqM.setTau(0);
   assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX, options.assemblyThreads);  
   M_ = assembler.template get<Matrix>(false);
-  writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
+  // writeToMatlab(assembler,matlab_dir+"/matrixM_", "M"); 
 
   // get stiffness 
   F.Mass_stiff(0);
@@ -805,7 +805,7 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eqK,u,u,du), Assembler::MATRIX, options.assemblyThreads); 
   K_ = assembler.template get<Matrix>(false);
   K_*=(-options.dt);
-  writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
+  // writeToMatlab(assembler,matlab_dir+"/matrixK_", "K"); 
   
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -945,7 +945,7 @@ int main(int argc, char* argv[])
 
       int tag = sequenceOfTags[subIdx];
       std::string path = std::to_string(subIdx);
-      writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
+      // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
     std::cout << "A_.N() = " <<A_.N() << " max_subdomain "<< max_subdomain<< " max_subdomain "<< min_subdomain<< std::endl;
   }

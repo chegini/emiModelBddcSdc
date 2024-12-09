@@ -168,7 +168,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     rhs.write(rhs_petsc_test.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_test, rhs_petsc_test);
-    writeSolution_test(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
+    // writeSolution_test(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
     std::vector<Vector> Fs(n_subdomains);
         // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // fill the sub matrices for kaskade format
@@ -302,8 +302,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     if(options.plot) writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
 
-    writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
-             IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+    // writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
+    //          IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
     int lookback = std::min(10,iter_cg_with_bddc-1);
     double contraction = std::pow(resNorm.back()/resNorm[resNorm.size()-lookback],1.0/lookback);
     std::cout << "Estimated contraction factor: " << contraction << ". (kappa ~ " << (1+contraction)/(1-contraction) << ").\n";

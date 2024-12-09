@@ -1623,8 +1623,8 @@ void construct_A_submatrix(int subIdx,
   Matrix_mass_petsc+=subMatrix_mass;
   Matrix_stiffness_petsc+=subMatrix_stiffness;
   if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-  writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
-  writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
+  // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
+  // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
 
 }
 
@@ -2338,16 +2338,16 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
     Matrix_mass_petsc+=subMatrix_mass;
     Matrix_stiffness_petsc+=subMatrix_stiffness;
     if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-    writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
-    writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
+    // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
+    // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
   }
 
 
    
     std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@"<<std::endl;
 
-    writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
-    writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
+    // writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
+    // writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
 
   // -------------------------------------
   // compute the weight for each subdomain to update the rhs

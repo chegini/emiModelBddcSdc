@@ -1887,7 +1887,9 @@ void construct_A_submatrix(int subIdx,
 //   return u;
 // }
 
-template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
+
+
+template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector, class Material, class Options>
 typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::vector<int> arr_extra, 
                                                           std::map<int,int> map_nT2oT,
                                                           GridManager<Grid>& gridManager,
@@ -1923,12 +1925,31 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                                                           std::vector<Vector> &weights,
                                                           std::vector<Matrix> &subMatrices,
                                                           std::vector<Matrix> &subMatrices_M,
-                                                          std::vector<Matrix> &subMatrices_K)
+                                                          std::vector<Matrix> &subMatrices_K,
+                                                          Material const& material,
+                                                          Options const& options,
+                                                          double penalty,
+                                                          double sigma_i,
+                                                          double sigma_e,
+                                                          double C_m,
+                                                          double R,
+                                                          double R_extra)
 {
 
 
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::cout << "numThreads: " << numThreads << " 1u : " << 1u <<std::endl;
+    CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+
+      Functional F1( material,
+                gridManager.grid(),
+                spaces,
+                penalty,
+                sigma_i,
+                sigma_e,
+                C_m,  
+                R,
+                R_extra);
   // ------------------------------------------------------------------------------------ 
   // construct sparsity patterns
   // ------------------------------------------------------------------------------------ 
@@ -1986,9 +2007,9 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // construct mass and stiffness matrix from semi-implicit structure
   // ------------------------------------------------------------------------------------ 
   // Thread-Local Storage: Avoid shared variables where possible
-  thread_local Matrix subMatrix_mass(creator);
-  thread_local Matrix subMatrix_stiffness(creator);
-  thread_local Matrix subMatrix(creator);
+  // thread_local Matrix subMatrix_mass(creator);
+  // thread_local Matrix subMatrix_stiffness(creator);
+  // thread_local Matrix subMatrix(creator);
   thread_local Vector Fs_petcs_sub;
   thread_local auto du = u;
 
@@ -1999,101 +2020,265 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   std::mutex subMatricesMutex; // Mutex to protect access to shared subMatrices
 
 
-  auto du_local(u);
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
   {
-    // std::cout<<subIdx <<std::endl;
-    int tag = sequenceOfTags[subIdx]; 
-    std::string path = std::to_string(subIdx);
-    du *= 0;
+      std::vector<std::future<void>> futures;
+      int chunkSize = (sequenceOfTags.size() + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+      int n_subs = sequenceOfTags.size();
 
-    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-    double coef = 0.5;
-    std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
-    F.Mass_stiff(1);
-    F.set_mass_submatrix(true);
-    SemiImplicitEulerStep<Functional>  eqM(&F,dt);
-    eqM.setTau(0);
-    Matrix subMatrix(creator);
-   
-    // mass
-    Matrix subMatrix_mass(creator);
-    Vector Fs_petcs_sub =  Fs_petcs[subIdx];
+      for (int threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+          int startIdx = threadIdx * chunkSize;
+          int endIdx = std::min(startIdx + chunkSize, n_subs);
 
-    // construct mass
-    for ( const auto & gamma_nbr: nbrs )
-    {
-      Cellfltr.set_cells(cells_set);
-      Cellfltr.set_tags(tags);
-      int row = tag;
-      int col = gamma_nbr.first;
-      {
-        Matrix M_sub(creator);
-        F.set_row_col_subdomain(row,col);
-        assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
-        Matrix sub_M_ = assembler.template get<Matrix>(false);
-        parallelFor(0,sub_M_.N(),[&](int k)
-        {
-          auto row_ = sub_M_[k];
-          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
-          {
-            int const l = ca.index();
-            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
-          }
-        });
-        subMatrix_mass+=M_sub;
-      }
-
-      {
-        Matrix M_sub(creator);
-        F.set_row_col_subdomain(col,row);
-        assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
-        Matrix sub_M_ = assembler.template get<Matrix>(false);
-
-        parallelFor(0,sub_M_.N(),[&](int k)
-        {
-          auto row_ = sub_M_[k];
-          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
-          {
-            int const l = ca.index();
-            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
-          }
-        });
-        subMatrix_mass+=M_sub;
-      }
-    }
-
-    subMatrix+=subMatrix_mass;
-
-    Matrix subMatrix_stiffness(creator);
-   // construct stiffness
-    {
-      SemiImplicitEulerStep<Functional>  eqK(&F,dt);
-      F.Mass_stiff(0);
-      F.set_mass_submatrix(false);
-      eqK.setTau(1);
+          futures.push_back(std::async(std::launch::async, [startIdx, endIdx, &sequenceOfTags, &map_GammaNbr, &Fs_petcs, 
+                                                           &subMatrices, dt, &F, &assembler, &map_indices, 
+                                                           &Cellfltr, write_to_file, &matlab_dir,&sequenceOfsubdomains,&cells_set,&tags,&subMatricesMutex,&matrixMutex, &creator,&u, &K_, &map_II, &map_GammaGamma, &material, &gridManager, &spaces, &penalty,&arr_extra,
+                &sigma_i,
+                &sigma_e,
+                &C_m,  
+                &R,
+                &R_extra]() {
     
-      std::set<int> tags_target;
-      tags_target.insert(tag);
-      Cellfltr.set_tags(tags_target);
-      Cellfltr.select_based_on_tag(true);
-      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
-      K_ = assembler.template get<Matrix>(false);
-      K_*=(-dt); 
-      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
-      subMatrix+=subMatrix_stiffness;
-      Cellfltr.select_based_on_tag(false);
-    }
-   
-    subMatrices[subIdx] = subMatrix;
-    subMatrices_M[subIdx] = subMatrix_mass;
-    subMatrices_K[subIdx] = subMatrix_stiffness;
-    Matrix_mass_petsc+=subMatrix_mass;
-    Matrix_stiffness_petsc+=subMatrix_stiffness;
-    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-    // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
-    // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
+              for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) 
+              {
+                std::cout << "startIdx: " << startIdx << " endIdx: " << endIdx << " by thread " << std::this_thread::get_id() << std::endl;
+                int tag = sequenceOfTags[subIdx];
+                std::string path = std::to_string(subIdx);
+                auto du = u;
+                du *= 0; // Reset the u vector
+
+                std::map<int, std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+                double coef = 0.5;
+                std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
+                Functional F1( material,
+                gridManager.grid(),
+                spaces,
+                penalty,
+                sigma_i,
+                sigma_e,
+                C_m,  
+                R,
+                R_extra);
+                F1.extracellular_materials(arr_extra);
+                F1.Mass_stiff(1);
+                F1.set_mass_submatrix(true);
+                SemiImplicitEulerStep<Functional> eqM(&F1, dt);
+                eqM.setTau(0);
+                Matrix subMatrix(creator);
+               
+                // Construct mass matrix
+                Matrix subMatrix_mass(creator);
+                Vector Fs_petcs_sub = Fs_petcs[subIdx];
+
+                // Parallel for loop within the subdomain
+                for (const auto &gamma_nbr : nbrs) {
+                    CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+                    Cellfltr1.set_cells(cells_set);
+                    Cellfltr1.set_tags(tags);
+                    int row = tag;
+                    int col = gamma_nbr.first;
+
+                    // Mass matrix computation for each subdomain
+                    {
+                        std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                        Matrix M_sub(creator);
+                        F1.set_row_col_subdomain(row, col);
+                        assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
+                        Matrix sub_M_ = assembler.template get<Matrix>(false);
+
+                        // Parallelize matrix assembly using a simple loop
+                        // parallelFor(0, sub_M_.N(), [&](int k) {
+                        for (int k = 0; k < sub_M_.N(); ++k)
+                        {
+                            auto row_ = sub_M_[k];
+                            for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
+                                int const l = ca.index();
+                                M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
+                            }
+                        }
+                        // });
+                        {
+                        std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                        subMatrix_mass += M_sub;
+                        }
+                    }
+
+                    // Add to the final subMatrix
+                    {
+                        std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                        Matrix M_sub(creator);
+                        F1.set_row_col_subdomain(col, row);
+                        assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
+                        Matrix sub_M_ = assembler.template get<Matrix>(false);
+
+                        //parallelFor(0, sub_M_.N(), [&](int k) {
+                        for (int k = 0; k < sub_M_.N(); ++k)
+                        {
+                            auto row_ = sub_M_[k];
+                            for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
+                                int const l = ca.index();
+                                M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
+                            }
+                          }
+                        //});
+                        {
+                        std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                        subMatrix_mass += M_sub;
+                        }
+                    }
+                }
+                {
+                  std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                  subMatrix += subMatrix_mass;
+                }
+                // Construct stiffness matrix in a similar manner
+                Matrix subMatrix_stiffness(creator);
+               // construct stiffness
+                {
+                  std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                  Functional F2( material,
+                                      gridManager.grid(),
+                                      spaces,
+                                      penalty,
+                                      sigma_i,
+                                      sigma_e,
+                                      C_m,  
+                                      R,
+                                      R_extra);
+
+                  F2.extracellular_materials(arr_extra);
+                  SemiImplicitEulerStep<Functional>  eqK(&F2,dt);
+                  F2.Mass_stiff(0);
+                  F2.set_mass_submatrix(false);
+                  eqK.setTau(1);
+                
+                  CellFilter Cellfltr2(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+
+                  std::set<int> tags_target;
+                  tags_target.insert(tag);
+                  Cellfltr2.set_tags(tags_target);
+                  Cellfltr2.select_based_on_tag(true);
+                  assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr2,Assembler::MATRIX|Assembler::RHS,1);  
+                  K_ = assembler.template get<Matrix>(false);
+                  K_*=(-dt); 
+                  exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
+                  {
+                    std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                    subMatrix+=subMatrix_stiffness;
+                  }
+                  Cellfltr2.select_based_on_tag(false);
+
+                }
+
+                // After constructing submatrix, store results
+                {
+                  std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                  subMatrices[subIdx] = subMatrix;
+                }
+
+                // Optional: Write to file if needed
+                if (write_to_file) {
+                    writeToMatlabPath(subMatrix, Fs_petcs_sub, "resultBDDC" + path, matlab_dir, false);
+                    writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
+                }
+
+              }
+          }));
+      }
+
+      // Wait for all threads to complete
+      for (auto& future : futures) {
+          future.get();
+      }
   }
+
+  // auto du_local(u);
+  // for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  // {
+  //   int tag = sequenceOfTags[subIdx]; 
+  //   std::string path = std::to_string(subIdx);
+  //   du *= 0;
+
+  //   std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+  //   double coef = 0.5;
+  //   std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
+  //   F.Mass_stiff(1);
+  //   F.set_mass_submatrix(true);
+  //   SemiImplicitEulerStep<Functional>  eqM(&F,dt);
+  //   eqM.setTau(0);
+  //   Matrix subMatrix(creator);
+   
+  //   // mass
+  //   Matrix subMatrix_mass(creator);
+  //   Vector Fs_petcs_sub =  Fs_petcs[subIdx];
+
+  //   // construct mass
+  //   for ( const auto & gamma_nbr: nbrs )
+  //   {
+  //     Cellfltr.set_cells(cells_set);
+  //     Cellfltr.set_tags(tags);
+  //     int row = tag;
+  //     int col = gamma_nbr.first;
+  //     {
+  //       Matrix M_sub(creator);
+  //       F.set_row_col_subdomain(row,col);
+  //       assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
+  //       Matrix sub_M_ = assembler.template get<Matrix>(false);
+  //       parallelFor(0,sub_M_.N(),[&](int k)
+  //       {
+  //         auto row_ = sub_M_[k];
+  //         for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
+  //         {
+  //           int const l = ca.index();
+  //           M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
+  //         }
+  //       });
+  //       subMatrix_mass+=M_sub;
+  //     }
+
+  //     {
+  //       Matrix M_sub(creator);
+  //       F.set_row_col_subdomain(col,row);
+  //       assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
+  //       Matrix sub_M_ = assembler.template get<Matrix>(false);
+
+  //       parallelFor(0,sub_M_.N(),[&](int k)
+  //       {
+  //         auto row_ = sub_M_[k];
+  //         for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
+  //         {
+  //           int const l = ca.index();
+  //           M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
+  //         }
+  //       });
+  //       subMatrix_mass+=M_sub;
+  //     }
+  //   }
+
+  //   subMatrix+=subMatrix_mass;
+
+  //   Matrix subMatrix_stiffness(creator);
+  //  // construct stiffness
+  //   {
+  //     SemiImplicitEulerStep<Functional>  eqK(&F,dt);
+  //     F.Mass_stiff(0);
+  //     F.set_mass_submatrix(false);
+  //     eqK.setTau(1);
+    
+  //     std::set<int> tags_target;
+  //     tags_target.insert(tag);
+  //     Cellfltr.set_tags(tags_target);
+  //     Cellfltr.select_based_on_tag(true);
+  //     assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
+  //     K_ = assembler.template get<Matrix>(false);
+  //     K_*=(-dt); 
+  //     exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
+  //     subMatrix+=subMatrix_stiffness;
+  //     Cellfltr.select_based_on_tag(false);
+  //   }
+   
+  //   subMatrices[subIdx] = subMatrix;
+  //   if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+  // }
  
   std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@"<<std::endl;
 
@@ -2135,7 +2320,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
 }
 
 
-template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
+template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector, class Material, class Options>
 typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std::vector<int> arr_extra, 
                                                           std::map<int,int> map_nT2oT,
                                                           GridManager<Grid>& gridManager,
@@ -2171,12 +2356,21 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std
                                                           std::vector<Vector> &weights,
                                                           std::vector<Matrix> &subMatrices,
                                                           std::vector<Matrix> &subMatrices_M,
-                                                          std::vector<Matrix> &subMatrices_K)
+                                                          std::vector<Matrix> &subMatrices_K,
+                                                          Material const& material,
+                                                          Options const& options,
+                                                          double penalty,
+                                                          double sigma_i,
+                                                          double sigma_e,
+                                                          double C_m,
+                                                          double R,
+                                                          double R_extra)
 {
 
 
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::cout << "numThreads: " << numThreads <<std::endl;
+  // CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
   // ------------------------------------------------------------------------------------ 
   // construct sparsity patterns
   // ------------------------------------------------------------------------------------ 
@@ -2512,8 +2706,9 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std
     // construct mass
     for ( const auto & gamma_nbr: nbrs )
     {
-      Cellfltr.set_cells(cells_set);
-      Cellfltr.set_tags(tags);
+      CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+      Cellfltr1.set_cells(cells_set);
+      Cellfltr1.set_tags(tags);
       int row = tag;
       int col = gamma_nbr.first;
       {
@@ -2562,16 +2757,17 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std
       F.set_mass_submatrix(false);
       eqK.setTau(1);
     
+      CellFilter Cellfltr2(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
       std::set<int> tags_target;
       tags_target.insert(tag);
-      Cellfltr.set_tags(tags_target);
-      Cellfltr.select_based_on_tag(true);
-      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
+      Cellfltr2.set_tags(tags_target);
+      Cellfltr2.select_based_on_tag(true);
+      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr2,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
       K_ = assembler.template get<Matrix>(false);
       K_*=(-dt); 
       exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
       subMatrix+=subMatrix_stiffness;
-      Cellfltr.select_based_on_tag(false);
+      Cellfltr2.select_based_on_tag(false);
     }
    
     subMatrices[subIdx] = subMatrix;
@@ -2580,6 +2776,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std
     Matrix_mass_petsc+=subMatrix_mass;
     Matrix_stiffness_petsc+=subMatrix_stiffness;
     if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+    if(write_to_file) writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
+    
     // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
     // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
   }

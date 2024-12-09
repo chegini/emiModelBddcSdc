@@ -1887,9 +1887,256 @@ void construct_A_submatrix(int subIdx,
 //   return u;
 // }
 
-
 template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
 typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::vector<int> arr_extra, 
+                                                          std::map<int,int> map_nT2oT,
+                                                          GridManager<Grid>& gridManager,
+                                                          Functional& F,
+                                                          CellFilter & Cellfltr,
+                                                          VariableSet const& variableSet, 
+                                                          Spaces const& spaces,
+                                                          Grid const& grid, 
+                                                          typename VariableSet::VariableSet u,
+                                                          double  dt,
+                                                          std::vector<int> sequenceOfTags, 
+                                                          std::map<int,int> startingIndexOfTag,
+                                                          std::map<int,std::set<int>> map_II,
+                                                          std::map<int,std::set<int>> map_GammaGamma,
+                                                          std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
+                                                          std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
+                                                          std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
+                                                          std::map<int,std::vector<int>> sequenceOfsubdomains,
+                                                          std::map<int, int> map_indices,
+                                                          std::map<int,bool> map_markCorners,
+                                                          std::set<int> cells_set,
+                                                          std::set<int> tags,
+                                                          std::vector<std::set<int>> i2t, 
+                                                          Matrix A_,
+                                                          Matrix K_,
+                                                          Matrix M_,
+                                                          Vector rhs_petsc_test,
+                                                          int nDofs,
+                                                          int assemblyThreads,
+                                                          bool write_to_file,
+                                                          std::string matlab_dir,
+                                                          std::vector<Vector> &Fs_petcs,
+                                                          std::vector<Vector> &weights,
+                                                          std::vector<Matrix> &subMatrices,
+                                                          std::vector<Matrix> &subMatrices_M,
+                                                          std::vector<Matrix> &subMatrices_K)
+{
+
+
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  std::cout << "numThreads: " << numThreads << " 1u : " << 1u <<std::endl;
+  // ------------------------------------------------------------------------------------ 
+  // construct sparsity patterns
+  // ------------------------------------------------------------------------------------ 
+  NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
+  for (int k=0; k<A_.N(); ++k)
+  {
+    auto row  = A_[k];
+    for (auto ca=row.begin(); ca!=row.end(); ++ca)
+    {
+      int const l = ca.index();
+      int row_indx = map_indices[k];
+      int col_indx = map_indices[l];
+      creator.addElement(row_indx,col_indx);  
+    }
+  }
+
+  // original lhs in petsc format
+  Matrix A_petsc(creator);
+  {
+    for (int k = 0; k < A_.N(); ++k)
+    {
+      auto row_ = A_[k];
+      for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
+      {
+        int const l = ca.index();
+        A_petsc[map_indices[k]][map_indices[l]] = (*ca); 
+      }
+    }
+  }
+
+  if(write_to_file)
+    writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
+
+
+  //writeToMatlabPath_matlab(A_petsc,rhs_petsc_test,"resultBDDCTEST",matlab_dir, true);
+  // ------------------------------------------------------------------------------------ 
+  // construct submatrices
+  // ------------------------------------------------------------------------------------ 
+  std::vector<Matrix> Ms;// for debugging
+  std::vector<Matrix> Ks;// for debugging
+  Matrix M_sum(creator);// for debugging
+  Matrix K_sum(creator);// for debugging
+
+  typedef SemiLinearizationAtInner<SemiImplicitEulerStep<Functional> >  SemiLinearization;
+  typedef VariationalFunctionalAssembler<SemiLinearization> Assembler;
+  Assembler assembler(spaces);
+
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
+  std::set<int>::iterator itr;
+
+
+  Matrix Matrix_mass_petsc(creator);
+  Matrix Matrix_stiffness_petsc(creator);
+  // ------------------------------------------------------------------------------------
+  // construct mass and stiffness matrix from semi-implicit structure
+  // ------------------------------------------------------------------------------------ 
+  // Thread-Local Storage: Avoid shared variables where possible
+  thread_local Matrix subMatrix_mass(creator);
+  thread_local Matrix subMatrix_stiffness(creator);
+  thread_local Matrix subMatrix(creator);
+  thread_local Vector Fs_petcs_sub;
+  thread_local auto du = u;
+
+  int n = sequenceOfTags.size();
+  std::vector<std::thread> threads_original;
+
+  std::mutex matrixMutex; // Protect shared resources
+  std::mutex subMatricesMutex; // Mutex to protect access to shared subMatrices
+
+
+  auto du_local(u);
+  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
+  {
+    // std::cout<<subIdx <<std::endl;
+    int tag = sequenceOfTags[subIdx]; 
+    std::string path = std::to_string(subIdx);
+    du *= 0;
+
+    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+    double coef = 0.5;
+    std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
+    F.Mass_stiff(1);
+    F.set_mass_submatrix(true);
+    SemiImplicitEulerStep<Functional>  eqM(&F,dt);
+    eqM.setTau(0);
+    Matrix subMatrix(creator);
+   
+    // mass
+    Matrix subMatrix_mass(creator);
+    Vector Fs_petcs_sub =  Fs_petcs[subIdx];
+
+    // construct mass
+    for ( const auto & gamma_nbr: nbrs )
+    {
+      Cellfltr.set_cells(cells_set);
+      Cellfltr.set_tags(tags);
+      int row = tag;
+      int col = gamma_nbr.first;
+      {
+        Matrix M_sub(creator);
+        F.set_row_col_subdomain(row,col);
+        assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
+        Matrix sub_M_ = assembler.template get<Matrix>(false);
+        parallelFor(0,sub_M_.N(),[&](int k)
+        {
+          auto row_ = sub_M_[k];
+          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
+          {
+            int const l = ca.index();
+            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
+          }
+        });
+        subMatrix_mass+=M_sub;
+      }
+
+      {
+        Matrix M_sub(creator);
+        F.set_row_col_subdomain(col,row);
+        assembler.assemble(SemiLinearization(eqM,u,u,du_local), Assembler::MATRIX,assemblyThreads); 
+        Matrix sub_M_ = assembler.template get<Matrix>(false);
+
+        parallelFor(0,sub_M_.N(),[&](int k)
+        {
+          auto row_ = sub_M_[k];
+          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
+          {
+            int const l = ca.index();
+            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
+          }
+        });
+        subMatrix_mass+=M_sub;
+      }
+    }
+
+    subMatrix+=subMatrix_mass;
+
+    Matrix subMatrix_stiffness(creator);
+   // construct stiffness
+    {
+      SemiImplicitEulerStep<Functional>  eqK(&F,dt);
+      F.Mass_stiff(0);
+      F.set_mass_submatrix(false);
+      eqK.setTau(1);
+    
+      std::set<int> tags_target;
+      tags_target.insert(tag);
+      Cellfltr.set_tags(tags_target);
+      Cellfltr.select_based_on_tag(true);
+      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du_local),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
+      K_ = assembler.template get<Matrix>(false);
+      K_*=(-dt); 
+      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
+      subMatrix+=subMatrix_stiffness;
+      Cellfltr.select_based_on_tag(false);
+    }
+   
+    subMatrices[subIdx] = subMatrix;
+    subMatrices_M[subIdx] = subMatrix_mass;
+    subMatrices_K[subIdx] = subMatrix_stiffness;
+    Matrix_mass_petsc+=subMatrix_mass;
+    Matrix_stiffness_petsc+=subMatrix_stiffness;
+    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
+    // writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
+    // writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
+  }
+ 
+  std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@"<<std::endl;
+
+    // writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
+    // writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
+
+  // -------------------------------------
+  // compute the weight for each subdomain to update the rhs
+  // -------------------------------------
+  // - we need to go through the interfaces  
+  //  - of the current and their neighbors   
+  // - update the rhs for each subdomain
+  // - generate the submatrices with the writeToMatlabPath again
+  // -------------------------------------
+
+  std::vector<std::thread> threads;
+  
+  // Divide the subdomains among threads
+  for (size_t t = 0; t < numThreads; ++t) {
+    threads.emplace_back([t, n, numThreads, &sequenceOfTags, &creator, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights]() {
+      for (size_t subIdx = t; subIdx < n; subIdx += numThreads) {
+        Matrix subMatrix(creator);
+        subMatrix = subMatrices[subIdx];
+        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, A_petsc, rhs_petsc_test, Fs_petcs, weights);
+      }
+    });
+  }
+
+
+  // Wait for all threads to finish
+  for (auto& thread : threads) {
+      if (thread.joinable()) {
+          thread.join();
+      }
+  }
+
+
+  return u;
+}
+
+
+template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
+typename VariableSet::VariableSet  construct_submatrices_petsc_parallel_old( std::vector<int> arr_extra, 
                                                           std::map<int,int> map_nT2oT,
                                                           GridManager<Grid>& gridManager,
                                                           Functional& F,

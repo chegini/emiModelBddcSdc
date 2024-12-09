@@ -95,10 +95,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_join_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_join_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_join_list_intracellular.txt","subdomain definition")
@@ -186,10 +186,10 @@ int main(int argc, char* argv[])
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
-  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
@@ -324,13 +324,13 @@ int main(int argc, char* argv[])
   // REMOVE!!!
   // ---------------------------------------------------------------------------------------
   // unsigned int numThreads = std::thread::hardware_concurrency();
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  // unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
-  if (numThreads == 0) {
-      std::cout << "Unable to detect the number of hardware threads.\n";
-  } else {
-      std::cout << "Number of hardware threads available: " << numThreads << "\n";
-  }
+  // if (numThreads == 0) {
+  //     std::cout << "Unable to detect the number of hardware threads.\n";
+  // } else {
+  //     std::cout << "Number of hardware threads available: " << numThreads << "\n";
+  // }
 
   // int n = 10; // Total number of subdomains
   // unsigned int m = numThreads;  // Number of threads
@@ -473,6 +473,50 @@ int main(int argc, char* argv[])
   std::cout<< "n_excited_region: " << n_excited_region <<std::endl;
   std::vector<int> arr_excited_region(n_excited_region);
   getSubdomain(arr_excited_region, file_excited_region);
+
+  // ------------------------------------------------------------------------------------------------------------
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+
+
+  int n_subs = arr_extra.size() + arr_intra_set.size();
+  int chunkSize;
+
+  if (numThreads > n_subs) {
+      std::cout << "ERROR: The numebr of subdomains is smaller than the number of threads! \n";
+  } else {
+    chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+    std::cout << "Number of hardware threads available: " << numThreads << " and n_subdomains is "<< n_subs << " and chunkSize is " << chunkSize << "\n";
+
+    for (int t = 0; t < numThreads; ++t) {
+        int start = t * chunkSize;
+        int end = std::min(start + chunkSize, n_subs);
+        std::cout << "start: " << start << " end :"<< end << "\n";
+    }
+  }
+
+
+    {
+        std::vector<std::future<void>> futures;
+        chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+
+        for (int threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+            int startIdx = threadIdx * chunkSize;
+            int endIdx = std::min(startIdx + chunkSize, n_subs);
+
+            futures.push_back(std::async(std::launch::async, [startIdx, endIdx]() {
+                for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) {
+                    // Process subdomain
+                    std::cout << "Processing subdomain " << subIdx << " by thread " << std::this_thread::get_id() << std::endl;
+                }
+            }));
+        }
+
+        // Wait for all threads to complete
+        for (auto& future : futures) {
+            future.get();
+        }
+    }
+  // ------------------------------------------------------------------------------------------------------------
 
   Dune::FieldVector<double,dim> zero(0);
 

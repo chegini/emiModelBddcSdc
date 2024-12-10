@@ -1478,7 +1478,8 @@ void weight_and_rhs(int subIdx,
                     Matrix &A_petsc, 
                     Vector& rhs_petsc_test,
                     std::vector<Vector> &Fs_petcs, 
-                    std::vector<Vector> &weights){
+                    std::vector<Vector> &weights,
+                    std::mutex & matrixMutex){
 
   int tag = sequenceOfTags[subIdx]; 
   std::string path = std::to_string(subIdx+1);
@@ -1495,8 +1496,11 @@ void weight_and_rhs(int subIdx,
     Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
     weights_sub[k] = weight;
   }
-  Fs_petcs[subIdx] = Fs_petcs_sub;
-  weights[subIdx] = weights_sub;
+  {
+    std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+    Fs_petcs[subIdx] = Fs_petcs_sub;
+    weights[subIdx] = weights_sub;
+  }
 }
 
 template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector, class Material, class Options>
@@ -1800,11 +1804,11 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
     int startIdx = threadIdx * chunkSize;
     int endIdx = std::min(startIdx + chunkSize, n);
-    threads.emplace_back([startIdx, endIdx, &sequenceOfTags, &creator, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights]() {
+    threads.emplace_back([startIdx, endIdx, &sequenceOfTags, &creator, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights, &matrixMutex]() {
       for (size_t subIdx = startIdx; subIdx < endIdx; ++subIdx) {
         Matrix subMatrix(creator);
         subMatrix = subMatrices[subIdx];
-        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, A_petsc, rhs_petsc_test, Fs_petcs, weights);
+        weight_and_rhs(subIdx, sequenceOfTags, subMatrix, A_petsc, rhs_petsc_test, Fs_petcs, weights, matrixMutex);
       }
     });
   }

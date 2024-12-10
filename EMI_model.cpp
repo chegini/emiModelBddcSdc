@@ -323,66 +323,8 @@ int main(int argc, char* argv[])
   // ---------------------------------------------------------------------------------------
   // REMOVE!!!
   // ---------------------------------------------------------------------------------------
-  // unsigned int numThreads = std::thread::hardware_concurrency();
-  // unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
-
-  // if (numThreads == 0) {
-  //     std::cout << "Unable to detect the number of hardware threads.\n";
-  // } else {
-  //     std::cout << "Number of hardware threads available: " << numThreads << "\n";
-  // }
-
-  // int n = 10; // Total number of subdomains
-  // unsigned int m = numThreads;  // Number of threads
-
-  // {
-  //   std::mutex mapMutex; // Mutex to protect shared resource MapSharedDofsKaskadeTuple
-  //   typedef std::tuple<int, int, int> i3tuple; // Defining the i3tuple type
-
-  //   // Map to store the shared dofs kaskade tuples
-  //   std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
-
-  //   std::vector<int> sequenceOfTags = {0, 1, 2, 3, 4};  // Example sequence of tags
-  //   std::map<int, std::vector<int>> sequanceOfsubdomainsKaskade = {
-  //       {0, {0, 1, 2}}, {1, {3, 4, 5}}, {2, {6, 7, 8}},
-  //       {3, {9, 10, 11}}, {4, {12, 13, 14}}
-  //   }; // Example map of subdomains for each tag
-
-  //   int n = sequenceOfTags.size();
-  //   int m = 4; // Number of threads
-  //   std::vector<std::thread> threads;
-
-  //   // Launch threads to process subdomains concurrently
-  //   for (int subIdx = 0; subIdx < n; ++subIdx) {
-  //       threads.emplace_back([subIdx, &sequenceOfTags, &sequanceOfsubdomainsKaskade, &MapSharedDofsKaskadeTuple, &mapMutex]() {
-  //           processSubdomain(subIdx, sequenceOfTags, sequanceOfsubdomainsKaskade, MapSharedDofsKaskadeTuple, mapMutex);
-  //       });
-  //   }
-
-  //   // Wait for all threads to finish
-  //   for (auto& t : threads) {
-  //       if (t.joinable()) {
-  //           t.join();
-  //       }
-  //   }
-
-  //   // Optionally, print the contents of MapSharedDofsKaskadeTuple for debugging
-  //   for (const auto& entry : MapSharedDofsKaskadeTuple) {
-  //       std::cout << "Key: " << entry.first << "\n";
-  //       for (const auto& val : entry.second) {
-  //           std::cout << "  (" << std::get<0>(val) << ", " 
-  //                     << std::get<1>(val) << ", " 
-  //                     << std::get<2>(val) << ")\n";
-  //       }
-  //   }
-    
-  // }
   // // Sequential execution
   // auto sequentialStart = std::chrono::high_resolution_clock::now();
-
-  // for (int i = 0; i < n; ++i) {
-  //     processSubdomain(i); // Process each subdomain one by one
-  // }
 
   // auto sequentialEnd = std::chrono::high_resolution_clock::now();
   // std::chrono::duration<double> sequentialDuration = sequentialEnd - sequentialStart;
@@ -391,27 +333,6 @@ int main(int argc, char* argv[])
   // // Multithreaded execution
   // auto parallelStart = std::chrono::high_resolution_clock::now();
 
-  // std::vector<std::thread> threads; // To manage threads
-  // int chunkSize = (n + m - 1) / m; // Calculate chunk size (ceil(n/m))
-
-  // for (int i = 0; i < m; ++i) {
-  //     int start = i * chunkSize;
-  //     int end = std::min(start + chunkSize, n);
-
-  //     // Launch a thread to process the range of subdomains
-  //     threads.emplace_back([start, end]() {
-  //         for (int j = start; j < end; ++j) {
-  //             processSubdomain(j);
-  //         }
-  //     });
-  // }
-
-  // // Wait for all threads to finish
-  // for (auto& t : threads) {
-  //     if (t.joinable()) {
-  //         t.join();
-  //     }
-  // }
 
   // auto parallelEnd = std::chrono::high_resolution_clock::now();
   // std::chrono::duration<double> parallelDuration = parallelEnd - parallelStart;
@@ -421,7 +342,6 @@ int main(int argc, char* argv[])
   // double speedup = sequentialDuration.count() / parallelDuration.count();
   // std::cout << "Speedup: " << speedup << "x\n";
 
-  // return 0;
   // ------------------------------------------------------------------------------------------------------------
   // get the material from the mesh  
   // ------------------------------------------------------------------------------------------------------------

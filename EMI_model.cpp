@@ -368,18 +368,18 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------------------------------
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
-  int n_subs = arr_extra.size() + arr_intra.size();
+  int n_subdomains = arr_extra.size() + arr_intra.size();
   int chunkSize;
 
-  if (numThreads > n_subs) {
+  if (numThreads > n_subdomains) {
       std::cout << "ERROR: The numebr of subdomains is smaller than the number of threads! \n";
   } else {
-    chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
-    std::cout << "Number of hardware threads available: " << numThreads << " and n_subdomains is "<< n_subs << " and chunkSize is " << chunkSize << "\n";
+    chunkSize = (n_subdomains + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+    std::cout << "Number of hardware threads available: " << numThreads << " and n_subdomains is "<< n_subdomains << " and chunkSize is " << chunkSize << "\n";
 
     for (int t = 0; t < numThreads; ++t) {
         int start = t * chunkSize;
-        int end = std::min(start + chunkSize, n_subs);
+        int end = std::min(start + chunkSize, n_subdomains);
         std::cout << "start: " << start << " end :"<< end << "\n";
     }
   }
@@ -591,7 +591,6 @@ int main(int argc, char* argv[])
                       map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
                       map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains);
-  int n_subdomains = map_II.size();
 
   std::vector<int> sequenceOfTags(n_subdomains);
   std::vector<int> sequenceOfTags_extra(n_extra_set); // only extra cellular
@@ -602,22 +601,22 @@ int main(int argc, char* argv[])
 
   if(false)
   {
-  std::cout <<"==========================\n";
-  std::cout <<"sequenceOfsubdomains\n";
-  std::cout <<"==========================\n";
-  for (int i = 0; i < sequenceOfTags.size(); ++i)
-  {
-    int tag = sequenceOfTags[i];
-    std::vector<int> vec_nbr = sequenceOfsubdomains[tag];
+      std::cout <<"==========================\n";
+      std::cout <<"sequenceOfsubdomains\n";
+      std::cout <<"==========================\n";
+      for (int i = 0; i < n_subdomains; ++i)
+      {
+        int tag = sequenceOfTags[i];
+        std::vector<int> vec_nbr = sequenceOfsubdomains[tag];
 
-    std::cout << tag<<": ";
-    for (int nbr = 0; nbr < vec_nbr.size(); ++nbr)
-    {
-      std::cout << vec_nbr[nbr]<<" ";
-    }
-    std::cout <<"\n";
-  }
-  std::cout <<"==========================\n";
+        std::cout << tag<<": ";
+        for (int nbr = 0; nbr < vec_nbr.size(); ++nbr)
+        {
+          std::cout << vec_nbr[nbr]<<" ";
+        }
+        std::cout <<"\n";
+      }
+      std::cout <<"==========================\n";
   }
 
 
@@ -845,7 +844,7 @@ int main(int argc, char* argv[])
     
     int max_subdomain = 0;
     int min_subdomain = 1e10;
-    for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+    for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
     {
 
       //std::cout << "As[subIdx].N()-> "<< As[subIdx].N() << " Ms[subIdx].N()-> " << Ms[subIdx].N()  << " Ks[subIdx].N()-> "  << Ks[subIdx].N()  << std::endl;
@@ -1033,111 +1032,6 @@ int main(int argc, char* argv[])
     }  
   }
 
-  // // ------------------------------------------------------------------------------------
-  // // semi implicit + CG + BDDC methods Fused
-  // // ------------------------------------------------------------------------------------
-  // {
-  //   // if(run_implicit_CG_BDDC_Fused)
-  //   // {
-  //   //   std::map<int,std::set<int>> map_II_fused;                        // II
-  //   //   std::map<int,std::set<int>> map_GammaGamma_fused;                // GammaGamma
-  //   //   std::map<int,std::set<int>> map_GammaGamma_noDuplicate_fused;    // GammaGamma_nodup
-  //   //   std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate_fused;  // GammaGamma only nbr without out the extra neighors...
-  //   //   std::map<int,Matrix> subMatrices_fused;
-  //   //   std::map<int, int> map_t2l_fused;                                    //map: tag to lenth
-  //   //   merge_inner_interface_bddc_fused( sequenceOfTags_extra,
-  //   //                                     T2Index,
-  //   //                                     map_II,
-  //   //                                     map_GammaGamma,
-  //   //                                     map_GammaGamma_noDuplicate,
-  //   //                                     map_GammaNbr_Nbr_noDuplicate,
-  //   //                                     subMatrices,
-  //   //                                     map_II_fused,
-  //   //                                     map_GammaGamma_fused,
-  //   //                                     map_GammaGamma_noDuplicate_fused,
-  //   //                                     map_GammaNbr_Nbr_noDuplicate_fused,
-  //   //                                     map_t2l_fused,
-  //   //                                     subMatrices_fused);
-
-
-
-
-
-  //   //   std::vector<Matrix> As_fused(n_subdomains);
-  //   //   std::vector<Vector> Fs_fused(n_subdomains);
-  //   //   std::vector<std::vector<int>> IG_seq_fused(n_subdomains);
-  //   //   std::vector<std::vector<LocalDof>> sharedDofsKaskade_new_fused;
-  //   //   construct_As_fused( arr_extra, 
-  //   //                       sequenceOfTags_extra, 
-  //   //                       map_II_fused, 
-  //   //                       map_GammaGamma_fused, 
-  //   //                       map_GammaGamma_noDuplicate_fused, 
-  //   //                       map_GammaNbr_Nbr_noDuplicate_fused, 
-  //   //                       rhs_petsc_test, 
-  //   //                       weights, 
-  //   //                       map_indices, 
-  //   //                       matlab_dir,
-  //   //                       write_to_file,
-  //   //                       subMatrices_fused, 
-  //   //                       As_fused, 
-  //   //                       Fs_fused, 
-  //   //                       IG_seq_fused, 
-  //   //                       sharedDofsKaskade_new_fused);
-  //   //   std::cout << "---------------------------------------------" << std::endl;
-  //   //   std::cout << "semi implicit with CG + BDDC + Fused subdomain" << std::endl;
-  //   //   std::cout << "---------------------------------------------" << std::endl;
-  //   //   Vector sol_BDDC(nDofs);
-  //   //   Functional F_BDDC(  material,
-  //   //                       gridManager.grid(),
-  //   //                       spaces,
-  //   //                       penalty,
-  //   //                       sigma_i,
-  //   //                       sigma_e,
-  //   //                       C_m,  
-  //   //                       R,
-  //   //                       R_extra);
-  //   //   F_BDDC.extracellular_materials(arr_extra);
-  //   //   F_BDDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
-  //   //   uAll = component<0>(u);
-
-  //   //   u = semiImplicit_CG_BDDC_fused( gridManager,
-  //   //                             F_BDDC,
-  //   //                             variableSetDesc,
-  //   //                             spaces,
-  //   //                             gridManager.grid(),
-  //   //                             options,
-  //   //                             out,
-  //   //                             direct,
-  //   //                             u,
-  //   //                             uAll,
-  //   //                             sol_BDDC,
-  //   //                             sharedDofsKaskade_new_fused,
-  //   //                             interfaceTypes,
-  //   //                             As,               // pass the right one 
-  //   //                             sequenceOfTags,   // sequenceOfTags for fused!
-  //   //                             sequenceOfTags_extra, 
-  //   //                             map_II_fused,                          // update 
-  //   //                             map_GammaGamma_noDuplicate_fused,      // update
-  //   //                             map_GammaNbr_Nbr_noDuplicate_fused,    // update 
-  //   //                             weights,
-  //   //                             cg_solver,
-  //   //                             iter_cg_with_bddc,
-  //   //                             local2Global,  // update
-  //   //                             tol,
-  //   //                             map_t2l_fused,       // update 
-  //   //                             map_indices,
-  //   //                             BDDC_verbose,
-  //   //                             IG_seq_fused,        // update
-  //   //                             matlab_dir,
-  //   //                             write_to_file
-  //   //                             );  
-  //   //     Vector sol_bddc_to_petsc(sol_BDDC);
-  //   //     sol_bddc_to_petsc = 0; 
-  //   //     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
-  //   //     if(write_to_file) writeSolution(sol_bddc_to_petsc,matlab_dir+"/sol_bddc"); 
-  //   // }  
-  // }
-
   // ------------------------------------------------------------------------------------
   // semi implicit + CG + SDC + BDDC methods
   // ------------------------------------------------------------------------------------
@@ -1226,7 +1120,7 @@ int main(int argc, char* argv[])
   }
 
   // ------------------------------------------------------------------------------------
-  // semi implicit + CG + SDC + BDDC methods all collocation_once
+  // semi implicit + CG + SDC + BDDC methods all collocation_once update
   // ------------------------------------------------------------------------------------
   {
     if(run_implicit_CG_SDC_BDDC_all_collocation_once_update)
@@ -1400,7 +1294,7 @@ int main(int argc, char* argv[])
   }
 
     // ------------------------------------------------------------------------------------
-  // semi implicit + CG + SDC + BDDC methods all collocation_once
+  // semi implicit + CG + SDC + BDDC methods smallest collocation_once
   // ------------------------------------------------------------------------------------
   {
     if(run_implicit_CG_SDC_BDDC_smallest_collocation)

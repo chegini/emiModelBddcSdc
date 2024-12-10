@@ -368,7 +368,6 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------------------------------
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
-
   int n_subs = arr_extra.size() + arr_intra_set.size();
   int chunkSize;
 
@@ -384,33 +383,9 @@ int main(int argc, char* argv[])
         std::cout << "start: " << start << " end :"<< end << "\n";
     }
   }
-
-
-    {
-        std::vector<std::future<void>> futures;
-        chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
-
-        for (int threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
-            int startIdx = threadIdx * chunkSize;
-            int endIdx = std::min(startIdx + chunkSize, n_subs);
-
-            futures.push_back(std::async(std::launch::async, [startIdx, endIdx]() {
-                for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) {
-                    // Process subdomain
-                    //std::cout << "Processing subdomain " << subIdx << " by thread " << std::this_thread::get_id() << std::endl;
-                }
-            }));
-        }
-
-        // Wait for all threads to complete
-        for (auto& future : futures) {
-            future.get();
-        }
-    }
   // ------------------------------------------------------------------------------------------------------------
 
   Dune::FieldVector<double,dim> zero(0);
-
 
   // assume that only extra cellular has the tag number zero
   // in case of having more than one extracellular subdomain, 

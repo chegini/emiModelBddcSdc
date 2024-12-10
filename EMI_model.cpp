@@ -355,8 +355,8 @@ int main(int argc, char* argv[])
   int n_intra_set;
   file_intra_list >> n_intra_set;
   std::cout<< "n_intra_set: " << n_intra_set <<std::endl;
-  std::vector<int> arr_intra_set(n_intra_set);
-  getSubdomain(arr_intra_set, file_intra_list);
+  std::vector<int> arr_intra(n_intra_set);
+  getSubdomain(arr_intra, file_intra_list);
 
   std::ifstream file_excited_region(early_excited);
   int n_excited_region;
@@ -368,7 +368,7 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------------------------------
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
-  int n_subs = arr_extra.size() + arr_intra_set.size();
+  int n_subs = arr_extra.size() + arr_intra.size();
   int chunkSize;
 
   if (numThreads > n_subs) {
@@ -399,11 +399,11 @@ int main(int argc, char* argv[])
     extra_zero[0] = 0.0;
     map_OriginalTag_anzastTag.insert({ arr_extra[i], extra_zero }); 
   }
-  for (int i = 0; i < arr_intra_set.size(); ++i)
+  for (int i = 0; i < arr_intra.size(); ++i)
   {
     Dune::FieldVector<double,1> intra_zero(0);
-    intra_zero[0] = arr_intra_set[i];
-    map_OriginalTag_anzastTag.insert({ arr_intra_set[i], intra_zero }); 
+    intra_zero[0] = arr_intra[i];
+    map_OriginalTag_anzastTag.insert({ arr_intra[i], intra_zero }); 
   }
 
 
@@ -479,9 +479,6 @@ int main(int argc, char* argv[])
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   std::cout << "END: assembler.assemble(SemiLinearization "<<std::endl;
   auto rhs_oiginal = assembler.rhs();
-
-
-
 
   // ------------------------------------------------------------------------------------
   // semi implicit + CG methods
@@ -815,7 +812,6 @@ int main(int argc, char* argv[])
 
   std::vector<int> dofsDirichlet_vec(dofsDirichlet.begin(), dofsDirichlet.end());
   std::cout << "=========================================================="<<std::endl;
-  //construct_As_parallel
   construct_As_parallel( arr_extra, 
                 sequenceOfTags, 
                 map_II, 

@@ -19,35 +19,6 @@
 #include <string>
 #include <thread>
 
-// A sample function representing work on a subdomain
-void processSubdomain(int subdomainId) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate work
-    std::cout << "Processed subdomain: " << subdomainId << " on thread: "
-              << std::this_thread::get_id() << "\n";
-}
-
-template<class i3tuple>
-void processSubdomain(int subIdx, const std::vector<int>& sequenceOfTags, 
-                      const std::map<int, std::vector<int>>& sequanceOfsubdomainsKaskade,std::map<int, std::vector<i3tuple>> & MapSharedDofsKaskadeTuple, std::mutex& mapMutex) {
-    int tag = sequenceOfTags[subIdx];  // Get the tag for the current subdomain
-    const std::vector<int>& tmp = sequanceOfsubdomainsKaskade.at(tag);  // Get the list of subdomains for the tag
-
-    for (int i = 0; i < tmp.size(); ++i) {
-        auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);  // Find the subdomain in the map
-        
-        std::lock_guard<std::mutex> lock(mapMutex); // Lock the map for thread safety
-
-        if (it != MapSharedDofsKaskadeTuple.end()) {
-            // If the subdomain already exists, add the new tuple
-            std::vector<i3tuple>& values = it->second;
-            values.push_back(i3tuple(subIdx, i, tmp[i]));
-        } else {
-            // Otherwise, create a new entry for the subdomain
-            MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(subIdx, i, tmp[i])};
-        }
-    }
-}
-
 
 int main(int argc, char* argv[])
 {

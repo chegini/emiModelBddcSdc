@@ -336,28 +336,57 @@ void mesh_data_structure( FSElement& fse,
 
   std::cout << "rest..."<<std::endl;
 
-  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
 
-  for ( const auto &IGamma : map_IGamma ) {
+  // Mutex for synchronizing map access across threads
+  std::mutex mutex;
 
-    int tag = IGamma.first;
-    tags.insert(tag);
-    std::vector<int> igamma(IGamma.second.begin(), IGamma.second.end());
-    std::vector<int> gamma(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+  // Convert map_IGamma to vector for easy chunking
+  std::vector<std::pair<int, std::set<int>>> IGammaVector(map_IGamma.begin(), map_IGamma.end());
 
-    std::set<int> I;
-    std::set_difference(IGamma.second.begin(), IGamma.second.end(), 
-                        map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
-                        std::inserter(I, I.end()));
+  // Get the number of threads and calculate the chunk size
+  size_t numThreads = std::thread::hardware_concurrency();  // Use hardware concurrency
+  size_t chunkSize = (IGammaVector.size() + numThreads - 1) / numThreads;  // Round up
 
-    map_II[IGamma.first] = I;
+  // Create a vector to hold threads
+  std::vector<std::thread> threads;
+
+
+  // Parallelize the loop over map_IGamma (divided into chunks)
+  for (size_t t = 0; t < numThreads; ++t) 
+  {
+    size_t startIdx = t * chunkSize;
+    size_t endIdx = std::min(startIdx + chunkSize, IGammaVector.size());
+
+    threads.emplace_back([&, startIdx, endIdx]() 
+    {
+      for (size_t i = startIdx; i < endIdx; ++i) 
+      {
+        const auto &IGamma = IGammaVector[i];
+        int tag = IGamma.first;
+
+        // Ensure thread-safe access to shared data structures
+        std::lock_guard<std::mutex> lock(mutex);
+
+        // Perform the computations and updates
+        tags.insert(tag);
+        std::vector<int> igamma(IGamma.second.begin(), IGamma.second.end());
+        std::vector<int> gamma(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+
+        std::set<int> I;
+        std::set_difference(IGamma.second.begin(), IGamma.second.end(), 
+                            map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
+                            std::inserter(I, I.end()));
+
+        map_II[IGamma.first] = I;
+        map_t2l[tag] = IGamma.second.size();
+      }
+    });
   }
 
-
-  {
-    std::map<int,std::set<int>>::iterator it;
-    for (it=map_IGamma.begin(); it!=map_IGamma.end(); ++it){
-      map_t2l[it->first] = it->second.size();
+  // Join all threads to ensure completion
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+        thread.join();
     }
   }
 

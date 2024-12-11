@@ -2113,6 +2113,88 @@ void construct_As_parallel(std::vector<int> arr_extra,
     }
   }
 
+  // // -----------------------------------------------------------------
+  //   std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
+  //   double precision = 16;
+  //   std::string fname = matlab_dir + "/sharedDofsKaskade.txt";
+    
+  //   std::mutex vectorMutex;   // Mutex to protect shared vectors
+  //   std::mutex fileMutex;     // Mutex to protect file I/O
+
+  //   std::vector<std::thread> threads_sharedDofs_final;
+  //   std::vector<std::map<int, std::vector<i3tuple>>::const_iterator> keys(MapSharedDofsKaskadeTuple.begin(),
+  //                                                                         MapSharedDofsKaskadeTuple.end());
+
+  //   size_t chunkSize = (keys.size() + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+
+  //   for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+  //       size_t startIdx = threadIdx * chunkSize;
+  //       size_t endIdx = std::min(startIdx + chunkSize, keys.size());
+ 
+  //       threads_sharedDofs_final.emplace_back([&, startIdx, endIdx]() {
+  //           std::ofstream f(fname, std::ios::app); // Open file in append mode
+  //           f.precision(precision);
+
+  //           for (size_t i = startIdx; i < endIdx; ++i) {
+  //               const auto& entry = *(keys[i]);
+  //               int key = entry.first;
+  //               const std::vector<i3tuple>& values = entry.second;
+
+  //               std::vector<LocalDof> tmpAll;
+  //               for (const auto& value : values) {
+  //                   tmpAll.push_back({std::get<0>(value), std::get<1>(value)});
+  //               }
+
+  //               // Lock sharedDofsKaskadeAll update
+  //               {
+  //                   std::lock_guard<std::mutex> lock(vectorMutex);
+  //                   sharedDofsKaskadeAll.push_back(tmpAll);
+  //               }
+
+  //               if (values.size() > 1) {
+  //                   std::vector<LocalDof> tmp;
+  //                   std::vector<int> tags_extra;
+  //                   std::vector<int> tags_extra_dofs;
+
+  //                   for (const auto& value : values) {
+  //                       tmp.push_back({std::get<0>(value), std::get<1>(value)});
+  //                       tags_extra.push_back(std::get<0>(value));
+  //                       tags_extra_dofs.push_back(std::get<1>(value));
+  //                   }
+
+  //                   bool extra_cellular_shared = isSubset(tags_extra, arr_extra);
+  //                   bool extra_cellular_shared_dirichlet = isSubset(tags_extra_dofs, dofsDirichlet);
+
+  //                   //if (!extra_cellular_shared && !extra_cellular_shared_dirichlet) {
+  //                       // Lock sharedDofsKaskade update
+  //                       {
+  //                           std::lock_guard<std::mutex> lock(vectorMutex);
+  //                           sharedDofsKaskade.push_back(tmp);
+  //                       }
+  //                   //}
+
+  //                   // File output (always performed)
+  //                   if(values.size()>1)
+  //                   {
+  //                       std::lock_guard<std::mutex> lock(fileMutex);
+  //                       f << key << " -> ";
+  //                       for (const auto& value : values) {
+  //                           f << "(" << std::get<0>(value) << " " << std::get<1>(value) << ") ";
+  //                       }
+  //                       f << "\n";
+  //                   }
+  //               }
+  //           }
+  //       });
+  //   }
+
+  //   // Join all threads
+  //   for (auto& thread : threads_sharedDofs_final) {
+  //       thread.join();
+  //   }
+
+
+  // -----------------------------------------------------------------
   std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
   {
     double precision = 16;

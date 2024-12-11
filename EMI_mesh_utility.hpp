@@ -46,6 +46,8 @@ struct GetGlobalCoordinate
  * \param map_IGamma for each material, gives the all the global indices of the subdomain
  */
 
+
+// Function template
 template< class FSElement, class Function, class Material>
 void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,  
                                            Function const& fu, 
@@ -60,104 +62,143 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::map<int,std::set<int>> & map_IGamma, 
                                            int number_elem)
 {
+    typedef typename FSElement::Space ImageSpace;
+    typedef typename ImageSpace::Grid Grid;
 
-  typedef typename FSElement::Space ImageSpace;
-  typedef typename ImageSpace::Grid Grid;
-  std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
-  std::map<int, std::vector<double>>::iterator it_coord_glabalIndex;
+    // Thread-safe variables
+    std::mutex mtx_e2i, mtx_i2e, mtx_i2t, mtx_i2i, mtx_coord, mtx_coord_globalIndex, mtx_i2T, mtx_map_IGamma;
 
-  DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
+    // Number of threads
+    const int numThreads = std::thread::hardware_concurrency();
+    const int cellsPerThread = (number_elem + numThreads - 1) / numThreads;
 
-  fse.coefficients() = typename ImageSpace::Scalar(0.0);
+    // Thread function
+    auto processCells = [&](int startIdx, int endIdx) {
+        // Thread-local storage
+        std::unordered_map<int, std::set<int>> local_i2e, local_i2t, local_i2i;
+        std::unordered_map<std::pair<int, int>, std::vector<double>, 
+                           boost::hash<std::pair<int, int>>> local_coord;
+        std::unordered_map<int, std::vector<double>> local_coord_globalIndex;
+        std::unordered_map<int, int> local_i2T;
+        std::unordered_map<int, std::set<int>> local_map_IGamma;
 
-  typename ImageSpace::Evaluator isfs(fse.space()); // evalautor of finite space element
+        typename ImageSpace::Evaluator isfs(fse.space());
+        auto const cend = fse.space().gridView().template end<0>();
 
-  auto const cend = fse.space().gridView().template end<0>(); //  cell end
+        // Iterate over assigned cells
+        for (int cellIdx = startIdx; cellIdx < endIdx; ++cellIdx) {
+            auto ci = fse.space().gridView().template begin<0>();
+            std::advance(ci, cellIdx);
 
-  using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
-  
-  std::map<int,int>::iterator it;
-  std::map<int,std::set<int>>::iterator it_igamma;
+            auto eIndex = fse.space().indexSet().index(*ci);
+            isfs.moveTo(*ci);
+            auto const& localCoordinate = isfs.shapeFunctions().interpolationNodes();
 
-  // iterate over cells
-  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
-  {
-    auto eIndex = fse.space().indexSet().index(*ci); // get cell index
-    isfs.moveTo(*ci); 
+            using Cell = decltype(ci);
+            auto dof_u = fse.space().mapper().globalIndices(*ci);
+            int nrNodes = dof_u.size();
 
-    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-    globalValues.setSize(localCoordinate.size(),1); // not used!
+            Dune::FieldVector<double, ImageSpace::dim> zero(0.0);
+            int material_var = material.value(*ci, zero);
 
+            for (int i = 0; i < isfs.globalIndices().size(); ++i) {
+                int nIndex = isfs.globalIndices()[i];
+                std::pair<int, int> pairs = {nIndex, material_var};
 
-    using Cell = decltype(ci);
-    auto dof_u = fse.space().mapper().globalIndices(*ci);
-    int nrNodes = dof_u.size();
+                // Update local e2i
+                {
+                    std::lock_guard<std::mutex> lock(mtx_e2i);
+                    e2i[eIndex].push_back(nIndex);
+                }
 
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
+                // Update i2i
+                local_i2i[nIndex].insert(nIndex);
 
-    // iterate over nodes of each cell
-    for (int i = 0; i < isfs.globalIndices().size(); ++i) 
-    {
-      int nIndex = isfs.globalIndices()[i];
-      std::pair<int,int> pairs;
-      pairs.first = nIndex;
-      pairs.second = material_var;
+                // Update i2e
+                local_i2e[nIndex].insert(eIndex);
 
-      e2i[eIndex].push_back(nIndex); // e2n
-      
-      std::set<int> s_index = i2i[nIndex];
-      s_index.insert(nIndex);
-      i2i[nIndex] = s_index; 
+                // Update i2t
+                local_i2t[nIndex].insert(material_var);
 
-      std::set<int> cell_indices = i2e[nIndex];
-      cell_indices.insert(eIndex);
-      i2e[nIndex] = cell_indices;
+                auto x = fu.value(*ci, localCoordinate[i]);
 
-      std::set<int> tags = i2t[nIndex];
-      tags.insert(material_var);
-      i2t[nIndex] = tags;
+                // Update coord_globalIndex
+                if (local_coord_globalIndex.find(nIndex) == local_coord_globalIndex.end()) {
+                    for (double val : x) {
+                        local_coord_globalIndex[nIndex].push_back(val);
+                    }
+                }
 
-      auto x = fu.value(*ci,localCoordinate[i]);
+                // Update coord
+                if (local_coord.find(pairs) == local_coord.end()) {
+                    local_i2T[nIndex] = material_var;
+                    for (double val : x) {
+                        local_coord[pairs].push_back(val);
+                    }
 
-      it_coord_glabalIndex = coord_globalIndex.find(nIndex);
-      if (it_coord_glabalIndex == coord_globalIndex.end()){
-         for (int j = 0; j < x.size(); ++j){
-          coord_globalIndex[nIndex].push_back(x[j]);
-        }
-      }
-
-
-      it_coord = coord.find(pairs);
-      if (it_coord == coord.end()){
-        i2T[nIndex] = material_var;
-        // // count the number of dof for each subdomain
-        // it = map_t2l.find(material_var);
-        // if (map_t2l[material_var]!=0){
-        //   int old = it->second;
-        //   it->second = old+1;
-        // }else{
-        //   map_t2l[material_var] = 1;
-        // }
-
-        for (int j = 0; j < x.size(); ++j){
-          coord[pairs].push_back(x[j]);
+                    // Update map_IGamma
+                    local_map_IGamma[material_var].insert(nIndex);
+                }
+            }
         }
 
-        // adding all the igamma for matreial 
-        it_igamma = map_IGamma.find(material_var);
-        if(it_igamma!= map_IGamma.end()){
-          std::set<int> igamma = it_igamma->second;
-          igamma.insert(nIndex);
-          it_igamma->second = igamma;
-        }else{
-          std::set<int> igamma;
-          igamma.insert(nIndex);
-          map_IGamma[material_var] = igamma;
+        // Merge results into global structures
+        {
+            std::lock_guard<std::mutex> lock(mtx_i2e);
+            for (const auto& [key, value] : local_i2e) {
+                i2e[key].insert(value.begin(), value.end());
+            }
         }
-      }
+        {
+            std::lock_guard<std::mutex> lock(mtx_i2t);
+            for (const auto& [key, value] : local_i2t) {
+                i2t[key].insert(value.begin(), value.end());
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_i2i);
+            for (const auto& [key, value] : local_i2i) {
+                i2i[key].insert(value.begin(), value.end());
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_coord);
+            for (const auto& [key, value] : local_coord) {
+                coord[key] = value;
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_coord_globalIndex);
+            for (const auto& [key, value] : local_coord_globalIndex) {
+                coord_globalIndex[key] = value;
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_i2T);
+            for (const auto& [key, value] : local_i2T) {
+                i2T[key] = value;
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_map_IGamma);
+            for (const auto& [key, value] : local_map_IGamma) {
+                map_IGamma[key].insert(value.begin(), value.end());
+            }
+        }
+    };
+
+    // Launch threads
+    std::vector<std::thread> threads;
+    for (int t = 0; t < numThreads; ++t) {
+        int startIdx = t * cellsPerThread;
+        int endIdx = std::min(startIdx + cellsPerThread, number_elem);
+        threads.emplace_back(processCells, startIdx, endIdx);
     }
-  }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
 }
 
 /**

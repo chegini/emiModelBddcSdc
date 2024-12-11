@@ -723,15 +723,15 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
-  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
-  compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
+  // std::vector<std::vector<LocalDof>> sharedDofsKaskade;
+  // compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
 
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
   // ------------------------------------------------------------------------------------
   std::cout << "generated sub matrices of EMI model for BDDC in petsc!" << std::endl;
   std::vector<Vector> Fs_petcs(n_subdomains);
-  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, sharedDofsKaskade, Fs_petcs);
+  petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, Fs_petcs);
 
   std::vector<int> cells(gridManager.grid().size(0)); // vector with size ints.
   std::iota (std::begin(cells), std::end(cells), 0);
@@ -786,7 +786,7 @@ int main(int argc, char* argv[])
                                       R,
                                       R_extra);
   Cellfltr.select_based_on_tag(false);
-  if(write_to_file) generate_Interror_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
+  if(write_to_file) generate_Interior_and_Interfaces_indices(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_indices, matlab_dir);
 
   // ------------------------------------------------------------------------------------ 
   // compute submatrices and rhs based on Kaskade structure

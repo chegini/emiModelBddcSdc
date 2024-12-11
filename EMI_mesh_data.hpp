@@ -1243,7 +1243,6 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
                                 std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
                                 Vector b_,
                                 std::map<int, int> map_indices,
-                                std::vector<std::vector<LocalDof>> sharedDofsAll,
                                 std::vector<Vector> &Fs)
 {
 
@@ -1709,7 +1708,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   return u;
 }
 
-void generate_Interror_and_Interfaces_indices(std::vector<int> sequenceOfTags,
+void generate_Interior_and_Interfaces_indices(std::vector<int> sequenceOfTags,
                                               std::map<int,std::set<int>> map_II,
                                               std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
                                               std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,

@@ -723,8 +723,8 @@ int main(int argc, char* argv[])
   // ------------------------------------------------------------------------------------ 
   // compute rhs of each based on petsc structure
   // ------------------------------------------------------------------------------------ 
-  // std::vector<std::vector<LocalDof>> sharedDofsKaskade;
-  // compute_sharedDofsKaskade_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsKaskade);
+  // std::vector<std::vector<LocalDof>> sharedDofsPetsc;
+  //compute_sharedDofsPetsc_moreExtraCells(sequenceOfTags, map_indices, map_II, map_GammaGamma, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, write_to_file, matlab_dir, sharedDofsPetsc);
 
   // ------------------------------------------------------------------------------------ 
   // compute rhs based on petsc structure
@@ -798,7 +798,7 @@ int main(int argc, char* argv[])
 
   std::vector<Vector> Fs(n_subdomains);
   std::map<int,std::vector<int>> IG_seq;
-  std::vector<std::vector<LocalDof>> sharedDofsKaskade_new;
+  std::vector<std::vector<LocalDof>> sharedDofsKaskade;
   std::map<int,int> T2Index;
 
   // construct_As
@@ -828,7 +828,7 @@ int main(int argc, char* argv[])
                 Fs, 
                 IG_seq, 
                 dofsDirichlet_vec,
-                sharedDofsKaskade_new,
+                sharedDofsKaskade,
                 T2Index);
 
   auto sequentialEnd_AS = std::chrono::high_resolution_clock::now();
@@ -1003,7 +1003,7 @@ int main(int argc, char* argv[])
                                 u,
                                 uAll,
                                 sol_BDDC,
-                                sharedDofsKaskade_new,
+                                sharedDofsKaskade,
                                 interfaceTypes,
                                 As,
                                 sequenceOfTags, 
@@ -1078,7 +1078,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC,
-                                    sharedDofsKaskade_new,
+                                    sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,
@@ -1165,7 +1165,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC_all_coll,
-                                    sharedDofsKaskade_new,
+                                    sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,
@@ -1253,7 +1253,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC_all_coll,
-                                    sharedDofsKaskade_new,
+                                    sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,
@@ -1339,7 +1339,7 @@ int main(int argc, char* argv[])
                                     direct,
                                     matlab_dir,
                                     sol_BDDC_SDC_small_coll,
-                                    sharedDofsKaskade_new,
+                                    sharedDofsKaskade,
                                     interfaceTypes,
                                     n_subdomains,
                                     A_,

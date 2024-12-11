@@ -874,7 +874,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
     }
 }
 
-void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags, 
+void compute_sharedDofsPetsc_moreExtraCells( std::vector<int> sequenceOfTags, 
                                 std::map<int, int> map_indices, 
                                 std::map<int,std::set<int>> map_II,
                                 std::map<int,std::set<int>> map_GammaGamma, 

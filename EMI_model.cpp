@@ -763,7 +763,6 @@ int main(int argc, char* argv[])
                                       map_GammaNbr_Nbr_noDuplicate,
                                       sequenceOfsubdomains,
                                       map_indices,
-                                      map_markCorners,
                                       cells_set,
                                       tags,
                                       i2t,

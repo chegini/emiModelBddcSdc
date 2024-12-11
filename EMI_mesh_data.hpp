@@ -1187,23 +1187,70 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
                           Vector b_,
                           Vector &bs_)
 {
+  size_t totalSize = sequenceOfTags.size();
+  size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+  std::vector<std::thread> threads;
+
+    // Mutex for thread-safe access to bs_
+  std::mutex bs_mutex;
+
+  // Set all elements of bs_ to 0
   bs_ *= 0;
-  for (int index = 0; index < sequenceOfTags.size(); ++index)
-  { 
-    int tag =  sequenceOfTags[index];
 
-    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
-    for (int i = 0; i < Interior.size(); ++i)
-    {
-      bs_[map_indices[Interior[i]]] = b_[Interior[i]];
-    }
+  for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+    size_t startIdx = threadIdx * chunkSize;
+    size_t endIdx = std::min(startIdx + chunkSize, totalSize);
 
-    for (int i = 0; i < interface.size(); ++i)
+    threads.push_back(std::thread([&, startIdx, endIdx] 
     {
-      bs_[map_indices[interface[i]]] = b_[interface[i]];
-    }
+      for (size_t index = startIdx; index < endIdx; ++index) 
+      {
+        int tag = sequenceOfTags[index];
+
+        // Get interior and interface vectors
+        std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+        std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+
+        // Lock the mutex to update bs_ safely
+        {
+          std::lock_guard<std::mutex> lock(bs_mutex);
+
+          // Update bs_ for interior elements
+          for (int i = 0; i < Interior.size(); ++i) {
+              bs_[map_indices[Interior[i]]] = b_[Interior[i]];
+          }
+
+          // Update bs_ for interface elements
+          for (int i = 0; i < interface.size(); ++i) {
+              bs_[map_indices[interface[i]]] = b_[interface[i]];
+          }
+        }
+      }
+    }));
   }
+
+  // Join all threads
+  for (auto& t : threads) {
+      t.join();
+  }
+
+  // for (int index = 0; index < sequenceOfTags.size(); ++index)
+  // { 
+  //   int tag =  sequenceOfTags[index];
+
+  //   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+  //   std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+  //   for (int i = 0; i < Interior.size(); ++i)
+  //   {
+  //     bs_[map_indices[Interior[i]]] = b_[Interior[i]];
+  //   }
+
+  //   for (int i = 0; i < interface.size(); ++i)
+  //   {
+  //     bs_[map_indices[interface[i]]] = b_[interface[i]];
+  //   }
+  // }
 }
 
 
@@ -1356,7 +1403,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                                                           std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
                                                           std::map<int,std::vector<int>> sequenceOfsubdomains,
                                                           std::map<int, int> map_indices,
-                                                          std::map<int,bool> map_markCorners,
+                                                          // std::map<int,bool> map_markCorners,
                                                           std::set<int> cells_set,
                                                           std::set<int> tags,
                                                           std::vector<std::set<int>> i2t, 

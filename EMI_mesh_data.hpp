@@ -336,7 +336,6 @@ void mesh_data_structure( FSElement& fse,
 
   std::cout << "rest..."<<std::endl;
 
-
   // Mutex for synchronizing map access across threads
   std::mutex mutex;
 
@@ -390,18 +389,52 @@ void mesh_data_structure( FSElement& fse,
     }
   }
 
-  // GET only neighbrs without duplication the extra cellular
-  // question, I should make them be,ong to one subdomain???
-  for ( const auto &Gamma : map_GammaGamma ) 
+  // GET only neighbors without duplication (the extra cellular)
+  // question: I should make them belong to one subdomain???
   {
-    int tag = Gamma.first;
-    std::set<int> difference;
+    // Convert map_GammaGamma to a vector for easier chunking
+    std::vector<std::pair<int, std::set<int>>> GammaVector(map_GammaGamma.begin(), map_GammaGamma.end());
 
-    // Use std::set_difference to find the difference between set1 and set2
-    std::set_difference(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end(),
-                        map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
-                        std::inserter(difference, difference.begin()));
-    map_GammaNbr_Nbr[tag] = difference;
+    // Get the number of threads and calculate the chunk size
+    size_t numThreads = std::thread::hardware_concurrency();  // Use hardware concurrency
+    size_t chunkSize = (GammaVector.size() + numThreads - 1) / numThreads;  // Round up
+
+    // Mutex for synchronizing map access across threads
+    std::mutex mutex;
+
+    // Create a vector to hold threads
+    std::vector<std::thread> threads;
+
+    // Parallelize the loop over map_GammaGamma (divided into chunks)
+    for (size_t t = 0; t < numThreads; ++t) 
+    {
+      size_t startIdx = t * chunkSize;
+      size_t endIdx = std::min(startIdx + chunkSize, GammaVector.size());
+
+      threads.emplace_back([&, startIdx, endIdx]() {
+          for (size_t i = startIdx; i < endIdx; ++i) {
+              const auto &Gamma = GammaVector[i];
+              int tag = Gamma.first;
+              std::set<int> difference;
+
+              // Perform std::set_difference to find the difference between sets
+              std::set_difference(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end(),
+                                  map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(),
+                                  std::inserter(difference, difference.begin()));
+
+              // Ensure thread-safe access to shared data structure map_GammaNbr_Nbr
+              std::lock_guard<std::mutex> lock(mutex);
+              map_GammaNbr_Nbr[tag] = difference;
+          }
+      });
+    }
+
+    // Join all threads to ensure completion
+    for (auto& thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
   }
 
   // REMOVE THE INTERFACES FROM ONE OF THE EXTERNAL, 

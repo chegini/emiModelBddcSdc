@@ -319,61 +319,75 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
   }
 }
 
-template< class FSElement, class Function, class Material>
-void markedIndicesForDirichlet(FSElement& fse,  
-                                 Function const& fu, 
-                                 Material const & material,
-                                 std::vector<int> arr_extra,
-                                 std::vector<std::vector<int>> & cell2Indice, 
-                                 std::set<int> & dofsDirichlet )
-{
-  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
-  std::set<int>::iterator itr;
 
-  typedef typename FSElement::Space ImageSpace;
-  typedef typename ImageSpace::Grid Grid;
+template<class FSElement, class Function, class Material>
+void markedIndicesForDirichlet(FSElement& fse,
+                               Function const& fu,
+                               Material const& material,
+                               const std::vector<int>& arr_extra,
+                               const std::vector<std::vector<int>>& cell2Indice,
+                               std::set<int>& dofsDirichlet) {
+    // Convert arr_extra to a set for fast lookups
+    std::unordered_set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
 
-  DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
+    using ImageSpace = typename FSElement::Space;
+    using Grid = typename ImageSpace::Grid;
 
-  fse.coefficients() = typename ImageSpace::Scalar(0.0);
+    auto gridView = fse.space().gridView();
+    auto cbegin = gridView.template begin<0>();
+    auto cend = gridView.template end<0>();
 
-  typename ImageSpace::Evaluator isfs(fse.space());
+    int totalCells = std::distance(cbegin, cend);
+    unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+    int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
 
-  auto const cend = fse.space().gridView().template end<0>();
-  //std::cout <<  " cend localCoordinate! *ci " <<std::endl;
+    // Mutex to synchronize updates to the shared dofsDirichlet set
+    std::mutex mutex_dofsDirichlet;
 
-  using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
-  std::vector<ValueType> fuvalue; // declare here to prevent reallocations
-  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
-  {
-    auto cellIndex = fse.space().indexSet().index(*ci);
-    isfs.moveTo(*ci);
+    // Thread function to process a subset of cells
+    auto processCells = [&](int startIdx, int endIdx) {
+        std::unordered_set<int> localDofsDirichlet; // Thread-local set
 
-    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-    globalValues.setSize(localCoordinate.size(),1);
+        auto ci = cbegin;
+        std::advance(ci, startIdx);
+        for (int cellIdx = startIdx; cellIdx < endIdx && ci != cend; ++cellIdx, ++ci) {
+            auto cellIndex = fse.space().indexSet().index(*ci);
 
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
+            // Ensure cellIndex is within bounds of cell2Indice
+            assert(cellIndex >= 0 && cellIndex < static_cast<int>(cell2Indice.size()));
 
-    itr = arr_extra_set.find(material_var);
-    using Cell = decltype(ci);
-    auto dof_u = fse.space().mapper().globalIndices(*ci);
-    int nrNodes = dof_u.size();
+            Dune::FieldVector<double, ImageSpace::dim> zero(0.0);
+            int material_var = material.value(*ci, zero);
 
-    for(auto const& intersection : intersections(fse.space().gridView(),*ci))
-    {
-      if(!intersection.neighbor() and itr!=arr_extra_set.end())
-      {
-        for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
-        {
-          int index_c1 = cell2Indice[cellIndex][i];
-          dofsDirichlet.insert(index_c1);
+            if (arr_extra_set.find(material_var) != arr_extra_set.end()) {
+                for (auto const& intersection : intersections(gridView, *ci)) {
+                    if (!intersection.neighbor()) {
+                        for (int index_c1 : cell2Indice[cellIndex]) {
+                            localDofsDirichlet.insert(index_c1);
+                        }
+                    }
+                }
+            }
         }
-      }
-    }
-  }
-}
 
+        // Merge thread-local set into the global set
+        std::lock_guard<std::mutex> lock(mutex_dofsDirichlet);
+        dofsDirichlet.insert(localDofsDirichlet.begin(), localDofsDirichlet.end());
+    };
+
+    // Launch threads
+    std::vector<std::thread> threads;
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        int startIdx = t * cellsPerThread;
+        int endIdx = std::min(startIdx + cellsPerThread, totalCells);
+        threads.emplace_back(processCells, startIdx, endIdx);
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
 
 
 #endif

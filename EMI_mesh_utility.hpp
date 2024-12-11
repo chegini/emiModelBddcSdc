@@ -219,11 +219,11 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
 
   auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>();
-  std::map<int,std::set<int>>::iterator it_gamma;
-  std::map<int,std::set<int>>::iterator it_gammaNbr;
+  // std::map<int,std::set<int>>::iterator it_gamma;
+  // std::map<int,std::set<int>>::iterator it_gammaNbr;
 
-  std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
-  std::map<int,std::set<int>>::iterator it_GammaNbr_i;
+  // std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
+  // std::map<int,std::set<int>>::iterator it_GammaNbr_i;
 
   int totalCells = std::distance(cbegin, cend);
   int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
@@ -283,7 +283,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                     if(coord[pairs][0]==coord[pairs_nbr][0] and
                        coord[pairs][1]==coord[pairs_nbr][1] ){
                       s_index.insert(nIndex_c2);
-
+                      std::map<int,std::set<int>>::iterator it_gamma;
                       // adding all the gammagamma for matreial 
                       it_gamma = map_GammaGamma.find(material_var);
                       if(it_gamma!= map_GammaGamma.end()){
@@ -291,6 +291,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                         gamma.insert(nIndex_c1);
                         it_gamma->second = gamma;
 
+                        std::map<int,std::set<int>>::iterator it_gammaNbr;
                         // gamma + nbr
                         it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
                         std::set<int> gammaNbr = it_gammaNbr->second;
@@ -299,6 +300,8 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                         it_gammaNbr->second = gammaNbr;
 
                         // nbr
+                        std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
+                        std::map<int,std::set<int>>::iterator it_GammaNbr_i;
                         it_GammaNbr = map_GammaNbr.find(material_var);
                         std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
                         it_GammaNbr_i = gamma_nbr.find(material_nbr);
@@ -342,6 +345,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                        coord[pairs][2]==coord[pairs_nbr][2] ){
                       s_index.insert(nIndex_c2);
 
+                      std::map<int,std::set<int>>::iterator it_gamma;
                       // adding all the gammagamma for matreial 
                       it_gamma = map_GammaGamma.find(material_var);
                       if(it_gamma!= map_GammaGamma.end()){
@@ -350,6 +354,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                         it_gamma->second = gamma;
 
                         // gamma + nbr
+                        std::map<int,std::set<int>>::iterator it_gammaNbr;
                         it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
                         std::set<int> gammaNbr = it_gammaNbr->second;
                         gammaNbr.insert(nIndex_c1);
@@ -357,6 +362,8 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                         it_gammaNbr->second = gammaNbr;
 
                         // nbr
+                        std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
+                        std::map<int,std::set<int>>::iterator it_GammaNbr_i;
                         it_GammaNbr = map_GammaNbr.find(material_var);
                         std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
                         it_GammaNbr_i = gamma_nbr.find(material_nbr);
@@ -426,6 +433,7 @@ void markedIndicesForDirichlet(FSElement& fse,
                                  std::vector<std::vector<int>> & cell2Indice, 
                                  std::set<int> & dofsDirichlet )
 {
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
   std::set<int>::iterator itr;
 
@@ -438,38 +446,63 @@ void markedIndicesForDirichlet(FSElement& fse,
 
   typename ImageSpace::Evaluator isfs(fse.space());
 
+  auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>();
   //std::cout <<  " cend localCoordinate! *ci " <<std::endl;
 
+  int totalCells = std::distance(cbegin, cend);
+  int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
+
+  std::mutex mutex_global;
+
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   std::vector<ValueType> fuvalue; // declare here to prevent reallocations
-  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
+  auto worker = [&](int startCell, int endCell) 
   {
-    auto cellIndex = fse.space().indexSet().index(*ci);
-    isfs.moveTo(*ci);
+    typename ImageSpace::Evaluator isfs(fse.space()); // Thread-local Evaluator
+    std::set<int> localDofsDirichlet;
 
-    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-    globalValues.setSize(localCoordinate.size(),1);
+    auto ci = cbegin;
+    std::advance(ci, startCell);
 
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
+    for (int cellCount = startCell; cellCount < endCell && ci != cend; ++cellCount, ++ci) {
+        auto cellIndex = fse.space().indexSet().index(*ci);
+        isfs.moveTo(*ci);
 
-    itr = arr_extra_set.find(material_var);
-    using Cell = decltype(ci);
-    auto dof_u = fse.space().mapper().globalIndices(*ci);
-    int nrNodes = dof_u.size();
+        auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+        DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
+        globalValues.setSize(localCoordinate.size(), 1);
 
-    for(auto const& intersection : intersections(fse.space().gridView(),*ci))
-    {
-      if(!intersection.neighbor() and itr!=arr_extra_set.end())
-      {
-        for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
-        {
-          int index_c1 = cell2Indice[cellIndex][i];
-          dofsDirichlet.insert(index_c1);
+        Dune::FieldVector<double, ImageSpace::dim> zero(0.0);
+        int material_var = material.value(*ci, zero);
+
+        if (arr_extra_set.find(material_var) != arr_extra_set.end()) {
+            for (auto const& intersection : intersections(fse.space().gridView(), *ci)) {
+                if (!intersection.neighbor()) {
+                    for (int index_c1 : cell2Indice[cellIndex]) {
+                        localDofsDirichlet.insert(index_c1);
+                    }
+                }
+            }
         }
-      }
     }
+
+    // Merge local results into global set
+    std::lock_guard<std::mutex> lock(mutex_global);
+    dofsDirichlet.insert(localDofsDirichlet.begin(), localDofsDirichlet.end());
+  };
+
+  std::vector<std::thread> threads;
+  for (unsigned int t = 0; t < numThreads; ++t) {
+      int startCell = t * cellsPerThread;
+      int endCell = std::min(startCell + cellsPerThread, totalCells);
+      threads.emplace_back(worker, startCell, endCell);
+  }
+
+  for (auto& thread : threads) {
+      if (thread.joinable()) {
+          thread.join();
+      }
   }
 }
 

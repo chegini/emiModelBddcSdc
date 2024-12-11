@@ -637,10 +637,10 @@ int main(int argc, char* argv[])
   std::map<int, int> map_index_to_subdomain;
   map_kaskade2petcs(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, map_indices, map_index_to_subdomain);
   std::cout <<"DONE!!!" <<std::endl;
-  // return 0;
 
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
+  if(false)
   {
     double precision = 16;
     std::string fname = matlab_dir+"/corners.m";

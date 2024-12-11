@@ -802,6 +802,8 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
 
   std::map<int, int> map_starting_Index;
   int counter = 0;
+  std::mutex map_mutex;  // Mutex for thread-safe access to shared maps
+
   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
   { 
     map_starting_Index[subIdx] = counter;
@@ -813,34 +815,63 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
     counter = counter + I_vec.size() + gamma_vec.size();
   }
 
-  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  { 
-    int tag =  sequenceOfTags[subIdx];
-    
-    std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
-    std::vector<int> gamma_vec(map_GammaGamma_noDuplicate[tag].begin(),map_GammaGamma_noDuplicate[tag].end());
-    
+    // Create threads to process each subdomain
+    std::vector<std::thread> threads;
 
-    for (int i = 0; i < I_vec.size(); ++i)
+    size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+    size_t totalSize = sequenceOfTags.size();
+    size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+
+    for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) 
     {
-      std::pair<int,int> pairs;
-      pairs.first = I_vec[i];
-      pairs.second = tag;
+      size_t startIdx = threadIdx * chunkSize;
+      size_t endIdx = std::min(startIdx + chunkSize, sequenceOfTags.size());
 
-      map_indices[I_vec[i]] = map_starting_Index[subIdx] + i;
-      map_index_to_subdomain[I_vec[i]] = subIdx;
+      threads.push_back(std::thread([&, startIdx, endIdx] 
+      {
+        for (size_t subIdx = startIdx; subIdx < endIdx; ++subIdx) 
+        {
+          int tag = sequenceOfTags[subIdx];
+
+          std::vector<int> I_vec(map_II[tag].begin(), map_II[tag].end());
+          std::vector<int> gamma_vec(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+
+          // Update map_indices and map_index_to_subdomain for I_vec
+          for (int i = 0; i < I_vec.size(); ++i) {
+            std::pair<int, int> pairs;
+            pairs.first = I_vec[i];
+            pairs.second = tag;
+
+            // Lock the mutex before accessing shared maps
+            {
+              std::lock_guard<std::mutex> lock(map_mutex);
+              map_indices[I_vec[i]] = map_starting_Index[subIdx] + i;
+              map_index_to_subdomain[I_vec[i]] = subIdx;
+            }
+          }
+
+          // Update map_indices and map_index_to_subdomain for gamma_vec
+          for (int i = 0; i < gamma_vec.size(); ++i) 
+          {
+            std::pair<int, int> pairs;
+            pairs.first = gamma_vec[i];
+            pairs.second = tag;
+
+            // Lock the mutex before accessing shared maps
+            {
+              std::lock_guard<std::mutex> lock(map_mutex);
+              map_indices[gamma_vec[i]] = map_starting_Index[subIdx] + I_vec.size() + i;
+              map_index_to_subdomain[gamma_vec[i]] = subIdx;
+            }
+          }
+        }
+      }));
     }
 
-    for (int i = 0; i < gamma_vec.size(); ++i)
-    {
-      std::pair<int,int> pairs;
-      pairs.first = gamma_vec[i];
-      pairs.second = tag;
-
-      map_indices[gamma_vec[i]] = map_starting_Index[subIdx] + I_vec.size() + i;
-      map_index_to_subdomain[gamma_vec[i]] = subIdx;
+    // Join all threads
+    for (auto &t : threads) {
+        t.join();
     }
-  }
 }
 
 void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags, 

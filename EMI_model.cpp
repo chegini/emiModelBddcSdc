@@ -663,7 +663,7 @@ int main(int argc, char* argv[])
     }
   }
 
-  marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, i2iSet, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
+  //marked_corners(arr_extra, sequenceOfTags, map_indices, i2t, i2iSet, map_GammaNbr_Nbr, matlab_dir, map_markCorners);
 
   std::cout << "write Dirichlet and coordinates!" << std::endl;
   std::set<int> dofsDirichlet;

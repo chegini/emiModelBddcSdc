@@ -1234,23 +1234,6 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
   for (auto& t : threads) {
       t.join();
   }
-
-  // for (int index = 0; index < sequenceOfTags.size(); ++index)
-  // { 
-  //   int tag =  sequenceOfTags[index];
-
-  //   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-  //   std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
-  //   for (int i = 0; i < Interior.size(); ++i)
-  //   {
-  //     bs_[map_indices[Interior[i]]] = b_[Interior[i]];
-  //   }
-
-  //   for (int i = 0; i < interface.size(); ++i)
-  //   {
-  //     bs_[map_indices[interface[i]]] = b_[interface[i]];
-  //   }
-  // }
 }
 
 
@@ -1263,30 +1246,57 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
                                 std::vector<std::vector<LocalDof>> sharedDofsAll,
                                 std::vector<Vector> &Fs)
 {
-  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+
+  size_t totalSize = sequenceOfTags.size();
+  size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+  std::vector<std::thread> threads;
+
+  // Mutex to protect shared Fs vector
+  std::mutex fs_mutex;
+
+  for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) 
   {
-    int tag = sequenceOfTags[subIdx];
-    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+    size_t startIdx = threadIdx * chunkSize;
+     size_t endIdx = std::min(startIdx + chunkSize, totalSize);
 
-    Vector Fs_subIdx(b_.size()); 
-    double coef = 0.5;
-
-    for (int indx = 0; indx < Interior.size(); ++indx)
+    threads.push_back(std::thread([&, startIdx, endIdx] 
     {
-      int pos = Interior[indx];
-      int pos_map = map_indices[pos];
-      Fs_subIdx[pos_map] = b_[pos];
-    }
+      for (size_t subIdx = startIdx; subIdx < endIdx; ++subIdx) 
+      {
+        int tag = sequenceOfTags[subIdx];
+        std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+        std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
 
-    for (int indx = 0; indx < interface.size(); ++indx)
-    {
-      int pos = interface[indx];
-      int pos_map = map_indices[pos];
-      Fs_subIdx[pos_map] = coef*b_[pos];
-    }
+        Vector Fs_subIdx(b_.size());
+        double coef = 0.5;
 
-    Fs[subIdx] = Fs_subIdx;
+        // Copy values for Interior
+        for (int indx = 0; indx < Interior.size(); ++indx) {
+            int pos = Interior[indx];
+            int pos_map = map_indices[pos];
+            Fs_subIdx[pos_map] = b_[pos];
+        }
+
+        // Copy values for Interface with scaling factor
+        for (int indx = 0; indx < interface.size(); ++indx) {
+            int pos = interface[indx];
+            int pos_map = map_indices[pos];
+            Fs_subIdx[pos_map] = coef * b_[pos];
+        }
+
+        // Lock and update shared Fs vector
+        {
+            std::lock_guard<std::mutex> lock(fs_mutex);
+            Fs[subIdx] = Fs_subIdx;
+        }
+      }
+    }));
+  }
+
+  // Join all threads
+  for (auto& t : threads) {
+      t.join();
   }
 }
 

@@ -71,6 +71,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
 
   typename ImageSpace::Evaluator isfs(fse.space()); // evalautor of finite space element
 
+  auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>(); //  cell end
 
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
@@ -104,6 +105,7 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
       pairs.second = material_var;
 
       e2i[eIndex].push_back(nIndex); // e2n
+      
       std::set<int> s_index = i2i[nIndex];
       s_index.insert(nIndex);
       i2i[nIndex] = s_index; 

@@ -746,7 +746,7 @@ int main(int argc, char* argv[])
   std::vector<Matrix> subMatrices_M(n_subdomains);
   std::vector<Matrix> subMatrices_K(n_subdomains);
   std::vector<Vector> weights(n_subdomains);
-  // construct_submatrices_petsc
+  
   construct_submatrices_petsc_parallel(arr_extra,
                                       map_nT2oT,
                                       gridManager,

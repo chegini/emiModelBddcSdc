@@ -635,23 +635,19 @@ void global2LocalMapSubdomain(std::vector<int> I, std::vector<int>  gamma, std::
 void globalIndicesSubdomain(std::vector<int> I, std::vector<int>  gamma, std::vector<int> Interface_nbr, 
                             std::vector<int> & globalIndices_subdomain)
 {
-  int index = 0;
   for (int i = 0; i < I.size(); ++i)
   {
-    globalIndices_subdomain.push_back(I[i]);
-    index++;  
+    globalIndices_subdomain.push_back(I[i]);  
   }
 
   for (int i = 0; i < gamma.size(); ++i)
   {
     globalIndices_subdomain.push_back(gamma[i]); 
-    index++;  
   }
 
   for (int i = 0; i < Interface_nbr.size(); ++i)
   {
     globalIndices_subdomain.push_back(Interface_nbr[i]); 
-    index++;  
   }
 }
 
@@ -664,7 +660,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
                         std::map<int,std::unordered_map<int, int>> & global2Local,
                         std::map<int,std::vector<int>> & globalIndices)
 {
-  for (int index = 0; index < sequenceOfTags.size(); ++index)
+  parallelFor(0,sequenceOfTags.size(),[&](int index)
   { 
     int tag =  sequenceOfTags[index];
     std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
@@ -682,7 +678,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
     global2Local[tag] = global2Local_subIdx;
     globalIndices[tag] = globalIndices_subIdx;
     // std::cout << "tag: " << tag << " local2Global[tag].size(): " << local2Global[tag].size() <<std::endl;
-  }
+  });
 }
 
 void map_kaskade2petcs(std::vector<int> sequenceOfTags, 
@@ -733,132 +729,6 @@ void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
     //   i2i.erase(i2i.begin()+i);
     // }
   }
-}
-
-void compute_sharedDofsKaskade( std::vector<int> sequenceOfTags, 
-                                std::map<std::pair<int, int>, int> map_indices, 
-                                std::map<int,std::set<int>> map_II,
-                                std::map<int,std::set<int>> map_GammaGamma, 
-                                std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
-                                bool write_to_file,
-                                std::string matlab_dir,  
-                                std::vector<std::vector<LocalDof>> & sharedDofsKaskade)
-{
-  // construct the sequance of the submatrices in BDDC in kaskade
-  int n_subdomains = map_II.size();
-  std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
-  for (int index = 0; index < sequenceOfTags.size(); ++index)
-  { 
-    int tag =  sequenceOfTags[index];
-    std::vector<int> I(map_II[tag].begin(),map_II[tag].end());
-    std::vector<int> gamma(map_GammaGamma[tag].begin(),map_GammaGamma[tag].end());
-    std::map<int,std::set<int>> gamma_nbr_subdomain(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-    int size = I.size()+gamma.size();
-    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
-    {
-     size += gamma_nbr.second.size(); 
-    }
-
-
-    std::vector<int> vec_kaskadeIndex(size);
-    int count = 0;
-    for (int i = 0; i < I.size(); ++i){
-      std::pair<int,int> pairs;
-      pairs.first = I[i];
-      pairs.second = tag;
-
-      vec_kaskadeIndex[count] = map_indices[pairs]; 
-      count++;     
-    }
-
-    for (int i = 0; i < gamma.size(); ++i){
-      std::pair<int,int> pairs;
-      pairs.first = gamma[i];
-      pairs.second = tag;
-
-      vec_kaskadeIndex[count] = map_indices[pairs];    
-      count++;  
-    }
-    
-    for ( const auto &gamma_nbr : gamma_nbr_subdomain ) 
-    {
-      int tag_nbr = gamma_nbr.first;
-      std::set<int> nbr = gamma_nbr.second;
-      std::set<int>::iterator it;
-
-      for (it = nbr.begin(); it != nbr.end(); it++)
-      {
-        std::pair<int,int> pairs;
-        pairs.first = *it;
-        pairs.second = tag_nbr;
-
-        vec_kaskadeIndex[count] = map_indices[pairs]; 
-        count++; 
-      }
-    }
-
-    sequanceOfsubdomainsKaskade[tag] = vec_kaskadeIndex;
-  }
-   
-
-  typedef std::tuple<int,int,int> i3tuple;
-  std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
-  for ( const auto &II : map_II ) 
-  {
-    int tag =  II.first;
-    std::vector<int> tmp = sequanceOfsubdomainsKaskade[tag];
-
-    for (int i = 0; i < tmp.size(); ++i)
-    {
-      auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);
-      if (it != MapSharedDofsKaskadeTuple.end()) {  
-        std::vector<i3tuple>& values = it->second;
-        values.push_back(i3tuple(tag,i, tmp[i]));
-      }else{
-        MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(tag,i, tmp[i])};
-      }
-    }
-  }
-
-  std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
-  {
-    double precision = 16;
-    std::string fname = matlab_dir+"/sharedDofsKaskade.txt";
-    std::ofstream f(fname.c_str());
-    f.precision(precision);
-
-    for (const auto& entry : MapSharedDofsKaskadeTuple) 
-    {
-      int key = entry.first;
-      const std::vector<i3tuple>& values = entry.second;
-      {
-        std::vector<LocalDof> tmp;
-        for (const auto& value : values) {
-          tmp.push_back({std::get<0>(value),std::get<1>(value)});
-        }
-        sharedDofsKaskadeAll.push_back(tmp);
-      }
-
-      if(values.size()>1){
-        std::vector<LocalDof> tmp;
-        for (const auto& value : values) {
-          tmp.push_back({std::get<0>(value),std::get<1>(value)});
-        }
-        sharedDofsKaskade.push_back(tmp);
-      }
-
-      if(values.size()>1 and write_to_file){
-        f << key << "-> ";
-        std::cout << key << "-> ";
-        for (const auto& value : values) {
-          f <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
-         std::cout <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
-        }
-        f << "\n";
-        std::cout <<"\n";
-      }
-    }
-  } 
 }
 
 void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags, 
@@ -1239,238 +1109,6 @@ void exctract_petsc_stiffness_blocks_moreExtracellular( std::vector<int> sequenc
   insertMatrixBlock_extra(K_GAMMAGAMMA_block, map_indices, Interface, Interface, Ks_);
 }
 
-template<class Grid, class Functional, class CellFilter, class VariableSet, class Spaces, class Matrix, class Vector>
-typename VariableSet::VariableSet  construct_submatrices_petsc( std::vector<int> arr_extra, 
-                                                          std::map<int,int> map_nT2oT,
-                                                          GridManager<Grid>& gridManager,
-                                                          Functional& F,
-                                                          CellFilter & Cellfltr,
-                                                          VariableSet const& variableSet, 
-                                                          Spaces const& spaces,
-                                                          Grid const& grid, 
-                                                          typename VariableSet::VariableSet u,
-                                                          double  dt,
-                                                          std::vector<int> sequenceOfTags, 
-                                                          std::map<int,int> startingIndexOfTag,
-                                                          std::map<int,std::set<int>> map_II,
-                                                          std::map<int,std::set<int>> map_GammaGamma,
-                                                          std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
-                                                          std::map<int,std::map<int,std::set<int>>> map_GammaNbr,
-                                                          std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
-                                                          std::map<int,std::vector<int>> sequenceOfsubdomains,
-                                                          std::map<int, int> map_indices,
-                                                          std::map<int,bool> map_markCorners,
-                                                          std::set<int> cells_set,
-                                                          std::set<int> tags,
-                                                          std::vector<std::set<int>> i2t, 
-                                                          Matrix A_,
-                                                          Matrix K_,
-                                                          Matrix M_,
-                                                          Vector rhs_petsc_test,
-                                                          int nDofs,
-                                                          int assemblyThreads,
-                                                          bool write_to_file,
-                                                          std::string matlab_dir,
-                                                          std::vector<Vector> &Fs_petcs,
-                                                          std::vector<Vector> &weights,
-                                                          std::vector<Matrix> &subMatrices,
-                                                          std::vector<Matrix> &subMatrices_M,
-                                                          std::vector<Matrix> &subMatrices_K)
-{
-  // ------------------------------------------------------------------------------------ 
-  // construct sparsity patterns
-  // ------------------------------------------------------------------------------------ 
-  NumaCRSPatternCreator<> creator(nDofs,nDofs,false);
-  for (int k=0; k<A_.N(); ++k)
-  {
-    auto row  = A_[k];
-    for (auto ca=row.begin(); ca!=row.end(); ++ca)
-    {
-      int const l = ca.index();
-      int row_indx = map_indices[k];
-      int col_indx = map_indices[l];
-      creator.addElement(row_indx,col_indx);  
-    }
-  }
-
-  // original lhs in petsc format
-  Matrix A_petsc(creator);
-  {
-    for (int k = 0; k < A_.N(); ++k)
-    {
-      auto row_ = A_[k];
-      for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
-      {
-        int const l = ca.index();
-        A_petsc[map_indices[k]][map_indices[l]] = (*ca); 
-      }
-    }
-  }
-
-  if(write_to_file)
-    writeToMatlabPath(A_petsc,rhs_petsc_test,"resultBDDC",matlab_dir, true);
-
-
-  writeToMatlabPath_matlab(A_petsc,rhs_petsc_test,"resultBDDCTEST",matlab_dir, true);
-  // ------------------------------------------------------------------------------------ 
-  // construct submatrices
-  // ------------------------------------------------------------------------------------ 
-  std::vector<Matrix> Ms;// for debugging
-  std::vector<Matrix> Ks;// for debugging
-  Matrix M_sum(creator);// for debugging
-  Matrix K_sum(creator);// for debugging
-
-  typedef SemiLinearizationAtInner<SemiImplicitEulerStep<Functional> >  SemiLinearization;
-  typedef VariationalFunctionalAssembler<SemiLinearization> Assembler;
-  Assembler assembler(spaces);
-
-  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
-  std::set<int>::iterator itr;
-
-
-  Matrix Matrix_mass_petsc(creator);
-  Matrix Matrix_stiffness_petsc(creator);
-  // ------------------------------------------------------------------------------------
-  // construct mass and stiffness matrix from semi-implicit structure
-  // ------------------------------------------------------------------------------------  
-
-  auto du(u);
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  {
-    // std::cout<<subIdx <<std::endl;
-    int tag = sequenceOfTags[subIdx]; 
-    std::string path = std::to_string(subIdx);
-    du *= 0;
-
-    std::map<int,std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-    double coef = 0.5;
-    std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
-    F.Mass_stiff(1);
-    F.set_mass_submatrix(true);
-    SemiImplicitEulerStep<Functional>  eqM(&F,dt);
-    eqM.setTau(0);
-    Matrix subMatrix(creator);
-
-    // mass
-    Matrix subMatrix_mass(creator);
-    Vector Fs_petcs_sub =  Fs_petcs[subIdx];
-
-    // construct mass
-    for ( const auto & gamma_nbr: nbrs )
-    {
-      Cellfltr.set_cells(cells_set);
-      Cellfltr.set_tags(tags);
-      int row = tag;
-      int col = gamma_nbr.first;
-      {
-        Matrix M_sub(creator);
-        F.set_row_col_subdomain(row,col);
-        assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
-        Matrix sub_M_ = assembler.template get<Matrix>(false);
-        parallelFor(0,sub_M_.N(),[&](int k)
-        {
-          auto row_ = sub_M_[k];
-          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
-          {
-            int const l = ca.index();
-            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
-          }
-        });
-        subMatrix_mass+=M_sub;
-      }
-
-      {
-        Matrix M_sub(creator);
-        F.set_row_col_subdomain(col,row);
-        assembler.assemble(SemiLinearization(eqM,u,u,du), Assembler::MATRIX,assemblyThreads); 
-        Matrix sub_M_ = assembler.template get<Matrix>(false);
-
-        parallelFor(0,sub_M_.N(),[&](int k)
-        {
-          auto row_ = sub_M_[k];
-          for (auto ca=row_.begin(); ca!=row_.end(); ++ca)
-          {
-            int const l = ca.index();
-            M_sub[map_indices[k]][map_indices[l]] = coef*(*ca); 
-          }
-        });
-        subMatrix_mass+=M_sub;
-      }
-    }
-
-    subMatrix+=subMatrix_mass;
-    // if(write_to_file) writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"mass"+path,matlab_dir, false);
-
-
-   // construct stiffness
-    Matrix subMatrix_stiffness(creator);
-    {
-      SemiImplicitEulerStep<Functional>  eqK(&F,dt);
-      F.Mass_stiff(0);
-      F.set_mass_submatrix(false);
-      eqK.setTau(1);
-    
-      std::set<int> tags_target;
-      tags_target.insert(tag);
-      Cellfltr.set_tags(tags_target);
-      Cellfltr.select_based_on_tag(true);
-      assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr,Assembler::MATRIX|Assembler::RHS,assemblyThreads);  
-      K_ = assembler.template get<Matrix>(false);
-      K_*=(-dt); 
-      exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
-      subMatrix+=subMatrix_stiffness;
-      // if(write_to_file) writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"stiffness"+path,matlab_dir, false);
-      Cellfltr.select_based_on_tag(false);
-    }
-   
-    subMatrices[subIdx] = subMatrix;
-    subMatrices_M[subIdx] = subMatrix_mass;
-    subMatrices_K[subIdx] = subMatrix_stiffness;
-    Matrix_mass_petsc+=subMatrix_mass;
-    Matrix_stiffness_petsc+=subMatrix_stiffness;
-    if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, false);
-    //writeToMatlabPath(subMatrix_mass,Fs_petcs_sub,"resultBDDC_mass"+path,matlab_dir, false);
-    //writeToMatlabPath(subMatrix_stiffness,Fs_petcs_sub,"resultBDDC_stiff"+path,matlab_dir, false);
-  }
-  //writeToMatlabPath(Matrix_mass_petsc,rhs_petsc_test,"M_original",matlab_dir, false);
-  //writeToMatlabPath(Matrix_stiffness_petsc,rhs_petsc_test,"K_original",matlab_dir, false);
-
-  // -------------------------------------
-  // compute the weight for each subdomain to update the rhs
-  // -------------------------------------
-  // - we need to go through the interfaces  
-  //  - of the current and their neighbors   
-  // - update the rhs for each subdomain
-  // - generate the submatrices with the writeToMatlabPath again
-  // -------------------------------------
-
-  for (int subIdx=0; subIdx<sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx]; 
-    std::string path = std::to_string(subIdx+1);
-    Matrix subMatrix(creator);
-    subMatrix = subMatrices[subIdx];
-    Vector Fs_petcs_sub =  rhs_petsc_test;
-    Vector weights_sub(subMatrix.N()); 
-    // optimize it by iterating only on the interfaces
-    for (int k = 0; k < subMatrix.N(); ++k)
-    {
-      double subvalue = subMatrix[k][k];
-      double originalvalue = A_petsc[k][k];
-
-      double weight = (subvalue/originalvalue);
-      Fs_petcs_sub[k] = Fs_petcs_sub[k]*weight;
-      weights_sub[k] = weight;
-    }
-    Fs_petcs[subIdx] = Fs_petcs_sub;
-    weights[subIdx] = weights_sub;
-    // std::cout<< " ===================================================== "<<std::endl;
-    // if(write_to_file) writeToMatlabPath(subMatrix,Fs_petcs_sub,"resultBDDCNew"+path,matlab_dir);
-  }
-
-  return u;
-}
-
 template<class Matrix, class Vector>
 void weight_and_rhs(int subIdx, 
                     std::vector<int> &sequenceOfTags,
@@ -1631,156 +1269,153 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
           futures.push_back(std::async(std::launch::async, [startIdx, endIdx, &sequenceOfTags, &map_GammaNbr, &Fs_petcs, 
                                                            &subMatrices, dt, &F, &assembler, &map_indices, 
                                                            &Cellfltr, write_to_file, &matlab_dir,&sequenceOfsubdomains,&cells_set,&tags,&subMatricesMutex,&matrixMutex, &creator,&u, &K_, &map_II, &map_GammaGamma, &material, &gridManager, &spaces, &penalty,&arr_extra,
-                &sigma_i,
-                &sigma_e,
-                &C_m,  
-                &R,
-                &R_extra]() {
+                                                           &sigma_i,&sigma_e,&C_m,&R,&R_extra]() 
+          {
     
-              for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) 
-              {
-                std::cout << "startIdx: " << startIdx << " endIdx: " << endIdx << " by thread " << std::this_thread::get_id() << std::endl;
-                int tag = sequenceOfTags[subIdx];
-                std::string path = std::to_string(subIdx);
-                auto du = u;
-                du *= 0; // Reset the u vector
+                for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) 
+                {
+                  std::cout << "startIdx: " << startIdx << " endIdx: " << endIdx << " by thread " << std::this_thread::get_id() << std::endl;
+                  int tag = sequenceOfTags[subIdx];
+                  std::string path = std::to_string(subIdx);
+                  auto du = u;
+                  du *= 0; // Reset the u vector
 
-                std::map<int, std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
-                double coef = 0.5;
-                std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
-                Functional F1( material,
-                gridManager.grid(),
-                spaces,
-                penalty,
-                sigma_i,
-                sigma_e,
-                C_m,  
-                R,
-                R_extra);
-                F1.extracellular_materials(arr_extra);
-                F1.Mass_stiff(1);
-                F1.set_mass_submatrix(true);
-                SemiImplicitEulerStep<Functional> eqM(&F1, dt);
-                eqM.setTau(0);
-                Matrix subMatrix(creator);
-               
-                // Construct mass matrix
-                Matrix subMatrix_mass(creator);
-                Vector Fs_petcs_sub = Fs_petcs[subIdx];
+                  std::map<int, std::set<int>> nbrs(map_GammaNbr[tag].begin(), map_GammaNbr[tag].end());
+                  double coef = 0.5;
+                  std::vector<int> nbr_tags = sequenceOfsubdomains[tag];
+                  Functional F1( material,
+                  gridManager.grid(),
+                  spaces,
+                  penalty,
+                  sigma_i,
+                  sigma_e,
+                  C_m,  
+                  R,
+                  R_extra);
+                  F1.extracellular_materials(arr_extra);
+                  F1.Mass_stiff(1);
+                  F1.set_mass_submatrix(true);
+                  SemiImplicitEulerStep<Functional> eqM(&F1, dt);
+                  eqM.setTau(0);
+                  Matrix subMatrix(creator);
+                 
+                  // Construct mass matrix
+                  Matrix subMatrix_mass(creator);
+                  Vector Fs_petcs_sub = Fs_petcs[subIdx];
 
-                // Parallel for loop within the subdomain
-                for (const auto &gamma_nbr : nbrs) {
-                    CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
-                    Cellfltr1.set_cells(cells_set);
-                    Cellfltr1.set_tags(tags);
-                    int row = tag;
-                    int col = gamma_nbr.first;
+                  // Parallel for loop within the subdomain
+                  for (const auto &gamma_nbr : nbrs) {
+                      CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+                      Cellfltr1.set_cells(cells_set);
+                      Cellfltr1.set_tags(tags);
+                      int row = tag;
+                      int col = gamma_nbr.first;
 
-                    // Mass matrix computation for each subdomain
-                    {
-                        std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
-                        Matrix M_sub(creator);
-                        F1.set_row_col_subdomain(row, col);
-                        assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
-                        Matrix sub_M_ = assembler.template get<Matrix>(false);
+                      // Mass matrix computation for each subdomain
+                      {
+                          std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                          Matrix M_sub(creator);
+                          F1.set_row_col_subdomain(row, col);
+                          assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
+                          Matrix sub_M_ = assembler.template get<Matrix>(false);
 
-                        // Parallelize matrix assembly using a simple loop
-                        // parallelFor(0, sub_M_.N(), [&](int k) {
-                        for (int k = 0; k < sub_M_.N(); ++k)
-                        {
-                            auto row_ = sub_M_[k];
-                            for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
-                                int const l = ca.index();
-                                M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
-                            }
-                        }
-                        // });
-                        {
-                        std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
-                        subMatrix_mass += M_sub;
-                        }
-                    }
-
-                    // Add to the final subMatrix
-                    {
-                        std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
-                        Matrix M_sub(creator);
-                        F1.set_row_col_subdomain(col, row);
-                        assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
-                        Matrix sub_M_ = assembler.template get<Matrix>(false);
-
-                        //parallelFor(0, sub_M_.N(), [&](int k) {
-                        for (int k = 0; k < sub_M_.N(); ++k)
-                        {
-                            auto row_ = sub_M_[k];
-                            for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
-                                int const l = ca.index();
-                                M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
-                            }
+                          // Parallelize matrix assembly using a simple loop
+                          // parallelFor(0, sub_M_.N(), [&](int k) {
+                          for (int k = 0; k < sub_M_.N(); ++k)
+                          {
+                              auto row_ = sub_M_[k];
+                              for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
+                                  int const l = ca.index();
+                                  M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
+                              }
                           }
-                        //});
-                        {
-                        std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
-                        subMatrix_mass += M_sub;
-                        }
-                    }
-                }
-                {
-                  std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
-                  subMatrix += subMatrix_mass;
-                }
-                // Construct stiffness matrix in a similar manner
-                Matrix subMatrix_stiffness(creator);
-               // construct stiffness
-                {
-                  std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
-                  Functional F2( material,
-                                      gridManager.grid(),
-                                      spaces,
-                                      penalty,
-                                      sigma_i,
-                                      sigma_e,
-                                      C_m,  
-                                      R,
-                                      R_extra);
+                          // });
+                          {
+                          std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                          subMatrix_mass += M_sub;
+                          }
+                      }
 
-                  F2.extracellular_materials(arr_extra);
-                  SemiImplicitEulerStep<Functional>  eqK(&F2,dt);
-                  F2.Mass_stiff(0);
-                  F2.set_mass_submatrix(false);
-                  eqK.setTau(1);
-                
-                  CellFilter Cellfltr2(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+                      // Add to the final subMatrix
+                      {
+                          std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                          Matrix M_sub(creator);
+                          F1.set_row_col_subdomain(col, row);
+                          assembler.assemble(SemiLinearization(eqM, u, u, du), Assembler::MATRIX, 1);
+                          Matrix sub_M_ = assembler.template get<Matrix>(false);
 
-                  std::set<int> tags_target;
-                  tags_target.insert(tag);
-                  Cellfltr2.set_tags(tags_target);
-                  Cellfltr2.select_based_on_tag(true);
-                  assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr2,Assembler::MATRIX|Assembler::RHS,1);  
-                  K_ = assembler.template get<Matrix>(false);
-                  K_*=(-dt); 
-                  exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
+                          //parallelFor(0, sub_M_.N(), [&](int k) {
+                          for (int k = 0; k < sub_M_.N(); ++k)
+                          {
+                              auto row_ = sub_M_[k];
+                              for (auto ca = row_.begin(); ca != row_.end(); ++ca) {
+                                  int const l = ca.index();
+                                  M_sub[map_indices[k]][map_indices[l]] = coef * (*ca);
+                              }
+                            }
+                          //});
+                          {
+                          std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                          subMatrix_mass += M_sub;
+                          }
+                      }
+                  }
                   {
                     std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
-                    subMatrix+=subMatrix_stiffness;
+                    subMatrix += subMatrix_mass;
                   }
-                  Cellfltr2.select_based_on_tag(false);
+                  // Construct stiffness matrix in a similar manner
+                  Matrix subMatrix_stiffness(creator);
+                 // construct stiffness
+                  {
+                    std::lock_guard<std::mutex> lock(subMatricesMutex); // Lock for thread-safe access to shared resources
+                    Functional F2( material,
+                                        gridManager.grid(),
+                                        spaces,
+                                        penalty,
+                                        sigma_i,
+                                        sigma_e,
+                                        C_m,  
+                                        R,
+                                        R_extra);
+
+                    F2.extracellular_materials(arr_extra);
+                    SemiImplicitEulerStep<Functional>  eqK(&F2,dt);
+                    F2.Mass_stiff(0);
+                    F2.set_mass_submatrix(false);
+                    eqK.setTau(1);
+                  
+                    CellFilter Cellfltr2(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+
+                    std::set<int> tags_target;
+                    tags_target.insert(tag);
+                    Cellfltr2.set_tags(tags_target);
+                    Cellfltr2.select_based_on_tag(true);
+                    assembler.template assemble<AssemblyDetail::TakeAllBlocks,CellFilter>(SemiLinearization(eqK,u,u,du),Cellfltr2,Assembler::MATRIX|Assembler::RHS,1);  
+                    K_ = assembler.template get<Matrix>(false);
+                    K_*=(-dt); 
+                    exctract_petsc_stiffness_blocks_moreExtracellular(sequenceOfTags, map_indices, map_II, map_GammaGamma, K_, subIdx,subMatrix_stiffness); 
+                    {
+                      std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                      subMatrix+=subMatrix_stiffness;
+                    }
+                    Cellfltr2.select_based_on_tag(false);
+
+                  }
+
+                  // After constructing submatrix, store results
+                  {
+                    std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
+                    subMatrices[subIdx] = subMatrix;
+                  }
+
+                  // Optional: Write to file if needed
+                  if (write_to_file) {
+                      writeToMatlabPath(subMatrix, Fs_petcs_sub, "resultBDDC" + path, matlab_dir, false);
+                      // writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
+                  }
 
                 }
-
-                // After constructing submatrix, store results
-                {
-                  std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
-                  subMatrices[subIdx] = subMatrix;
-                }
-
-                // Optional: Write to file if needed
-                if (write_to_file) {
-                    writeToMatlabPath(subMatrix, Fs_petcs_sub, "resultBDDC" + path, matlab_dir, false);
-                    // writeToMatlabPath_matlab(subMatrix,Fs_petcs_sub,"resultBDDC"+path,matlab_dir, true);
-                }
-
-              }
           }));
       }
 
@@ -1891,256 +1526,6 @@ bool isSubset(const std::vector<int>& V, const std::vector<int>& W) {
         }
     }
     return true; // All elements of V are in W
-}
-
-
-template<class Matrix, class Vector>
-void construct_As(std::vector<int> arr_extra, 
-                  std::vector<int> sequenceOfTags, 
-                  std::map<int,std::set<int>> map_II,
-                  std::map<int,std::set<int>> map_GammaGamma,
-                  std::map<int,std::set<int>> map_GammaGamma_noDuplicate,
-                  std::map<int,std::set<int>> map_GammaNbr_Nbr_noDuplicate,
-                  Vector rhs_kaskade,
-                  std::vector<Vector> weights,
-                  std::map<int, int> map_indices,
-                  std::string matlab_dir, bool write_to_file,
-                  std::vector<Matrix> subMatrices,
-                  std::vector<Matrix> subMatrices_M,
-                  std::vector<Matrix> subMatrices_K,
-                  double dt,
-                  std::vector<Matrix> &subMatrices_kaskade,
-                  std::vector<Matrix> &subMatrices_kaskade_Ms,
-                  std::vector<Matrix> &subMatrices_kaskade_Ks,
-                  std::vector<Vector> &Fs,
-                  std::map<int,vector<int>> &IG_seq,
-                  std::vector<int> &dofsDirichlet,
-                  std::vector<std::vector<LocalDof>> &sharedDofsKaskade,
-                  std::map<int,int> & T2Index)
-{
-
-  std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
-
-  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end()); 
-  std::set<int>::iterator itr_extra; 
-  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx]; 
-    T2Index[tag] = subIdx;
-    int count = 0;
-
-    bool extra = false;
-    itr_extra =arr_extra_set.find(tag);
-    if(itr_extra!=arr_extra_set.end())
-      extra = true;
-
-
-    Matrix subMatrix  = subMatrices[subIdx];
-    Matrix subMatrix_M  = subMatrices_M[subIdx];
-    Matrix subMatrix_K  = subMatrices_K[subIdx];
-
-    std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
-    std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
-    std::vector<int> Interface_noDup(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
-    std::vector<int> Interface_nbr(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end());
-
-
-
-    std::set<int> diff;
-    std::set<int> Interface_nbr_diff;
-    if(Interface_noDup.size()!=Interface.size()){
-      
-      std::set_difference(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end(), 
-                          map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
-                          std::inserter(diff, diff.end()));
-
-      std::set_difference(map_GammaNbr_Nbr_noDuplicate[tag].begin(), map_GammaNbr_Nbr_noDuplicate[tag].end(), 
-                          diff.begin(), diff.end(),
-                          std::inserter(Interface_nbr_diff, Interface_nbr_diff.end()));
-
-      std::vector<int> Interface_nbr_shrinked(Interface_nbr_diff.begin(), Interface_nbr_diff.end());
-      Interface_nbr = Interface_nbr_shrinked;
-    }
-
-    std::map<int, int> map_Petsc2Kaskade;
-    std::map<int, int> map_petsc_diff;
-    std::vector<int> IG(Interior.size()+Interface_noDup.size()+ diff.size()+Interface_nbr.size()); // vector with size ints.
-    int counter_kaskade = 0;
-    {  
-      for (int k = 0; k < Interior.size(); ++k)
-      {
-        map_Petsc2Kaskade[map_indices[Interior[k]]] = k + counter_kaskade;
-        IG[k+counter_kaskade] = map_indices[Interior[k]];
-      }   
-
-      counter_kaskade += Interior.size();
-      for (int k = 0; k < Interface_noDup.size(); ++k)
-      {
-        map_Petsc2Kaskade[map_indices[Interface_noDup[k]]] = k + counter_kaskade;
-        IG[k+counter_kaskade] = map_indices[Interface_noDup[k]];
-      }    
-
-      counter_kaskade += Interface_noDup.size();
-      if(diff.size()>0)
-      {
-        std::vector<int> diff_vec(diff.begin(), diff.end());
-        for (int k = 0; k < diff_vec.size(); ++k)
-        {
-          map_Petsc2Kaskade[map_indices[diff_vec[k]]] = k + counter_kaskade;
-          IG[k+counter_kaskade] = map_indices[diff_vec[k]];
-          map_petsc_diff[map_indices[diff_vec[k]]] = k+counter_kaskade;
-        } 
-        counter_kaskade += diff.size();     
-      }
-      {
-        for (int k = 0; k < Interface_nbr.size(); ++k)
-        {
-          map_Petsc2Kaskade[map_indices[Interface_nbr[k]]] = k+counter_kaskade;
-          IG[k+counter_kaskade] = map_indices[Interface_nbr[k]];
-        }
-        counter_kaskade += Interface_nbr.size(); 
-      } 
-
-      if(false) std::cout << "\n";
-    }
-    IG_seq[subIdx] = IG;
-    if(false) std::cout <<"============================" << std::endl; 
-    if(false) std::cout << tag<<" -> "<< counter_kaskade << " diff " << diff.size() << " IG.size() "<< IG.size()<< std::endl;
-    if(false) std::cout <<"============================" << std::endl;
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    // creator for kaskade structure, the shrinked version
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    NumaCRSPatternCreator<> creator_kaskade(counter_kaskade,counter_kaskade,false);
-    std::map<int,int>::iterator it;
-    std::vector<int> diff_vec(diff.begin(), diff.end());
-    for (int k=0; k<subMatrix.N(); ++k)
-    {
-      it = map_Petsc2Kaskade.find(k);
-      if (it != map_Petsc2Kaskade.end())
-      {
-        auto row  = subMatrix[k];
-        for (auto ca=row.begin(); ca!=row.end(); ++ca)
-        {
-          int const l = ca.index();
-          int row_indx = map_Petsc2Kaskade[k];
-          it = map_Petsc2Kaskade.find(l);
-          if (it != map_Petsc2Kaskade.end()){
-            int col_indx = map_Petsc2Kaskade[l];
-            double val = *ca;
-            creator_kaskade.addElement(row_indx,col_indx);  
-          }  
-        }
-      }
-       if(diff.size()>0)
-       {
-        it = map_petsc_diff.find(k);
-        if (it != map_petsc_diff.end()){
-          int col_indx = map_petsc_diff[k];
-          creator_kaskade.addElement(col_indx,col_indx); 
-        }
-      } 
-    }
-
-    Matrix subMatrix_kaskade_shrinked(creator_kaskade); 
-    Matrix subMatrix_kaskade_M_shrinked(creator_kaskade); 
-    Matrix subMatrix_kaskade_K_shrinked(creator_kaskade); 
-    {
-      auto IGAMMA_block = subMatrix(IG,IG);
-      insertMatrixBlock(IGAMMA_block, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_shrinked,true);
-
-      auto IGAMMA_block_M = subMatrix_M(IG,IG);
-      insertMatrixBlock(IGAMMA_block_M, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_M_shrinked,true);
-
-      auto IGAMMA_block_K = subMatrix_K(IG,IG);
-      insertMatrixBlock(IGAMMA_block_K, 0, 0, IG, map_Petsc2Kaskade, subMatrix_kaskade_K_shrinked,true);
-    }
-
-    subMatrices_kaskade[subIdx] = subMatrix_kaskade_shrinked;
-    subMatrices_kaskade_Ms[subIdx] = subMatrix_kaskade_M_shrinked;
-    subMatrices_kaskade_Ks[subIdx] = subMatrix_kaskade_K_shrinked;
-
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    // save sub_matrices for kaskade format
-    // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-    Vector Fs_subIdx(counter_kaskade);  
-    { 
-      for (int i = 0; i < counter_kaskade; ++i)
-      {
-        int index = IG[i]; 
-        sequanceOfsubdomainsKaskade[tag].push_back(index);
-        int coef = weights[subIdx][index];
-        Fs_subIdx[i] = coef*rhs_kaskade[index];
-      }
-    }
-    Fs[subIdx] = Fs_subIdx;
-  }
-
-  typedef std::tuple<int,int,int> i3tuple;
-  std::map<int, std::vector<i3tuple>> MapSharedDofsKaskadeTuple;
-
-  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
-  {
-    int tag = sequenceOfTags[subIdx];
-    std::vector<int> tmp = sequanceOfsubdomainsKaskade[tag];
-
-    for (int i = 0; i < tmp.size(); ++i)
-    {
-      auto it = MapSharedDofsKaskadeTuple.find(tmp[i]);
-      if (it != MapSharedDofsKaskadeTuple.end()) {  
-        std::vector<i3tuple>& values = it->second;
-        values.push_back(i3tuple(subIdx,i, tmp[i]));
-      }else{
-        MapSharedDofsKaskadeTuple[tmp[i]] = {i3tuple(subIdx,i, tmp[i])};
-      }
-    }
-  }
-
-  std::vector<std::vector<LocalDof>> sharedDofsKaskadeAll;
-  {
-    double precision = 16;
-    std::string fname = matlab_dir+"/sharedDofsKaskade.txt";
-    std::ofstream f(fname.c_str());
-    f.precision(precision);
-
-    for (const auto& entry : MapSharedDofsKaskadeTuple) {
-      int key = entry.first;
-      const std::vector<i3tuple>& values = entry.second;
-      {
-        std::vector<LocalDof> tmp;
-        for (const auto& value : values) {
-          tmp.push_back({std::get<0>(value),std::get<1>(value)});
-        }
-        sharedDofsKaskadeAll.push_back(tmp);
-      }
-
-      if(values.size()>1){
-        std::vector<LocalDof> tmp;
-        std::vector<int> tags_extra;
-        std::vector<int> tags_extra_dofs;
-        for (const auto& value : values) {
-          tmp.push_back({std::get<0>(value),std::get<1>(value)});
-          tags_extra.push_back(std::get<0>(value));
-          tags_extra_dofs.push_back(std::get<1>(value));
-        }
-        bool extra_cellular_shared = isSubset(tags_extra,arr_extra);
-        bool extra_cellular_shared_dirichlet = isSubset(tags_extra_dofs,dofsDirichlet);
-
-
-        //if(!extra_cellular_shared and !extra_cellular_shared_dirichlet) 
-        sharedDofsKaskade.push_back(tmp);
-
-        //if(values.size()>1 and write_to_file and !extra_cellular_shared and !extra_cellular_shared_dirichlet){
-        if(values.size()>1){  
-          //if(write_to_file){
-          f << key << "-> ";
-          for (const auto& value : values) {
-            f <<"("<<std::get<0>(value) << " "<< std::get<1>(value) << ") ";
-          }
-          f << "\n";
-        }
-      }
-    }
-  }
 }
 
 template<class i3tuple>

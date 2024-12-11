@@ -57,11 +57,12 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::map<int, std::vector<double>> & coord_globalIndex, 
                                            std::vector<int> & i2T,
-                                           std::map<int,std::set<int>> & map_IGamma)
+                                           std::map<int,std::set<int>> & map_IGamma,
+                                           int number_elem)
 {
 
   unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
-  
+
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
   std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
@@ -81,84 +82,105 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
   std::map<int,int>::iterator it;
   std::map<int,std::set<int>>::iterator it_igamma;
 
-  // iterate over cells
-  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
-  {
-    auto eIndex = fse.space().indexSet().index(*ci); // get cell index
-    isfs.moveTo(*ci); 
+  // std::mutex matrixMutex; // Protect shared resources
+  // std::mutex subMatricesMutex; // Mutex to protect access to shared subMatrices
 
-    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-    globalValues.setSize(localCoordinate.size(),1); // not used!
+  int totalCells = std::distance(cbegin, cend);
+  int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
 
+  std::mutex mutex_e2i, mutex_i2e, mutex_i2t, mutex_i2i, mutex_coord, mutex_coord_global, mutex_map_IGamma;
 
-    using Cell = decltype(ci);
-    auto dof_u = fse.space().mapper().globalIndices(*ci);
-    int nrNodes = dof_u.size();
-
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
-
-    // iterate over nodes of each cell
-    for (int i = 0; i < isfs.globalIndices().size(); ++i) 
+  auto processCells = [&](int startIdx, int endIdx) {
+    auto ci = cbegin;
+    std::advance(ci, startIdx);
+    for (int cellIdx = startIdx; cellIdx < endIdx && ci != cend; ++cellIdx, ++ci) 
     {
-      int nIndex = isfs.globalIndices()[i];
-      std::pair<int,int> pairs;
-      pairs.first = nIndex;
-      pairs.second = material_var;
 
-      e2i[eIndex].push_back(nIndex); // e2n
-      
-      std::set<int> s_index = i2i[nIndex];
-      s_index.insert(nIndex);
-      i2i[nIndex] = s_index; 
+      auto eIndex = fse.space().indexSet().index(*ci);
+      typename ImageSpace::Evaluator isfs(fse.space());
+      isfs.moveTo(*ci);
 
-      std::set<int> cell_indices = i2e[nIndex];
-      cell_indices.insert(eIndex);
-      i2e[nIndex] = cell_indices;
+      auto const& localCoordinate = isfs.shapeFunctions().interpolationNodes();
+      auto dof_u = fse.space().mapper().globalIndices(*ci);
 
-      std::set<int> tags = i2t[nIndex];
-      tags.insert(material_var);
-      i2t[nIndex] = tags;
+      int material_var = material.value(*ci, Dune::FieldVector<double, ImageSpace::dim>(0.0));
 
-      auto x = fu.value(*ci,localCoordinate[i]);
+      std::lock_guard<std::mutex> lock(mutex_i2t);
+      {
+        // iterate over nodes of each cell
+        for (int i = 0; i < isfs.globalIndices().size(); ++i) 
+        {
+          int nIndex = isfs.globalIndices()[i];
+          std::pair<int,int> pairs;
+          pairs.first = nIndex;
+          pairs.second = material_var;
 
-      it_coord_glabalIndex = coord_globalIndex.find(nIndex);
-      if (it_coord_glabalIndex == coord_globalIndex.end()){
-         for (int j = 0; j < x.size(); ++j){
-          coord_globalIndex[nIndex].push_back(x[j]);
-        }
-      }
+          e2i[eIndex].push_back(nIndex); // e2n
+          
+          std::set<int> s_index = i2i[nIndex];
+          s_index.insert(nIndex);
+          i2i[nIndex] = s_index; 
+
+          std::set<int> cell_indices = i2e[nIndex];
+          cell_indices.insert(eIndex);
+          i2e[nIndex] = cell_indices;
+
+          std::set<int> tags = i2t[nIndex];
+          tags.insert(material_var);
+          i2t[nIndex] = tags;
+
+          auto x = fu.value(*ci,localCoordinate[i]);
+
+          it_coord_glabalIndex = coord_globalIndex.find(nIndex);
+          if (it_coord_glabalIndex == coord_globalIndex.end()){
+             for (int j = 0; j < x.size(); ++j){
+              coord_globalIndex[nIndex].push_back(x[j]);
+            }
+          }
 
 
-      it_coord = coord.find(pairs);
-      if (it_coord == coord.end()){
-        i2T[nIndex] = material_var;
-        // // count the number of dof for each subdomain
-        // it = map_t2l.find(material_var);
-        // if (map_t2l[material_var]!=0){
-        //   int old = it->second;
-        //   it->second = old+1;
-        // }else{
-        //   map_t2l[material_var] = 1;
-        // }
+          it_coord = coord.find(pairs);
+          if (it_coord == coord.end()){
+            i2T[nIndex] = material_var;
+            // // count the number of dof for each subdomain
+            // it = map_t2l.find(material_var);
+            // if (map_t2l[material_var]!=0){
+            //   int old = it->second;
+            //   it->second = old+1;
+            // }else{
+            //   map_t2l[material_var] = 1;
+            // }
 
-        for (int j = 0; j < x.size(); ++j){
-          coord[pairs].push_back(x[j]);
-        }
+            for (int j = 0; j < x.size(); ++j){
+              coord[pairs].push_back(x[j]);
+            }
 
-        // adding all the igamma for matreial 
-        it_igamma = map_IGamma.find(material_var);
-        if(it_igamma!= map_IGamma.end()){
-          std::set<int> igamma = it_igamma->second;
-          igamma.insert(nIndex);
-          it_igamma->second = igamma;
-        }else{
-          std::set<int> igamma;
-          igamma.insert(nIndex);
-          map_IGamma[material_var] = igamma;
+            // adding all the igamma for matreial 
+            it_igamma = map_IGamma.find(material_var);
+            if(it_igamma!= map_IGamma.end()){
+              std::set<int> igamma = it_igamma->second;
+              igamma.insert(nIndex);
+              it_igamma->second = igamma;
+            }else{
+              std::set<int> igamma;
+              igamma.insert(nIndex);
+              map_IGamma[material_var] = igamma;
+            }
+          }
         }
       }
     }
+  };
+
+  std::vector<std::thread> threads;
+  for (int t = 0; t < numThreads; ++t) {
+      int startIdx = t * cellsPerThread;
+      int endIdx = std::min(startIdx + cellsPerThread, totalCells);
+      threads.emplace_back(processCells, startIdx, endIdx);
+  }
+
+  for (auto& thread : threads) {
+      thread.join();
   }
 }
 

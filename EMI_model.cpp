@@ -452,14 +452,14 @@ int main(int argc, char* argv[])
   using Vector = Dune::BlockVector<Dune::FieldVector<double,1>>;
   typedef Kaskade::NumaBCRSMatrix<Dune::FieldMatrix<double,1,1>> Matrix;
   size_t nDofs = variableSetDesc.degreesOfFreedom(0,nvars);
-
+  int number_elem = gridManager.grid().size(0);
   Assembler assembler(spaces);
 
   auto up = variableSetDesc.variableSet();
   auto u = variableSetDesc.variableSet();
   auto uM = variableSetDesc.variableSet();
   std::cout << "The numeber of dofs: "<< nDofs <<std::endl;
-  std::cout << "The numeber of cells :: "<<gridManager.grid().size(0)<<std::endl;
+  std::cout << "The numeber of cells :: "<<number_elem<<std::endl;
   size_t dof_size = variableSetDesc.degreesOfFreedom(0, 1);
   // ------------------------------------------------------------------------------------
   // initila the data
@@ -590,7 +590,7 @@ int main(int argc, char* argv[])
                       e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, tags,
                       map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
-                      map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains);
+                      map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains, number_elem);
 
   std::vector<int> sequenceOfTags(n_subdomains);
   std::vector<int> sequenceOfTags_extra(n_extra_set); // only extra cellular

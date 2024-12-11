@@ -305,7 +305,8 @@ void mesh_data_structure( FSElement& fse,
                           std::map<int,std::set<int>> & map_GammaNbr_Nbr_noDuplicate,       
                           std::map<int,std::map<int,std::set<int>>> & map_GammaNbr,
                           std::set<int> & interface_extra_dofs,
-                          std::map<int,std::vector<int>> & sequenceOfsubdomains)     
+                          std::map<int,std::vector<int>> & sequenceOfsubdomains,
+                          int number_elem)     
 {
   std::cout << "getInnerInterfaceDofsForeachSubdomain"<<std::endl;
   getInnerInterfaceDofsForeachSubdomain(fse,  
@@ -318,7 +319,8 @@ void mesh_data_structure( FSElement& fse,
                                         coord,
                                         coord_globalIndex,
                                         i2Tag,
-                                        map_IGamma);
+                                        map_IGamma,
+                                        number_elem);
 
   std::cout << "markedIndicesOnInterfacesForeachSubdomain"<<std::endl;
   markedIndicesOnInterfacesForeachSubdomain(fse,

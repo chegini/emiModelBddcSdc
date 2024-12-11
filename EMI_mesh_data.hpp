@@ -799,13 +799,27 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
                        std::map<int, int> & map_indices,
                        std::map<int, int> & map_index_to_subdomain)
 {
+
+  std::map<int, int> map_starting_Index;
   int counter = 0;
+  for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
+  { 
+    map_starting_Index[subIdx] = counter;
+    int tag =  sequenceOfTags[subIdx];
+    
+    std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
+    std::vector<int> gamma_vec(map_GammaGamma_noDuplicate[tag].begin(),map_GammaGamma_noDuplicate[tag].end());
+
+    counter = counter + I_vec.size() + gamma_vec.size();
+  }
+
   for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
   { 
     int tag =  sequenceOfTags[subIdx];
     
     std::vector<int> I_vec(map_II[tag].begin(),map_II[tag].end());
     std::vector<int> gamma_vec(map_GammaGamma_noDuplicate[tag].begin(),map_GammaGamma_noDuplicate[tag].end());
+    
 
     for (int i = 0; i < I_vec.size(); ++i)
     {
@@ -813,9 +827,8 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.first = I_vec[i];
       pairs.second = tag;
 
-      map_indices[I_vec[i]] = counter;
+      map_indices[I_vec[i]] = map_starting_Index[subIdx] + i;
       map_index_to_subdomain[I_vec[i]] = subIdx;
-      counter++;
     }
 
     for (int i = 0; i < gamma_vec.size(); ++i)
@@ -824,9 +837,8 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
       pairs.first = gamma_vec[i];
       pairs.second = tag;
 
-      map_indices[gamma_vec[i]] = counter;
+      map_indices[gamma_vec[i]] = map_starting_Index[subIdx] + I_vec.size() + i;
       map_index_to_subdomain[gamma_vec[i]] = subIdx;
-      counter++;
     }
   }
 }

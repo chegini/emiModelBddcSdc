@@ -768,6 +768,7 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
                         std::map<int,std::unordered_map<int, int>> & global2Local,
                         std::map<int,std::vector<int>> & globalIndices)
 {
+  std::mutex mutex;
   parallelFor(0,sequenceOfTags.size(),[&](int index)
   { 
     int tag =  sequenceOfTags[index];
@@ -782,9 +783,12 @@ void subdomain_indices( std::vector<int> sequenceOfTags,
     local2GlobalMapSubdomain(Interior,Interface,Interface_nbr,local2Global_subIdx);
     global2LocalMapSubdomain(Interior,Interface,Interface_nbr,global2Local_subIdx);
     globalIndicesSubdomain(Interior,Interface,Interface_nbr,globalIndices_subIdx);
-    local2Global[tag] = local2Global_subIdx;
-    global2Local[tag] = global2Local_subIdx;
-    globalIndices[tag] = globalIndices_subIdx;
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      local2Global[tag] = local2Global_subIdx;
+      global2Local[tag] = global2Local_subIdx;
+      globalIndices[tag] = globalIndices_subIdx;
+    }
     // std::cout << "tag: " << tag << " local2Global[tag].size(): " << local2Global[tag].size() <<std::endl;
   });
 }

@@ -907,33 +907,83 @@ void write_Dirichlet_and_coordinates( FSElement& fse,
 
 }
 
-void computed_sequenceOfTags(std::map<int, int> map_t2l, 
-                             std::map<int,std::set<int>> map_IGamma_noDuplicate,
-                             std::map<int,std::map<int,std::set<int>>> map_GammaNbr, 
-                             std::vector<int> & sequenceOfTags, 
-                             std::vector<int> & sequenceOfTags_extra,
-                             std::map<int,int> & startingIndexOfTag, 
-                             std::map<int,int> & Tag2IndexSub,
-                             std::map<int,int> & map_nT2oT)
+void computed_sequenceOfTags(
+    const std::map<int, std::set<int>>& map_IGamma_noDuplicate,
+    std::vector<int>& sequenceOfTags, 
+    std::vector<int>& sequenceOfTags_extra,
+    std::map<int, int>& startingIndexOfTag, 
+    std::map<int, int>& Tag2IndexSub,
+    std::map<int, int>& map_nT2oT) 
 {  
-  int start = 0;
-  int index = 0;
-  int index_even = 0; // only extracellular
-  int nTag = 0;
-  for ( const auto &IGamma : map_IGamma_noDuplicate ) {
-    int tag = IGamma.first;
-    sequenceOfTags[index] = tag;
-    Tag2IndexSub[tag] = index;
-    if(tag%2==0) {
-      sequenceOfTags_extra[index_even] = tag;
-      index_even++;
-    } 
-    startingIndexOfTag[tag] = start;
-    start+=IGamma.second.size() ;
-    map_nT2oT[nTag] = tag;
-    nTag++;
-    index++;
-  }
+    // Mutex for shared resources
+    std::mutex mutex;
+    std::atomic<int> start(0);  // Atomic for consistent start index across threads
+    std::atomic<int> index(0);
+    std::atomic<int> index_even(0);
+    std::atomic<int> nTag(0);
+
+    // Convert map to vector for easy chunking
+    std::vector<std::pair<int, std::set<int>>> IGammaVector(
+        map_IGamma_noDuplicate.begin(), map_IGamma_noDuplicate.end());
+
+    size_t totalSize = IGammaVector.size();
+    size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+    size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+
+    // Vector to store threads
+    std::vector<std::thread> threads;
+
+    for (size_t t = 0; t < numThreads; ++t) 
+    {
+        size_t startIdx = t * chunkSize;
+        size_t endIdx = std::min(startIdx + chunkSize, totalSize);
+
+        threads.emplace_back([&, startIdx, endIdx]() {
+            for (size_t i = startIdx; i < endIdx; ++i) {
+                const auto& IGamma = IGammaVector[i];
+                int tag = IGamma.first;
+
+                // Local variables for updates
+                int local_start = 0;
+                int local_index = 0;
+                int local_index_even = 0;
+                int local_nTag = 0;
+
+                // Synchronize updates to shared resources
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+
+                    // Update sequenceOfTags
+                    sequenceOfTags[index] = tag;
+
+                    // Update Tag2IndexSub
+                    Tag2IndexSub[tag] = index;
+
+                    // Update sequenceOfTags_extra for even tags
+                    if (tag % 2 == 0) {
+                        sequenceOfTags_extra[index_even] = tag;
+                        local_index_even = index_even.fetch_add(1, std::memory_order_relaxed);
+                    }
+
+                    // Update startingIndexOfTag
+                    startingIndexOfTag[tag] = start;
+
+                    // Update start, map_nT2oT, and indices
+                    local_start = start.fetch_add(IGamma.second.size(), std::memory_order_relaxed);
+                    map_nT2oT[local_nTag] = tag;
+                    local_nTag = nTag.fetch_add(1, std::memory_order_relaxed);
+                    local_index = index.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
 }
 
 void marked_corners(std::vector<int> arr_extra, std::vector<int> sequenceOfTags, std::map<int,int> map_indices, std::vector<std::set<int>> i2t, 

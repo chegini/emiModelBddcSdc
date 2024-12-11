@@ -597,7 +597,7 @@ int main(int argc, char* argv[])
   // extracellular is only even number
   std::map<int,int> startingIndexOfTag;
   std::map<int,int> Tag2IndexSub;
-  computed_sequenceOfTags(map_t2l,map_IGamma_noDuplicate, map_GammaNbr, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, Tag2IndexSub, map_nT2oT);
+  computed_sequenceOfTags(map_IGamma_noDuplicate, sequenceOfTags, sequenceOfTags_extra, startingIndexOfTag, Tag2IndexSub, map_nT2oT);
 
   if(false)
   {

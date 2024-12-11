@@ -293,8 +293,7 @@ void mesh_data_structure( FSElement& fse,
                           std::map<int, std::vector<double>> & coord_globalIndex, 
                           std::vector<int>& i2Tag,  
                           std::set<int>& tags,                                    
-                          std::map<int, int> & map_t2l,                                
-                          std::map<int, int> & map_sT2l,                               
+                          std::map<int, int> & map_t2l,                                                              
                           std::map<int,std::set<int>> & map_II,                         
                           std::map<int,std::set<int>> & map_IGamma,                    
                           std::map<int,std::set<int>> & map_GammaGamma,
@@ -439,75 +438,120 @@ void mesh_data_structure( FSElement& fse,
 
   // REMOVE THE INTERFACES FROM ONE OF THE EXTERNAL, 
   // IT MEANS ONLY ONE EXTRA CELLULAR SUBDOMAIN WILL HAVE THE DOFS ON THE COMMON INTERFACES BETWEEN DIFFERENT EXTRACELLULAR SUBDOMAINS
-  map_IGamma_noDuplicate = map_IGamma;
-  map_GammaGamma_noDuplicate = map_GammaGamma;
-  for (int i = 0; i < i2t.size(); ++i)
   {
-    std::set<int> s = i2t[i];
-    std::set<int> s_ii = i2i[i];
-    std::set<int>::iterator itr;
-    std::set<int>::iterator itr_s_ii;
-    std::set<int>::iterator itr_g_nbr;
+    map_IGamma_noDuplicate = map_IGamma;
+    map_GammaGamma_noDuplicate = map_GammaGamma;
 
-    if(s.size()>1){
-      int count = 0;
-      for (itr = s.begin(); itr != s.end(); itr++) 
+    // Convert i2t to a vector for easier chunking
+    size_t totalSize = i2t.size();
+    size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+    size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+
+    // Mutex for synchronizing map access across threads
+    std::mutex mutex;
+
+    // Vector to store threads
+    std::vector<std::thread> threads;
+
+    // Parallelize the loop over i2t (divided into chunks)
+    for (size_t t = 0; t < numThreads; ++t) 
+    {
+      size_t startIdx = t * chunkSize;
+      size_t endIdx = std::min(startIdx + chunkSize, totalSize);
+
+      threads.emplace_back([&, startIdx, endIdx]() {
+          for (size_t i = startIdx; i < endIdx; ++i) {
+              std::set<int> s = i2t[i];
+
+              if (s.size() > 1) {
+                  int count = 0;
+                  for (auto itr = s.begin(); itr != s.end(); ++itr) {
+                      if (count == 0) {
+                          i2Tag[i] = *itr;
+                          std::lock_guard<std::mutex> lock(mutex);  // Ensure thread-safe modification
+                          interface_extra_dofs.insert(i);
+                      }
+                      if (count > 0) {
+                          // Locking to ensure safe modification of shared maps
+                          std::lock_guard<std::mutex> lock(mutex);
+                          map_IGamma_noDuplicate[*itr].erase(i);
+                          map_GammaGamma_noDuplicate[*itr].erase(i);
+                      }
+                      count++;
+                  }
+              } else {
+                  std::vector<int> v(s.begin(), s.end());
+                  i2Tag[i] = v[0];
+              }
+          }
+      });
+    }
+
+    // Join all threads to ensure completion
+    for (auto& thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+  }
+
+  // GET only neighbors without duplication the extra cellular
+  // question, I should make them belong to one subdomain???
+  {
+    // Mutex for synchronizing map access across threads
+    std::mutex mutex;
+    
+    // Create a vector to hold threads
+    std::vector<std::thread> threads;
+
+    // Convert map_IGamma_noDuplicate to a vector for easier chunking
+    size_t totalSize = map_IGamma_noDuplicate.size();
+    size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+    size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+
+    // Parallelize the loop over map_IGamma_noDuplicate (divided into chunks)
+    for (size_t t = 0; t < numThreads; ++t) 
+    {
+      size_t startIdx = t * chunkSize;
+      size_t endIdx = std::min(startIdx + chunkSize, totalSize);
+
+      threads.emplace_back([&, startIdx, endIdx]() 
       {
-        if(count==0) {
-          i2Tag[i] = *itr;
-          interface_extra_dofs.insert(i);
+        auto it = std::next(map_IGamma_noDuplicate.begin(), startIdx);
+        auto endIt = std::next(map_IGamma_noDuplicate.begin(), endIdx);
+
+        for (; it != endIt; ++it) {
+            const auto& Gamma = *it;
+            int tag = Gamma.first;
+            std::set<int> difference;
+            std::set<int>::iterator itr;
+            std::set<int> tags;
+
+            // Use std::set_difference to find the difference between set1 and set2
+            std::set_difference(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end(),
+                                map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
+                                std::inserter(difference, difference.begin()));
+
+            for (itr = difference.begin(); itr != difference.end(); itr++) {
+                tags.insert(i2Tag[*itr]);
+            }
+            std::vector<int> tags_vec(tags.begin(), tags.end());
+
+            // Synchronize writes to shared resources using mutex
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                sequenceOfsubdomains[tag] = tags_vec;
+                map_GammaNbr_Nbr_noDuplicate[tag] = difference;
+            }
         }
-        if(count>0){
-          map_IGamma_noDuplicate[*itr].erase(i);
-          map_GammaGamma_noDuplicate[*itr].erase(i);
+      });
+    }
+
+    // Join all threads to ensure completion
+    for (auto& thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
         }
-        count++;
-      }
-    }else{
-      std::vector<int> v(s.begin(),s.end());
-      i2Tag[i] = v[0];
-    }
-  }
-
-  // GET only neighbrs without duplication the extra cellular
-  // question, I should make them be,ong to one subdomain???
-  for ( const auto &Gamma : map_IGamma_noDuplicate ) 
-  {
-    int tag = Gamma.first;
-    std::set<int> difference;
-    std::set<int>::iterator itr;
-    std::set<int> tags;
-    // Use std::set_difference to find the difference between set1 and set2
-    std::set_difference(map_GammaGamma_W_Nbr[tag].begin(), map_GammaGamma_W_Nbr[tag].end(),
-                        map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end(),
-                        std::inserter(difference, difference.begin()));
- 
-    for (itr = difference.begin(); itr != difference.end(); itr++)
-    {
-      tags.insert(i2Tag[*itr]);
-    }
-    std::vector<int> tags_vec(tags.begin(), tags.end());
-    sequenceOfsubdomains[tag] = tags_vec;
-    map_GammaNbr_Nbr_noDuplicate[tag] = difference;
-  }
-
-  int n_count = 0;
-  {
-    std::map<int, int>::iterator it;
-
-    for (it = map_t2l.begin(); it != map_t2l.end(); it++)
-    {
-      map_sT2l[n_count] = it->second; 
-      if(false){
-      std::cout   << "pre( "<<it->first    // tag
-          << ':'
-          << it->second << " ) -> "   // length of dosf for this tag 
-          << "next( "<< n_count    // new tag
-          << ':'
-          << it->second << " ) "   // length of dosf for this tag 
-          << std::endl;       
-      } 
-      n_count++;
     }
   }
 

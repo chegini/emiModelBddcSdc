@@ -569,7 +569,6 @@ int main(int argc, char* argv[])
   std::vector<int> i2Tag(dof_size);                              //index to tags
   std::set<int> tags;                                            // list of tags
   std::map<int, int> map_t2l;                                    //map: tag to lenth
-  std::map<int, int> map_sT2l;                                   //map: sequance of each tag to length
   std::map<int,int> map_nT2oT;                                   //map: new Tag to original Tag
                               
   std::map<int,std::set<int>> map_II;                            // II
@@ -588,7 +587,7 @@ int main(int argc, char* argv[])
   mesh_data_structure(boost::fusion::at_c<0>(u.data),  
                       material, arr_extra,
                       e2i, i2e, i2t, e2e, i2i, coord, coord_globalIndex, i2Tag, tags,
-                      map_t2l, map_sT2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
+                      map_t2l, map_II, map_IGamma, map_GammaGamma, map_IGamma_noDuplicate, 
                       map_GammaGamma_noDuplicate, map_GammaGamma_W_Nbr, map_GammaNbr_Nbr, 
                       map_GammaNbr_Nbr_noDuplicate, map_GammaNbr, interface_extra_dofs,sequenceOfsubdomains, number_elem);
 

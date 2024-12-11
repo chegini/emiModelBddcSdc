@@ -60,6 +60,8 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::map<int,std::set<int>> & map_IGamma)
 {
 
+  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
   std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;

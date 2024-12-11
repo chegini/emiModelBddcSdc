@@ -1250,17 +1250,14 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // ------------------------------------------------------------------------------------
   // construct mass and stiffness matrix from semi-implicit structure
   // ------------------------------------------------------------------------------------ 
-  int n = sequenceOfTags.size();
-  std::vector<std::thread> threads_original;
+  int n_subs = sequenceOfTags.size();
 
   std::mutex matrixMutex; // Protect shared resources
   std::mutex subMatricesMutex; // Mutex to protect access to shared subMatrices
 
-  int chunkSize = (n + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
+  int chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
   {
       std::vector<std::future<void>> futures;
-
-      int n_subs = sequenceOfTags.size();
 
       for (int threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
           int startIdx = threadIdx * chunkSize;
@@ -1438,7 +1435,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
   // Divide the subdomains among threads
   for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
     int startIdx = threadIdx * chunkSize;
-    int endIdx = std::min(startIdx + chunkSize, n);
+    int endIdx = std::min(startIdx + chunkSize, n_subs);
     threads.emplace_back([startIdx, endIdx, &sequenceOfTags, &creator, &subMatrices, &A_petsc, &rhs_petsc_test, &Fs_petcs, &weights, &matrixMutex]() {
       for (size_t subIdx = startIdx; subIdx < endIdx; ++subIdx) {
         Matrix subMatrix(creator);

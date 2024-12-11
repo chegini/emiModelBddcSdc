@@ -212,154 +212,139 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
  * \param i2i update index to indices of other region with different matrial intersection
  */
 
-template< class FSElement, class Function, class Material>
-void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,  
-                                 Function const& fu, 
-                                 Material const & material, 
-                                 std::map<std::pair<int, int>, std::vector<double>> & coord,
-                                 // std::vector<std::vector<double>> & icoord,
-                                 std::vector<std::vector<int>> & e2i, 
-                                 std::vector<std::set<int>> & e2e,
-                                 std::vector<std::set<int>> & i2i,
-                                 std::map<int,std::set<int>> & map_GammaGamma,
-                                 std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,
-                                 std::map<int,std::map<int,std::set<int>>> & map_GammaNbr) 
+// Multithreaded version of the function
+template<class FSElement, class Function, class Material>
+void markedIndicesOnInterfacesForeachSubdomain(
+    FSElement& fse,
+    Function const& fu,
+    Material const& material,
+    std::map<std::pair<int, int>, std::vector<double>>& coord,
+    std::vector<std::vector<int>>& e2i,
+    std::vector<std::set<int>>& e2e,
+    std::vector<std::set<int>>& i2i,
+    std::map<int, std::set<int>>& map_GammaGamma,
+    std::map<int, std::set<int>>& map_GammaGamma_W_Nbr,
+    std::map<int, std::map<int, std::set<int>>>& map_GammaNbr)
 {
-  typedef typename FSElement::Space ImageSpace;
-  typedef typename ImageSpace::Grid Grid;
+    typedef typename FSElement::Space ImageSpace;
+    typedef typename ImageSpace::Grid Grid;
 
-  std::map<std::pair<int, int>, std::vector<double>>::iterator it_coord;
+    auto const& gridView = fse.space().gridView();
+    auto cbegin = fse.space().gridView().template begin<0>();
+    auto const cend = fse.space().gridView().template end<0>(); //  cell end
 
-  DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
+    std::mutex mutex_e2e, mutex_i2i, mutex_map_GammaGamma, mutex_map_GammaGamma_W_Nbr, mutex_map_GammaNbr;
 
-  fse.coefficients() = typename ImageSpace::Scalar(0.0);
+    size_t numThreads = std::thread::hardware_concurrency();
+    size_t totalCells = std::distance(cbegin, cend);
+    size_t chunkSize = (totalCells + numThreads - 1) / numThreads;
 
-  typename ImageSpace::Evaluator isfs(fse.space());
+    auto worker = [&](size_t start, size_t end) {
+      auto ci = cbegin;
+      std::advance(ci, start);
+        for (size_t idx = start; idx < end && ci != cend; ++idx, ++ci) 
+        {
+          auto eIndex = fse.space().indexSet().index(*ci);
 
-  auto const cend = fse.space().gridView().template end<0>();
-  std::map<int,std::set<int>>::iterator it_gamma;
-  std::map<int,std::set<int>>::iterator it_gammaNbr;
+          typename ImageSpace::Evaluator isfs(fse.space());
+          isfs.moveTo(*ci);
 
-  std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
-  std::map<int,std::set<int>>::iterator it_GammaNbr_i;
+          auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+          auto dof_u = fse.space().mapper().globalIndices(*ci);
+          int nrNodes = dof_u.size();
 
-  using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
-  std::vector<ValueType> fuvalue; // declare here to prevent reallocations
-  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
-  {
-    auto eIndex = fse.space().indexSet().index(*ci);
-    isfs.moveTo(*ci);
+          Dune::FieldVector<double, ImageSpace::dim> zero(0.0);
+          int material_var = material.value(*ci, zero);
 
-    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-    globalValues.setSize(localCoordinate.size(),1);
-
-    using Cell = decltype(ci);
-    auto dof_u = fse.space().mapper().globalIndices(*ci);
-    int nrNodes = dof_u.size();
-
-    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-    int material_var = material.value(*ci,zero);
-
-    std::set<int> s = e2e[eIndex];
-    s.insert(eIndex);
-    e2e[eIndex] = s; 
-
-    for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
-      if(intersection.neighbor()){
-        int eNbrIndex = fse.space().gridView().indexSet().index(intersection.outside());  
-        if(material.value(*ci,zero)!=material.value(intersection.outside(),zero)) {
-          
-          int material_nbr = material.value(intersection.outside(),zero);
-
-          for (int i = 0; i < e2i[eIndex].size(); ++i)
+          // Update e2e
           {
-            int nIndex_c1 = e2i[eIndex][i];
-            std::pair<int,int> pairs;
-            pairs.first = nIndex_c1;
-            pairs.second = material_var;
-
-            std::set<int> s_index = i2i[nIndex_c1];
-            for (int j = 0; j < e2i[eNbrIndex].size(); ++j)
-            {
-              int nIndex_c2 = e2i[eNbrIndex][j];
-              std::pair<int,int> pairs_nbr;
-              pairs_nbr.first = nIndex_c2;
-              pairs_nbr.second = material_nbr;
-              bool matched = false;
-              if (ImageSpace::dim == 2) {
-                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
-                            coord[pairs][1] == coord[pairs_nbr][1];
-              } else if (ImageSpace::dim == 3) {
-                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
-                            coord[pairs][1] == coord[pairs_nbr][1] &&
-                                              coord[pairs][2] == coord[pairs_nbr][2];
-              }
-              if(matched)
-              {
-                s_index.insert(nIndex_c2);
-                // adding all the gammagamma for matreial 
-                it_gamma = map_GammaGamma.find(material_var);
-                if(it_gamma!= map_GammaGamma.end()){
-                  std::set<int> gamma = it_gamma->second;
-                  gamma.insert(nIndex_c1);
-                  it_gamma->second = gamma;
-
-                  // gamma + nbr
-                  it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
-                  std::set<int> gammaNbr = it_gammaNbr->second;
-                  gammaNbr.insert(nIndex_c1);
-                  gammaNbr.insert(nIndex_c2);
-                  it_gammaNbr->second = gammaNbr;
-
-                  // nbr
-                  it_GammaNbr = map_GammaNbr.find(material_var);
-                  std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
-                  it_GammaNbr_i = gamma_nbr.find(material_nbr);
-                  if(it_GammaNbr_i!= gamma_nbr.end()){
-                    std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
-                    gamma_nbr_i.insert(nIndex_c2);
-                    it_GammaNbr_i->second = gamma_nbr_i;
-                    it_GammaNbr->second = gamma_nbr;
-                  }else{
-                    std::set<int> gamma_nbr_i;
-                    gamma_nbr_i.insert(nIndex_c2);
-                    gamma_nbr[material_nbr] = gamma_nbr_i;
-                    it_GammaNbr->second = gamma_nbr; 
-                  }
-
-                }else{
-                  std::set<int> gamma;
-                  gamma.insert(nIndex_c1);
-                  map_GammaGamma[material_var] = gamma;
-
-                  // gamma + nbr
-                  std::set<int> gammaNbr;
-                  gammaNbr.insert(nIndex_c1);
-                  gammaNbr.insert(nIndex_c2);
-                  map_GammaGamma_W_Nbr[material_var] = gammaNbr;
-
-                  // nbr
-                  std::map<int,std::set<int>> gamma_nbr;
-                  std::set<int> gamma_nbr_value;
-                  gamma_nbr_value.insert(nIndex_c2);
-                  gamma_nbr[material_nbr] = gamma_nbr_value;
-                  map_GammaNbr[material_var] = gamma_nbr;
-
-                }
-                break;
-              }
-            }
-            i2i[nIndex_c1] = s_index;
+              std::lock_guard<std::mutex> lock(mutex_e2e);
+              e2e[eIndex].insert(eIndex);
           }
-          std::set<int> s = e2e[eIndex];
-          s.insert(eNbrIndex);
-          e2e[eIndex] = s; 
-        }
-      }
-    }
-  }
-}
 
+          for (auto const& intersection : intersections(fse.space().gridView(), *ci)) {
+              if (intersection.neighbor()) {
+                  int eNbrIndex = fse.space().gridView().indexSet().index(intersection.outside());
+
+                  if (material.value(*ci, zero) != material.value(intersection.outside(), zero)) {
+                      int material_nbr = material.value(intersection.outside(), zero);
+
+                      for (int i = 0; i < e2i[eIndex].size(); ++i) {
+                          int nIndex_c1 = e2i[eIndex][i];
+                          std::pair<int, int> pairs{nIndex_c1, material_var};
+
+                          std::set<int> s_index;
+                          {
+                              std::lock_guard<std::mutex> lock(mutex_i2i);
+                              s_index = i2i[nIndex_c1];
+                          }
+
+                          for (int j = 0; j < e2i[eNbrIndex].size(); ++j) {
+                              int nIndex_c2 = e2i[eNbrIndex][j];
+                              std::pair<int, int> pairs_nbr{nIndex_c2, material_nbr};
+
+                              bool matched = false;
+                              if (ImageSpace::dim == 2) {
+                                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
+                                            coord[pairs][1] == coord[pairs_nbr][1];
+                              } else if (ImageSpace::dim == 3) {
+                                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
+                                            coord[pairs][1] == coord[pairs_nbr][1] &&
+                                            coord[pairs][2] == coord[pairs_nbr][2];
+                              }
+
+                              if (matched) {
+                                  s_index.insert(nIndex_c2);
+
+                                  {
+                                      std::lock_guard<std::mutex> lock(mutex_map_GammaGamma);
+                                      map_GammaGamma[material_var].insert(nIndex_c1);
+                                  }
+
+                                  {
+                                      std::lock_guard<std::mutex> lock(mutex_map_GammaGamma_W_Nbr);
+                                      auto& gammaNbr = map_GammaGamma_W_Nbr[material_var];
+                                      gammaNbr.insert(nIndex_c1);
+                                      gammaNbr.insert(nIndex_c2);
+                                  }
+
+                                  {
+                                      std::lock_guard<std::mutex> lock(mutex_map_GammaNbr);
+                                      auto& gammaNbr = map_GammaNbr[material_var][material_nbr];
+                                      gammaNbr.insert(nIndex_c2);
+                                  }
+
+                                  break;
+                              }
+                          }
+
+                          {
+                              std::lock_guard<std::mutex> lock(mutex_i2i);
+                              i2i[nIndex_c1] = s_index;
+                          }
+                      }
+
+                      {
+                          std::lock_guard<std::mutex> lock(mutex_e2e);
+                          e2e[eIndex].insert(eNbrIndex);
+                      }
+                  }
+              }
+          }
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (size_t t = 0; t < numThreads; ++t) {
+        size_t start = t * chunkSize;
+        size_t end = std::min(start + chunkSize, totalCells);
+        threads.emplace_back(worker, start, end);
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
 
 template<class FSElement, class Function, class Material>
 void markedIndicesForDirichlet(FSElement& fse,

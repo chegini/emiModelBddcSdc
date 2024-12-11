@@ -244,120 +244,68 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
               std::pair<int,int> pairs_nbr;
               pairs_nbr.first = nIndex_c2;
               pairs_nbr.second = material_nbr;
-              if(ImageSpace::dim==2){
-                if(coord[pairs][0]==coord[pairs_nbr][0] and
-                   coord[pairs][1]==coord[pairs_nbr][1] ){
-                  s_index.insert(nIndex_c2);
-
-                  // adding all the gammagamma for matreial 
-                  it_gamma = map_GammaGamma.find(material_var);
-                  if(it_gamma!= map_GammaGamma.end()){
-                    std::set<int> gamma = it_gamma->second;
-                    gamma.insert(nIndex_c1);
-                    it_gamma->second = gamma;
-
-                    // gamma + nbr
-                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
-                    std::set<int> gammaNbr = it_gammaNbr->second;
-                    gammaNbr.insert(nIndex_c1);
-                    gammaNbr.insert(nIndex_c2);
-                    it_gammaNbr->second = gammaNbr;
-
-                    // nbr
-                    it_GammaNbr = map_GammaNbr.find(material_var);
-                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
-                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
-                    if(it_GammaNbr_i!= gamma_nbr.end()){
-                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
-                      gamma_nbr_i.insert(nIndex_c2);
-                      it_GammaNbr_i->second = gamma_nbr_i;
-                      it_GammaNbr->second = gamma_nbr;
-                    }else{
-                      std::set<int> gamma_nbr_i;
-                      gamma_nbr_i.insert(nIndex_c2);
-                      gamma_nbr[material_nbr] = gamma_nbr_i;
-                      it_GammaNbr->second = gamma_nbr; 
-                    }
-
-                  }else{
-                    std::set<int> gamma;
-                    gamma.insert(nIndex_c1);
-                    map_GammaGamma[material_var] = gamma;
-
-                    // gamma + nbr
-                    std::set<int> gammaNbr;
-                    gammaNbr.insert(nIndex_c1);
-                    gammaNbr.insert(nIndex_c2);
-                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
-
-                    // nbr
-                    std::map<int,std::set<int>> gamma_nbr;
-                    std::set<int> gamma_nbr_value;
-                    gamma_nbr_value.insert(nIndex_c2);
-                    gamma_nbr[material_nbr] = gamma_nbr_value;
-                    map_GammaNbr[material_var] = gamma_nbr;
-
-                  }
-                  break;
-                }                
+              bool matched = false;
+              if (ImageSpace::dim == 2) {
+                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
+                            coord[pairs][1] == coord[pairs_nbr][1];
+              } else if (ImageSpace::dim == 3) {
+                  matched = coord[pairs][0] == coord[pairs_nbr][0] &&
+                            coord[pairs][1] == coord[pairs_nbr][1] &&
+                                              coord[pairs][2] == coord[pairs_nbr][2];
               }
-              else if(ImageSpace::dim==3){
-                if(coord[pairs][0]==coord[pairs_nbr][0] and
-                   coord[pairs][1]==coord[pairs_nbr][1] and
-                   coord[pairs][2]==coord[pairs_nbr][2] ){
-                  s_index.insert(nIndex_c2);
+              if(matched)
+              {
+                s_index.insert(nIndex_c2);
+                // adding all the gammagamma for matreial 
+                it_gamma = map_GammaGamma.find(material_var);
+                if(it_gamma!= map_GammaGamma.end()){
+                  std::set<int> gamma = it_gamma->second;
+                  gamma.insert(nIndex_c1);
+                  it_gamma->second = gamma;
 
-                  // adding all the gammagamma for matreial 
-                  it_gamma = map_GammaGamma.find(material_var);
-                  if(it_gamma!= map_GammaGamma.end()){
-                    std::set<int> gamma = it_gamma->second;
-                    gamma.insert(nIndex_c1);
-                    it_gamma->second = gamma;
+                  // gamma + nbr
+                  it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
+                  std::set<int> gammaNbr = it_gammaNbr->second;
+                  gammaNbr.insert(nIndex_c1);
+                  gammaNbr.insert(nIndex_c2);
+                  it_gammaNbr->second = gammaNbr;
 
-                    // gamma + nbr
-                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
-                    std::set<int> gammaNbr = it_gammaNbr->second;
-                    gammaNbr.insert(nIndex_c1);
-                    gammaNbr.insert(nIndex_c2);
-                    it_gammaNbr->second = gammaNbr;
-
-                    // nbr
-                    it_GammaNbr = map_GammaNbr.find(material_var);
-                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
-                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
-                    if(it_GammaNbr_i!= gamma_nbr.end()){
-                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
-                      gamma_nbr_i.insert(nIndex_c2);
-                      it_GammaNbr_i->second = gamma_nbr_i;
-                      it_GammaNbr->second = gamma_nbr;
-                    }else{
-                      std::set<int> gamma_nbr_i;
-                      gamma_nbr_i.insert(nIndex_c2);
-                      gamma_nbr[material_nbr] = gamma_nbr_i;
-                      it_GammaNbr->second = gamma_nbr;
-                    }
-
+                  // nbr
+                  it_GammaNbr = map_GammaNbr.find(material_var);
+                  std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
+                  it_GammaNbr_i = gamma_nbr.find(material_nbr);
+                  if(it_GammaNbr_i!= gamma_nbr.end()){
+                    std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
+                    gamma_nbr_i.insert(nIndex_c2);
+                    it_GammaNbr_i->second = gamma_nbr_i;
+                    it_GammaNbr->second = gamma_nbr;
                   }else{
-                    std::set<int> gamma;
-                    gamma.insert(nIndex_c1);
-                    map_GammaGamma[material_var] = gamma;
-
-                    // gamma +nbr
-                    std::set<int> gammaNbr;
-                    gammaNbr.insert(nIndex_c1);
-                    gammaNbr.insert(nIndex_c2);
-                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
-
-                    // nbr
-                    std::map<int,std::set<int>> gamma_nbr;
-                    std::set<int> gamma_nbr_value;
-                    gamma_nbr_value.insert(nIndex_c2);
-                    gamma_nbr[material_nbr] = gamma_nbr_value;
-                    map_GammaNbr[material_var] = gamma_nbr;  
-
+                    std::set<int> gamma_nbr_i;
+                    gamma_nbr_i.insert(nIndex_c2);
+                    gamma_nbr[material_nbr] = gamma_nbr_i;
+                    it_GammaNbr->second = gamma_nbr; 
                   }
-                  break;
-                }                
+
+                }else{
+                  std::set<int> gamma;
+                  gamma.insert(nIndex_c1);
+                  map_GammaGamma[material_var] = gamma;
+
+                  // gamma + nbr
+                  std::set<int> gammaNbr;
+                  gammaNbr.insert(nIndex_c1);
+                  gammaNbr.insert(nIndex_c2);
+                  map_GammaGamma_W_Nbr[material_var] = gammaNbr;
+
+                  // nbr
+                  std::map<int,std::set<int>> gamma_nbr;
+                  std::set<int> gamma_nbr_value;
+                  gamma_nbr_value.insert(nIndex_c2);
+                  gamma_nbr[material_nbr] = gamma_nbr_value;
+                  map_GammaNbr[material_var] = gamma_nbr;
+
+                }
+                break;
               }
             }
             i2i[nIndex_c1] = s_index;

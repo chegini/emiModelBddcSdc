@@ -832,17 +832,6 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
   }
 }
 
-void removeInnerIndices_i2i(std::vector<std::set<int>> & i2i)
-{
-  for (int i = 0; i < i2i.size(); ++i)
-  {
-    std::set<int> s = i2i[i];
-    // if(s.size()==1) {
-    //   i2i.erase(i2i.begin()+i);
-    // }
-  }
-}
-
 void compute_sharedDofsKaskade_moreExtraCells( std::vector<int> sequenceOfTags, 
                                 std::map<int, int> map_indices, 
                                 std::map<int,std::set<int>> map_II,

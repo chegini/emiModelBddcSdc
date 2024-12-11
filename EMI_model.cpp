@@ -639,8 +639,6 @@ int main(int argc, char* argv[])
   std::cout <<"DONE!!!" <<std::endl;
   // return 0;
 
-  std::set<std::set<int>> i2iSet_;
-  removeInnerIndices_i2i(i2i);
   std::set<std::set<int>> i2iSet(i2i.begin(),i2i.end());  //index to index only those has more than one neighours on the interfaces ?
 
   {

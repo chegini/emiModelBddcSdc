@@ -57,11 +57,9 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
                                            std::map<std::pair<int, int>, std::vector<double>> & coord,
                                            std::map<int, std::vector<double>> & coord_globalIndex, 
                                            std::vector<int> & i2T,
-                                           std::map<int,std::set<int>> & map_IGamma,
+                                           std::map<int,std::set<int>> & map_IGamma, 
                                            int number_elem)
 {
-
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
@@ -74,7 +72,6 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
 
   typename ImageSpace::Evaluator isfs(fse.space()); // evalautor of finite space element
 
-  auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>(); //  cell end
 
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
@@ -82,102 +79,84 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
   std::map<int,int>::iterator it;
   std::map<int,std::set<int>>::iterator it_igamma;
 
-  int totalCells = std::distance(cbegin, cend);
-  int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
+  // iterate over cells
+  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
+  {
+    auto eIndex = fse.space().indexSet().index(*ci); // get cell index
+    isfs.moveTo(*ci); 
 
-  std::mutex mutex_global;
+    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+    globalValues.setSize(localCoordinate.size(),1); // not used!
 
-  auto processCells = [&](int startIdx, int endIdx) {
-    auto ci = cbegin;
-    std::advance(ci, startIdx);
-    for (int cellIdx = startIdx; cellIdx < endIdx && ci != cend; ++cellIdx, ++ci) 
+
+    using Cell = decltype(ci);
+    auto dof_u = fse.space().mapper().globalIndices(*ci);
+    int nrNodes = dof_u.size();
+
+    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+    int material_var = material.value(*ci,zero);
+
+    // iterate over nodes of each cell
+    for (int i = 0; i < isfs.globalIndices().size(); ++i) 
     {
+      int nIndex = isfs.globalIndices()[i];
+      std::pair<int,int> pairs;
+      pairs.first = nIndex;
+      pairs.second = material_var;
 
-      auto eIndex = fse.space().indexSet().index(*ci);
-      typename ImageSpace::Evaluator isfs(fse.space());
-      isfs.moveTo(*ci);
+      e2i[eIndex].push_back(nIndex); // e2n
+      
+      std::set<int> s_index = i2i[nIndex];
+      s_index.insert(nIndex);
+      i2i[nIndex] = s_index; 
 
-      auto const& localCoordinate = isfs.shapeFunctions().interpolationNodes();
-      auto dof_u = fse.space().mapper().globalIndices(*ci);
+      std::set<int> cell_indices = i2e[nIndex];
+      cell_indices.insert(eIndex);
+      i2e[nIndex] = cell_indices;
 
-      int material_var = material.value(*ci, Dune::FieldVector<double, ImageSpace::dim>(0.0));
+      std::set<int> tags = i2t[nIndex];
+      tags.insert(material_var);
+      i2t[nIndex] = tags;
 
-      std::lock_guard<std::mutex> lock(mutex_global);
-      {
-        // iterate over nodes of each cell
-        for (int i = 0; i < isfs.globalIndices().size(); ++i) 
-        {
-          int nIndex = isfs.globalIndices()[i];
-          std::pair<int,int> pairs;
-          pairs.first = nIndex;
-          pairs.second = material_var;
+      auto x = fu.value(*ci,localCoordinate[i]);
 
-          e2i[eIndex].push_back(nIndex); // e2n
-          
-          std::set<int> s_index = i2i[nIndex];
-          s_index.insert(nIndex);
-          i2i[nIndex] = s_index; 
-
-          std::set<int> cell_indices = i2e[nIndex];
-          cell_indices.insert(eIndex);
-          i2e[nIndex] = cell_indices;
-
-          std::set<int> tags = i2t[nIndex];
-          tags.insert(material_var);
-          i2t[nIndex] = tags;
-
-          auto x = fu.value(*ci,localCoordinate[i]);
-
-          it_coord_glabalIndex = coord_globalIndex.find(nIndex);
-          if (it_coord_glabalIndex == coord_globalIndex.end()){
-             for (int j = 0; j < x.size(); ++j){
-              coord_globalIndex[nIndex].push_back(x[j]);
-            }
-          }
+      it_coord_glabalIndex = coord_globalIndex.find(nIndex);
+      if (it_coord_glabalIndex == coord_globalIndex.end()){
+         for (int j = 0; j < x.size(); ++j){
+          coord_globalIndex[nIndex].push_back(x[j]);
+        }
+      }
 
 
-          it_coord = coord.find(pairs);
-          if (it_coord == coord.end()){
-            i2T[nIndex] = material_var;
-            // // count the number of dof for each subdomain
-            // it = map_t2l.find(material_var);
-            // if (map_t2l[material_var]!=0){
-            //   int old = it->second;
-            //   it->second = old+1;
-            // }else{
-            //   map_t2l[material_var] = 1;
-            // }
+      it_coord = coord.find(pairs);
+      if (it_coord == coord.end()){
+        i2T[nIndex] = material_var;
+        // // count the number of dof for each subdomain
+        // it = map_t2l.find(material_var);
+        // if (map_t2l[material_var]!=0){
+        //   int old = it->second;
+        //   it->second = old+1;
+        // }else{
+        //   map_t2l[material_var] = 1;
+        // }
 
-            for (int j = 0; j < x.size(); ++j){
-              coord[pairs].push_back(x[j]);
-            }
+        for (int j = 0; j < x.size(); ++j){
+          coord[pairs].push_back(x[j]);
+        }
 
-            // adding all the igamma for matreial 
-            it_igamma = map_IGamma.find(material_var);
-            if(it_igamma!= map_IGamma.end()){
-              std::set<int> igamma = it_igamma->second;
-              igamma.insert(nIndex);
-              it_igamma->second = igamma;
-            }else{
-              std::set<int> igamma;
-              igamma.insert(nIndex);
-              map_IGamma[material_var] = igamma;
-            }
-          }
+        // adding all the igamma for matreial 
+        it_igamma = map_IGamma.find(material_var);
+        if(it_igamma!= map_IGamma.end()){
+          std::set<int> igamma = it_igamma->second;
+          igamma.insert(nIndex);
+          it_igamma->second = igamma;
+        }else{
+          std::set<int> igamma;
+          igamma.insert(nIndex);
+          map_IGamma[material_var] = igamma;
         }
       }
     }
-  };
-
-  std::vector<std::thread> threads;
-  for (int t = 0; t < numThreads; ++t) {
-      int startIdx = t * cellsPerThread;
-      int endIdx = std::min(startIdx + cellsPerThread, totalCells);
-      threads.emplace_back(processCells, startIdx, endIdx);
-  }
-
-  for (auto& thread : threads) {
-      thread.join();
   }
 }
 
@@ -197,6 +176,7 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                                  Function const& fu, 
                                  Material const & material, 
                                  std::map<std::pair<int, int>, std::vector<double>> & coord,
+                                 // std::vector<std::vector<double>> & icoord,
                                  std::vector<std::vector<int>> & e2i, 
                                  std::vector<std::set<int>> & e2e,
                                  std::vector<std::set<int>> & i2i,
@@ -204,8 +184,6 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
                                  std::map<int,std::set<int>> & map_GammaGamma_W_Nbr,
                                  std::map<int,std::map<int,std::set<int>>> & map_GammaNbr) 
 {
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
-
   typedef typename FSElement::Space ImageSpace;
   typedef typename ImageSpace::Grid Grid;
 
@@ -217,211 +195,179 @@ void markedIndicesOnInterfacesForeachSubdomain(FSElement& fse,
 
   typename ImageSpace::Evaluator isfs(fse.space());
 
-  auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>();
-  // std::map<int,std::set<int>>::iterator it_gamma;
-  // std::map<int,std::set<int>>::iterator it_gammaNbr;
+  std::map<int,std::set<int>>::iterator it_gamma;
+  std::map<int,std::set<int>>::iterator it_gammaNbr;
 
-  // std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
-  // std::map<int,std::set<int>>::iterator it_GammaNbr_i;
-
-  int totalCells = std::distance(cbegin, cend);
-  int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
-
-  std::mutex mutex_global;
+  std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
+  std::map<int,std::set<int>>::iterator it_GammaNbr_i;
 
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   std::vector<ValueType> fuvalue; // declare here to prevent reallocations
-    auto processCells = [&](int startIdx, int endIdx) {
-    auto ci = cbegin;
-    std::advance(ci, startIdx);
-    for (int cellIdx = startIdx; cellIdx < endIdx && ci != cend; ++cellIdx, ++ci) 
-    {
-      auto eIndex = fse.space().indexSet().index(*ci);
-      isfs.moveTo(*ci);
+  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
+  {
+    auto eIndex = fse.space().indexSet().index(*ci);
+    isfs.moveTo(*ci);
 
-      auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-      globalValues.setSize(localCoordinate.size(),1);
+    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+    globalValues.setSize(localCoordinate.size(),1);
 
-      using Cell = decltype(ci);
-      auto dof_u = fse.space().mapper().globalIndices(*ci);
-      int nrNodes = dof_u.size();
+    using Cell = decltype(ci);
+    auto dof_u = fse.space().mapper().globalIndices(*ci);
+    int nrNodes = dof_u.size();
 
-      Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
-      int material_var = material.value(*ci,zero);
+    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+    int material_var = material.value(*ci,zero);
 
-      std::lock_guard<std::mutex> lock(mutex_global);
-      {
-        std::set<int> s = e2e[eIndex];
-        s.insert(eIndex);
-        e2e[eIndex] = s; 
+    std::set<int> s = e2e[eIndex];
+    s.insert(eIndex);
+    e2e[eIndex] = s; 
 
-        for(auto const& intersection : intersections(fse.space().gridView(),*ci))
-        {
-          if(intersection.neighbor())
+    for(auto const& intersection : intersections(fse.space().gridView(),*ci)){
+      if(intersection.neighbor()){
+        int eNbrIndex = fse.space().gridView().indexSet().index(intersection.outside());  
+        if(material.value(*ci,zero)!=material.value(intersection.outside(),zero)) {
+          
+          int material_nbr = material.value(intersection.outside(),zero);
+
+          for (int i = 0; i < e2i[eIndex].size(); ++i)
           {
-            int eNbrIndex = fse.space().gridView().indexSet().index(intersection.outside());  
-            if(material.value(*ci,zero)!=material.value(intersection.outside(),zero)) {
-              
-              int material_nbr = material.value(intersection.outside(),zero);
+            int nIndex_c1 = e2i[eIndex][i];
+            std::pair<int,int> pairs;
+            pairs.first = nIndex_c1;
+            pairs.second = material_var;
 
-              for (int i = 0; i < e2i[eIndex].size(); ++i)
-              {
-                int nIndex_c1 = e2i[eIndex][i];
-                std::pair<int,int> pairs;
-                pairs.first = nIndex_c1;
-                pairs.second = material_var;
+            std::set<int> s_index = i2i[nIndex_c1];
+            for (int j = 0; j < e2i[eNbrIndex].size(); ++j)
+            {
+              int nIndex_c2 = e2i[eNbrIndex][j];
+              std::pair<int,int> pairs_nbr;
+              pairs_nbr.first = nIndex_c2;
+              pairs_nbr.second = material_nbr;
+              if(ImageSpace::dim==2){
+                if(coord[pairs][0]==coord[pairs_nbr][0] and
+                   coord[pairs][1]==coord[pairs_nbr][1] ){
+                  s_index.insert(nIndex_c2);
 
-                std::set<int> s_index = i2i[nIndex_c1];
-                for (int j = 0; j < e2i[eNbrIndex].size(); ++j)
-                {
-                  int nIndex_c2 = e2i[eNbrIndex][j];
-                  std::pair<int,int> pairs_nbr;
-                  pairs_nbr.first = nIndex_c2;
-                  pairs_nbr.second = material_nbr;
-                  if(ImageSpace::dim==2){
-                    if(coord[pairs][0]==coord[pairs_nbr][0] and
-                       coord[pairs][1]==coord[pairs_nbr][1] ){
-                      s_index.insert(nIndex_c2);
-                      std::map<int,std::set<int>>::iterator it_gamma;
-                      // adding all the gammagamma for matreial 
-                      it_gamma = map_GammaGamma.find(material_var);
-                      if(it_gamma!= map_GammaGamma.end()){
-                        std::set<int> gamma = it_gamma->second;
-                        gamma.insert(nIndex_c1);
-                        it_gamma->second = gamma;
+                  // adding all the gammagamma for matreial 
+                  it_gamma = map_GammaGamma.find(material_var);
+                  if(it_gamma!= map_GammaGamma.end()){
+                    std::set<int> gamma = it_gamma->second;
+                    gamma.insert(nIndex_c1);
+                    it_gamma->second = gamma;
 
-                        std::map<int,std::set<int>>::iterator it_gammaNbr;
-                        // gamma + nbr
-                        it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
-                        std::set<int> gammaNbr = it_gammaNbr->second;
-                        gammaNbr.insert(nIndex_c1);
-                        gammaNbr.insert(nIndex_c2);
-                        it_gammaNbr->second = gammaNbr;
+                    // gamma + nbr
+                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
+                    std::set<int> gammaNbr = it_gammaNbr->second;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    it_gammaNbr->second = gammaNbr;
 
-                        // nbr
-                        std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
-                        std::map<int,std::set<int>>::iterator it_GammaNbr_i;
-                        it_GammaNbr = map_GammaNbr.find(material_var);
-                        std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
-                        it_GammaNbr_i = gamma_nbr.find(material_nbr);
-                        if(it_GammaNbr_i!= gamma_nbr.end()){
-                          std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
-                          gamma_nbr_i.insert(nIndex_c2);
-                          it_GammaNbr_i->second = gamma_nbr_i;
-                          it_GammaNbr->second = gamma_nbr;
-                        }else{
-                          std::set<int> gamma_nbr_i;
-                          gamma_nbr_i.insert(nIndex_c2);
-                          gamma_nbr[material_nbr] = gamma_nbr_i;
-                          it_GammaNbr->second = gamma_nbr; 
-                        }
+                    // nbr
+                    it_GammaNbr = map_GammaNbr.find(material_var);
+                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
+                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
+                    if(it_GammaNbr_i!= gamma_nbr.end()){
+                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      it_GammaNbr_i->second = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }else{
+                      std::set<int> gamma_nbr_i;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      gamma_nbr[material_nbr] = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr; 
+                    }
 
-                      }else{
-                        std::set<int> gamma;
-                        gamma.insert(nIndex_c1);
-                        map_GammaGamma[material_var] = gamma;
+                  }else{
+                    std::set<int> gamma;
+                    gamma.insert(nIndex_c1);
+                    map_GammaGamma[material_var] = gamma;
 
-                        // gamma + nbr
-                        std::set<int> gammaNbr;
-                        gammaNbr.insert(nIndex_c1);
-                        gammaNbr.insert(nIndex_c2);
-                        map_GammaGamma_W_Nbr[material_var] = gammaNbr;
+                    // gamma + nbr
+                    std::set<int> gammaNbr;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
 
-                        // nbr
-                        std::map<int,std::set<int>> gamma_nbr;
-                        std::set<int> gamma_nbr_value;
-                        gamma_nbr_value.insert(nIndex_c2);
-                        gamma_nbr[material_nbr] = gamma_nbr_value;
-                        map_GammaNbr[material_var] = gamma_nbr;
+                    // nbr
+                    std::map<int,std::set<int>> gamma_nbr;
+                    std::set<int> gamma_nbr_value;
+                    gamma_nbr_value.insert(nIndex_c2);
+                    gamma_nbr[material_nbr] = gamma_nbr_value;
+                    map_GammaNbr[material_var] = gamma_nbr;
 
-                      }
-                      break;
-                    }                
                   }
-                  else if(ImageSpace::dim==3){
-                    if(coord[pairs][0]==coord[pairs_nbr][0] and
-                       coord[pairs][1]==coord[pairs_nbr][1] and
-                       coord[pairs][2]==coord[pairs_nbr][2] ){
-                      s_index.insert(nIndex_c2);
-
-                      std::map<int,std::set<int>>::iterator it_gamma;
-                      // adding all the gammagamma for matreial 
-                      it_gamma = map_GammaGamma.find(material_var);
-                      if(it_gamma!= map_GammaGamma.end()){
-                        std::set<int> gamma = it_gamma->second;
-                        gamma.insert(nIndex_c1);
-                        it_gamma->second = gamma;
-
-                        // gamma + nbr
-                        std::map<int,std::set<int>>::iterator it_gammaNbr;
-                        it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
-                        std::set<int> gammaNbr = it_gammaNbr->second;
-                        gammaNbr.insert(nIndex_c1);
-                        gammaNbr.insert(nIndex_c2);
-                        it_gammaNbr->second = gammaNbr;
-
-                        // nbr
-                        std::map<int,std::map<int,std::set<int>>>::iterator it_GammaNbr;
-                        std::map<int,std::set<int>>::iterator it_GammaNbr_i;
-                        it_GammaNbr = map_GammaNbr.find(material_var);
-                        std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
-                        it_GammaNbr_i = gamma_nbr.find(material_nbr);
-                        if(it_GammaNbr_i!= gamma_nbr.end()){
-                          std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
-                          gamma_nbr_i.insert(nIndex_c2);
-                          it_GammaNbr_i->second = gamma_nbr_i;
-                          it_GammaNbr->second = gamma_nbr;
-                        }else{
-                          std::set<int> gamma_nbr_i;
-                          gamma_nbr_i.insert(nIndex_c2);
-                          gamma_nbr[material_nbr] = gamma_nbr_i;
-                          it_GammaNbr->second = gamma_nbr;
-                        }
-
-                      }else{
-                        std::set<int> gamma;
-                        gamma.insert(nIndex_c1);
-                        map_GammaGamma[material_var] = gamma;
-
-                        // gamma +nbr
-                        std::set<int> gammaNbr;
-                        gammaNbr.insert(nIndex_c1);
-                        gammaNbr.insert(nIndex_c2);
-                        map_GammaGamma_W_Nbr[material_var] = gammaNbr;
-
-                        // nbr
-                        std::map<int,std::set<int>> gamma_nbr;
-                        std::set<int> gamma_nbr_value;
-                        gamma_nbr_value.insert(nIndex_c2);
-                        gamma_nbr[material_nbr] = gamma_nbr_value;
-                        map_GammaNbr[material_var] = gamma_nbr;  
-                      }
-                      break;
-                    }                
-                  }
-                }
-                i2i[nIndex_c1] = s_index;
+                  break;
+                }                
               }
-              std::set<int> s = e2e[eIndex];
-              s.insert(eNbrIndex);
-              e2e[eIndex] = s; 
+              else if(ImageSpace::dim==3){
+                if(coord[pairs][0]==coord[pairs_nbr][0] and
+                   coord[pairs][1]==coord[pairs_nbr][1] and
+                   coord[pairs][2]==coord[pairs_nbr][2] ){
+                  s_index.insert(nIndex_c2);
+
+                  // adding all the gammagamma for matreial 
+                  it_gamma = map_GammaGamma.find(material_var);
+                  if(it_gamma!= map_GammaGamma.end()){
+                    std::set<int> gamma = it_gamma->second;
+                    gamma.insert(nIndex_c1);
+                    it_gamma->second = gamma;
+
+                    // gamma + nbr
+                    it_gammaNbr = map_GammaGamma_W_Nbr.find(material_var);
+                    std::set<int> gammaNbr = it_gammaNbr->second;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    it_gammaNbr->second = gammaNbr;
+
+                    // nbr
+                    it_GammaNbr = map_GammaNbr.find(material_var);
+                    std::map<int,std::set<int>> gamma_nbr = it_GammaNbr->second;
+                    it_GammaNbr_i = gamma_nbr.find(material_nbr);
+                    if(it_GammaNbr_i!= gamma_nbr.end()){
+                      std::set<int> gamma_nbr_i = it_GammaNbr_i->second;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      it_GammaNbr_i->second = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }else{
+                      std::set<int> gamma_nbr_i;
+                      gamma_nbr_i.insert(nIndex_c2);
+                      gamma_nbr[material_nbr] = gamma_nbr_i;
+                      it_GammaNbr->second = gamma_nbr;
+                    }
+
+                  }else{
+                    std::set<int> gamma;
+                    gamma.insert(nIndex_c1);
+                    map_GammaGamma[material_var] = gamma;
+
+                    // gamma +nbr
+                    std::set<int> gammaNbr;
+                    gammaNbr.insert(nIndex_c1);
+                    gammaNbr.insert(nIndex_c2);
+                    map_GammaGamma_W_Nbr[material_var] = gammaNbr;
+
+                    // nbr
+                    std::map<int,std::set<int>> gamma_nbr;
+                    std::set<int> gamma_nbr_value;
+                    gamma_nbr_value.insert(nIndex_c2);
+                    gamma_nbr[material_nbr] = gamma_nbr_value;
+                    map_GammaNbr[material_var] = gamma_nbr;  
+
+                  }
+                  break;
+                }                
+              }
             }
+            i2i[nIndex_c1] = s_index;
           }
-        }//for intersection
-      }// mutrex
-    } // for cellIdx
-  };
-
-  std::vector<std::thread> threads;
-  for (int t = 0; t < numThreads; ++t) {
-      int startIdx = t * cellsPerThread;
-      int endIdx = std::min(startIdx + cellsPerThread, totalCells);
-      threads.emplace_back(processCells, startIdx, endIdx);
-  }
-
-  for (auto& thread : threads) {
-      thread.join();
+          std::set<int> s = e2e[eIndex];
+          s.insert(eNbrIndex);
+          e2e[eIndex] = s; 
+        }
+      }
+    }
   }
 }
 
@@ -433,7 +379,6 @@ void markedIndicesForDirichlet(FSElement& fse,
                                  std::vector<std::vector<int>> & cell2Indice, 
                                  std::set<int> & dofsDirichlet )
 {
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end());
   std::set<int>::iterator itr;
 
@@ -446,63 +391,38 @@ void markedIndicesForDirichlet(FSElement& fse,
 
   typename ImageSpace::Evaluator isfs(fse.space());
 
-  auto cbegin = fse.space().gridView().template begin<0>();
   auto const cend = fse.space().gridView().template end<0>();
   //std::cout <<  " cend localCoordinate! *ci " <<std::endl;
 
-  int totalCells = std::distance(cbegin, cend);
-  int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
-
-  std::mutex mutex_global;
-
   using ValueType = decltype(fu.value(*cend,Dune::FieldVector<typename Grid::ctype, ImageSpace::dim>()));
   std::vector<ValueType> fuvalue; // declare here to prevent reallocations
-  auto worker = [&](int startCell, int endCell) 
+  for (auto ci=fse.space().gridView().template begin<0>(); ci!=cend; ++ci)
   {
-    typename ImageSpace::Evaluator isfs(fse.space()); // Thread-local Evaluator
-    std::set<int> localDofsDirichlet;
+    auto cellIndex = fse.space().indexSet().index(*ci);
+    isfs.moveTo(*ci);
 
-    auto ci = cbegin;
-    std::advance(ci, startCell);
+    auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
+    globalValues.setSize(localCoordinate.size(),1);
 
-    for (int cellCount = startCell; cellCount < endCell && ci != cend; ++cellCount, ++ci) {
-        auto cellIndex = fse.space().indexSet().index(*ci);
-        isfs.moveTo(*ci);
+    Dune::FieldVector<double,ImageSpace::dim> zero(0.0);
+    int material_var = material.value(*ci,zero);
 
-        auto const& localCoordinate(isfs.shapeFunctions().interpolationNodes());
-        DynamicMatrix< Dune::FieldMatrix<typename ImageSpace::Scalar, ImageSpace::sfComponents, 1>> globalValues;
-        globalValues.setSize(localCoordinate.size(), 1);
+    itr = arr_extra_set.find(material_var);
+    using Cell = decltype(ci);
+    auto dof_u = fse.space().mapper().globalIndices(*ci);
+    int nrNodes = dof_u.size();
 
-        Dune::FieldVector<double, ImageSpace::dim> zero(0.0);
-        int material_var = material.value(*ci, zero);
-
-        if (arr_extra_set.find(material_var) != arr_extra_set.end()) {
-            for (auto const& intersection : intersections(fse.space().gridView(), *ci)) {
-                if (!intersection.neighbor()) {
-                    for (int index_c1 : cell2Indice[cellIndex]) {
-                        localDofsDirichlet.insert(index_c1);
-                    }
-                }
-            }
+    for(auto const& intersection : intersections(fse.space().gridView(),*ci))
+    {
+      if(!intersection.neighbor() and itr!=arr_extra_set.end())
+      {
+        for (int i = 0; i < cell2Indice[cellIndex].size(); ++i)
+        {
+          int index_c1 = cell2Indice[cellIndex][i];
+          dofsDirichlet.insert(index_c1);
         }
-    }
-
-    // Merge local results into global set
-    std::lock_guard<std::mutex> lock(mutex_global);
-    dofsDirichlet.insert(localDofsDirichlet.begin(), localDofsDirichlet.end());
-  };
-
-  std::vector<std::thread> threads;
-  for (unsigned int t = 0; t < numThreads; ++t) {
-      int startCell = t * cellsPerThread;
-      int endCell = std::min(startCell + cellsPerThread, totalCells);
-      threads.emplace_back(worker, startCell, endCell);
-  }
-
-  for (auto& thread : threads) {
-      if (thread.joinable()) {
-          thread.join();
       }
+    }
   }
 }
 

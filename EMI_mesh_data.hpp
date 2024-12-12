@@ -1236,6 +1236,73 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
   }
 }
 
+template<class Vector>
+void petsc_structure_rhs_mark(  std::vector<int> sequenceOfTags,
+                                std::map<int,int> map_indices,
+                                std::map<int,std::set<int>> map_II,
+                                std::map<int,std::set<int>> map_GammaGamma_noDuplicate, 
+                                Vector b_,
+                                std::vector<int> arr_extra,
+                                Vector &bs_)
+{
+  size_t totalSize = sequenceOfTags.size();
+  size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
+  std::vector<std::thread> threads;
+
+  std::set<int> arr_extra_set(arr_extra.begin(), arr_extra.end()); 
+
+    // Mutex for thread-safe access to bs_
+  std::mutex bs_mutex;
+
+  // Set all elements of bs_ to 0
+  bs_ *= 0;
+
+  for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+    size_t startIdx = threadIdx * chunkSize;
+    size_t endIdx = std::min(startIdx + chunkSize, totalSize);
+
+    threads.push_back(std::thread([&, startIdx, endIdx] 
+    {
+      for (size_t index = startIdx; index < endIdx; ++index) 
+      {
+        int tag = sequenceOfTags[index];
+
+        std::set<int>::iterator itr_extra; 
+        
+        bool extra = false;
+        itr_extra =arr_extra_set.find(tag);
+        if(itr_extra!=arr_extra_set.end())
+          extra = true;
+
+        // Get interior and interface vectors
+        std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
+        std::vector<int> interface(map_GammaGamma_noDuplicate[tag].begin(), map_GammaGamma_noDuplicate[tag].end());
+
+        // Lock the mutex to update bs_ safely
+        {
+          std::lock_guard<std::mutex> lock(bs_mutex);
+
+          // Update bs_ for interior elements
+          for (int i = 0; i < Interior.size(); ++i) {
+              bs_[map_indices[Interior[i]]] = extra? 0.0004: -0.0004;
+          }
+
+          // Update bs_ for interface elements
+          for (int i = 0; i < interface.size(); ++i) {
+              bs_[map_indices[interface[i]]] = extra? 0.0002: -0.0002;
+          }
+        }
+      }
+    }));
+  }
+
+  // Join all threads
+  for (auto& t : threads) {
+      t.join();
+  }
+}
+
 
 template<class Vector>
 void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags, 

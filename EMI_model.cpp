@@ -733,6 +733,13 @@ int main(int argc, char* argv[])
   std::vector<Vector> Fs_petcs(n_subdomains);
   petsc_structure_rhs_subdomain_petsc(sequenceOfTags, map_II, map_GammaGamma_noDuplicate, rhs_vec_original, map_indices, Fs_petcs);
 
+  Vector sol_mark(nDofs);
+  Vector sol_mark_to_petsc(sol_mark);
+  sol_mark_to_petsc = 0;
+
+  petsc_structure_rhs_mark(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_mark, arr_extra ,sol_mark_to_petsc);
+  writeSolution(sol_mark_to_petsc,matlab_dir+"/mark");
+
   std::vector<int> cells(gridManager.grid().size(0)); // vector with size ints.
   std::iota (std::begin(cells), std::end(cells), 0);
 

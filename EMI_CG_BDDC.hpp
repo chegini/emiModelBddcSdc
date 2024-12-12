@@ -1,8 +1,10 @@
 #ifndef INTEGRATE_BDDC_CG_HH
 #define INTEGRATE_BDDC_CG_HH
 
+// #include "EMI_write_utility.hpp"
+
 template <class VEntry>
-void writeSolution_test(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
+void writeSolution_vec(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
 {
   std::string fname = basename + ".m";
   std::ofstream f(fname.c_str());
@@ -15,6 +17,8 @@ void writeSolution_test(Dune::BlockVector<VEntry> const& b, std::string const& b
     f << b[i] << std::endl;
   f << "];\n";
 }
+
+
 
 template <class Grid, class Functional, class VariableSet, class Spaces, class elementType, class Vector, class Options, class Matrix>
 typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridManager,
@@ -108,7 +112,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
 
 
-  using TransmissionScalar = float;
+  using TransmissionScalar = double;
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
@@ -168,7 +172,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     rhs.write(rhs_petsc_test.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_test, rhs_petsc_test);
-    // writeSolution_test(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
+    writeSolution_sol(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
     std::vector<Vector> Fs(n_subdomains);
         // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // fill the sub matrices for kaskade format
@@ -299,11 +303,15 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 
     uAll = component<0>(u);
 
+    Vector sol_petsc_test(nDofs);
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_bddc, sol_petsc_test);
+    writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_bddc_"+std::to_string(time_step)); 
+
     if(options.plot) writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
 
-    // writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
-    //          IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+    writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
+             IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
     int lookback = std::min(10,iter_cg_with_bddc-1);
     double contraction = std::pow(resNorm.back()/resNorm[resNorm.size()-lookback],1.0/lookback);
     std::cout << "Estimated contraction factor: " << contraction << ". (kappa ~ " << (1+contraction)/(1-contraction) << ").\n";

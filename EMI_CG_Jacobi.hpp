@@ -1,8 +1,10 @@
 #ifndef INTEGRATE_CG_JACOBI_HH
 #define INTEGRATE_CG_JACOBI_HH
 
+// #include "EMI_write_utility.hpp"
+
 template <class VEntry>
-void writeSolution_test2(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
+void writeSolution_sol(Dune::BlockVector<VEntry> const& b, std::string const& basename, int precision=16)
 {
   std::string fname = basename + ".m";
   std::ofstream f(fname.c_str());
@@ -99,7 +101,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     rhs.write(rhs_petsc_test.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_temp, rhs_petsc_test);
-    //writeSolution_test2(rhs_petsc_test,matlab_dir+"/rhs_"+std::to_string(time_step)); 
+    writeSolution_sol(rhs_petsc_test,matlab_dir+"/rhs_cg_"+std::to_string(time_step)); 
 
     Vector rhs_vec(nDofs);
     rhs.write(rhs_vec.begin());
@@ -172,9 +174,15 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     
     // u = u + step
     component<0>(u) += component<0>(step_test);
-    
+    sol_semi *= 0;
+    step_test.write(sol_semi.begin());
+
     uAll = component<0>(u);
     
+    Vector sol_petsc_test(nDofs);
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi, sol_petsc_test);
+    writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_cg_"+std::to_string(time_step)); 
+
     if(options.plot) 
       writeVTK(uAll,out+"/emiCG"+paddedString(time_step,2),
                   IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
@@ -182,11 +190,11 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     //if(time_step%10==0) 
     // writeVTK(uAll,out+"/emiCG"+paddedString(time_step,2),
     //               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
-    sol_semi *= 0;
-    step_test.write(sol_semi.begin());
+    // sol_semi *= 0;
+    // step_test.write(sol_semi.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi, rhs_petsc_test);
-    //writeSolution_test2(rhs_petsc_test,matlab_dir+"/sol_"+std::to_string(time_step)); 
+    //writeSolution_sol(rhs_petsc_test,matlab_dir+"/sol_"+std::to_string(time_step)); 
 
   }
 

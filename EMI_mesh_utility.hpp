@@ -69,7 +69,8 @@ void getInnerInterfaceDofsForeachSubdomain(FSElement& fse,
     std::mutex mtx_e2i, mtx_i2e, mtx_i2t, mtx_i2i, mtx_coord, mtx_coord_globalIndex, mtx_i2T, mtx_map_IGamma;
 
     // Number of threads
-    const int numThreads = std::thread::hardware_concurrency();
+    int numThreads = std::thread::hardware_concurrency();
+    if(numThreads>number_elem) numThreads = std::min(numThreads,number_elem);
     const int cellsPerThread = (number_elem + numThreads - 1) / numThreads;
 
     // Thread function
@@ -237,6 +238,7 @@ void markedIndicesOnInterfacesForeachSubdomain(
 
     size_t numThreads = std::thread::hardware_concurrency();
     size_t totalCells = std::distance(cbegin, cend);
+    if(numThreads>totalCells) numThreads = std::min(numThreads,totalCells);
     size_t chunkSize = (totalCells + numThreads - 1) / numThreads;
 
     auto worker = [&](size_t start, size_t end) {
@@ -364,7 +366,8 @@ void markedIndicesForDirichlet(FSElement& fse,
     auto cend = gridView.template end<0>();
 
     int totalCells = std::distance(cbegin, cend);
-    unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+    int numThreads = std::max(1u, std::thread::hardware_concurrency());
+    if(numThreads>totalCells) numThreads = std::min(numThreads,totalCells);
     int cellsPerThread = (totalCells + numThreads - 1) / numThreads;
 
     // Mutex to synchronize updates to the shared dofsDirichlet set

@@ -343,6 +343,7 @@ void mesh_data_structure( FSElement& fse,
 
   // Get the number of threads and calculate the chunk size
   size_t numThreads = std::thread::hardware_concurrency();  // Use hardware concurrency
+  numThreads = std::min(numThreads,IGammaVector.size());
   size_t chunkSize = (IGammaVector.size() + numThreads - 1) / numThreads;  // Round up
 
   // Create a vector to hold threads
@@ -396,6 +397,7 @@ void mesh_data_structure( FSElement& fse,
 
     // Get the number of threads and calculate the chunk size
     size_t numThreads = std::thread::hardware_concurrency();  // Use hardware concurrency
+    numThreads = std::min(numThreads,GammaVector.size());
     size_t chunkSize = (GammaVector.size() + numThreads - 1) / numThreads;  // Round up
 
     // Mutex for synchronizing map access across threads
@@ -445,6 +447,7 @@ void mesh_data_structure( FSElement& fse,
     // Convert i2t to a vector for easier chunking
     size_t totalSize = i2t.size();
     size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+    numThreads = std::min(numThreads,totalSize);
     size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
 
     // Mutex for synchronizing map access across threads
@@ -507,6 +510,7 @@ void mesh_data_structure( FSElement& fse,
     // Convert map_IGamma_noDuplicate to a vector for easier chunking
     size_t totalSize = map_IGamma_noDuplicate.size();
     size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+        numThreads = std::min(numThreads,totalSize);
     size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
 
     // Parallelize the loop over map_IGamma_noDuplicate (divided into chunks)
@@ -820,6 +824,7 @@ void map_kaskade2petcs(std::vector<int> sequenceOfTags,
 
     size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
     size_t totalSize = sequenceOfTags.size();
+    numThreads = std::min(numThreads,totalSize);
     size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
 
     for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) 
@@ -1069,6 +1074,7 @@ void computed_sequenceOfTags(
 
   size_t totalSize = IGammaVector.size();
   size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  numThreads = std::min(numThreads, totalSize);
   size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
 
   // Vector to store threads
@@ -1189,6 +1195,7 @@ void petsc_structure_rhs( std::vector<int> sequenceOfTags,
 {
   size_t totalSize = sequenceOfTags.size();
   size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  numThreads = std::min(numThreads, totalSize);
   size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
   std::vector<std::thread> threads;
 
@@ -1247,6 +1254,7 @@ void petsc_structure_rhs_mark(  std::vector<int> sequenceOfTags,
 {
   size_t totalSize = sequenceOfTags.size();
   size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  numThreads = std::min(numThreads, totalSize);
   size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
   std::vector<std::thread> threads;
 
@@ -1315,6 +1323,7 @@ void petsc_structure_rhs_subdomain_petsc( std::vector<int> sequenceOfTags,
 
   size_t totalSize = sequenceOfTags.size();
   size_t numThreads = std::thread::hardware_concurrency();  // Number of threads to use
+  numThreads = std::min(numThreads,totalSize);
   size_t chunkSize = (totalSize + numThreads - 1) / numThreads;  // Divide work into chunks
   std::vector<std::thread> threads;
 
@@ -1507,7 +1516,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
 {
 
 
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::cout << "numThreads: " << numThreads << " 1u : " << 1u <<std::endl;
   CellFilter Cellfltr1(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
 
@@ -1572,7 +1581,7 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
 
   std::mutex matrixMutex; // Protect shared resources
   std::mutex subMatricesMutex; // Mutex to protect access to shared subMatrices
-
+  numThreads = std::min(numThreads,n_subs);
   int chunkSize = (n_subs + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
   {
       std::vector<std::future<void>> futures;
@@ -2080,7 +2089,7 @@ void construct_As_parallel(std::vector<int> arr_extra,
                   std::map<int,int> & T2Index)
 {
 
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  int numThreads = std::max(1u, std::thread::hardware_concurrency());
   std::cout << "numThreads: " << numThreads <<std::endl;
   std::mutex mapMutex; 
   std::map<int,std::vector<int>> sequanceOfsubdomainsKaskade;
@@ -2099,7 +2108,7 @@ void construct_As_parallel(std::vector<int> arr_extra,
   int n = sequenceOfTags.size();
   std::vector<std::thread> threads;
 
-
+  numThreads = std::min(numThreads, n);
 
   // Divide work among threads
   for (int t = 0; t < numThreads; ++t) {

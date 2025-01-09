@@ -315,9 +315,13 @@ public:
         memInterface = true;
       }
 
-
-      if (cellDomain > neighbourDomain)
+      // std::cout << "cellDomain: "<< cellDomain << " neighbourDomain: " << neighbourDomain <<std::endl;
+      if(two_extra){
+        std::tie(current,dcurrentCell,dcurrentNeighbour) = std::make_tuple(0,0,0);
+      }
+      else if (cellDomain > neighbourDomain){
         std::tie(current,dcurrentCell,dcurrentNeighbour) = ionCurrent(v);
+      }
       else
       {
         std::tie(current,dcurrentCell,dcurrentNeighbour) = ionCurrent(-v);
@@ -327,16 +331,7 @@ public:
 
     std::tuple<Scalar,Scalar,Scalar> ionCurrent(Scalar v) const
     {
-      // two extra celllular neighbors
-      if (two_extra)
-      {
-        v = 0;
-        // compute fake gap junction between two extra cellluar regions
-        Scalar gap_junc = F.GapJunctionLinearExtraCell(v);
-        Scalar dgap_junc = F.dGapJunctionLinearExtraCell();
-        return std::make_tuple(gap_junc,0,0);
-      }
-
+      
       // nonlinear ion current
       if (memInterface) // membrane
       {
@@ -531,16 +526,6 @@ public:
   Scalar dGapJunctionLinear() const
   { 
     return 1/R; 
-  }
-
-  Scalar GapJunctionLinearExtraCell(Scalar v) const
-  { 
-    return v/R_extra; 
-  }
-
-  Scalar dGapJunctionLinearExtraCell() const
-  { 
-    return 1/R_extra; 
   }
 
   Scalar time() const { return t; }

@@ -94,6 +94,18 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh_tags_change.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular_tags_change.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular_tags_change.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited_tags_change.txt","subdomain definition") 
+  ("input",                    inputfile,                           "./input/2Cells3d_2extra_mesh_tags.vtu","subdomain definition") //test
+  ("extra_set",                extra_set,                           "./input/2Cells3d_2extra_list_extracellular_tags.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/2Cells3d_2extra_list_intracellular_tags.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/2Cells3d_2extra_early_excited_tags.txt","subdomain definition") 
+  // ("input",                    inputfile,                           "./input/2Cells3d_mesh_tags.vtu","subdomain definition") //test
+  // ("extra_set",                extra_set,                           "./input/2Cells3d_list_extracellular_tags.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/2Cells3d_list_intracellular_tags.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/2Cells3d_early_excited_tags.txt","subdomain definition") 
   // ("input",                    inputfile,                           "./input/cube3D.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/cube3D_extra.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/cube3D_intra.txt","subdomain definition")
@@ -157,10 +169,14 @@ int main(int argc, char* argv[])
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
-  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
-  ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/10Cells3d_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/10Cells3d_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/10Cells3d_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/10Cells3d_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/20Cells3d_20extra_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
@@ -250,7 +266,7 @@ int main(int argc, char* argv[])
   ("atol",                     options.aTol,                        1e-15,  "absolute L^2 tolerance")
   ("stol",                     options.tolSelect,                   1e-5,  "L^inf tol for DoF selection")
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
-  ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
+  ("cgTol",                    options.cgTol,                       1e-15,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
   ("sweeps",                   options.minSweeps,                   5,  "minimal number of SDC sweeps")
   ("maxSweeps",                options.maxSweeps,                   5,  "maximal number of SDC sweeps")
@@ -366,13 +382,14 @@ int main(int argc, char* argv[])
   getSubdomain(arr_excited_region, file_excited_region);
 
   // ------------------------------------------------------------------------------------------------------------
-  unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
+  int numThreads = std::max(1u, std::thread::hardware_concurrency());
 
   int n_subdomains = arr_extra.size() + arr_intra.size();
+  numThreads = std::min(numThreads,n_subdomains);
   int chunkSize;
 
   if (numThreads > n_subdomains) {
-      std::cout << "ERROR: The numebr of subdomains is smaller than the number of threads! \n";
+      std::cout << "ERROR: The numebr of subdomains is smaller than the number of threads!, numThreads: " << numThreads;
   } else {
     chunkSize = (n_subdomains + numThreads - 1) / numThreads; // Calculate chunk size (ceil(n/m))
     std::cout << "Number of hardware threads available: " << numThreads << " and n_subdomains is "<< n_subdomains << " and chunkSize is " << chunkSize << "\n";

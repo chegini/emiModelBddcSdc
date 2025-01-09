@@ -181,7 +181,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     
     Vector sol_petsc_test(nDofs);
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi, sol_petsc_test);
-    writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_cg_"+std::to_string(time_step)); 
+    if(false) writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_cg_"+std::to_string(time_step)); 
 
     if(options.plot) 
       writeVTK(uAll,out+"/emiCG"+paddedString(time_step,2),
@@ -195,7 +195,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
     // step_test.write(sol_semi.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi, rhs_petsc_test);
-    //writeSolution_sol(rhs_petsc_test,matlab_dir+"/sol_"+std::to_string(time_step)); 
+    if(false) writeSolution_sol(rhs_petsc_test,matlab_dir+"/sol_"+std::to_string(time_step)); 
 
   }
 

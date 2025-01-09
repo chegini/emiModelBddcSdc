@@ -305,7 +305,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 
     Vector sol_petsc_test(nDofs);
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_bddc, sol_petsc_test);
-    writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_bddc_"+std::to_string(time_step)); 
+    if(false) writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_bddc_"+std::to_string(time_step)); 
 
 
     sol_bddc *= 0;
@@ -314,7 +314,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 
     Vector u_petsc_test(nDofs);
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_bddc, u_petsc_test);
-    writeSolution_sol(sol_petsc_test,matlab_dir+"/u_bddc_"+std::to_string(time_step)); 
+    if(false) writeSolution_sol(sol_petsc_test,matlab_dir+"/u_bddc_"+std::to_string(time_step)); 
 
     if(options.plot) writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");

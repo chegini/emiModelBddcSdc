@@ -112,8 +112,12 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
 
 
+  // using TransmissionScalar = double;
+  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  
   using TransmissionScalar = double;
-  using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
+  using BddcSubdomain = Subdomain<1,double,double,SpaceTransferCompressedData<1,double,TransmissionScalar>>;
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
   std::vector<int> activeIds(n_subdomains);
@@ -232,7 +236,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       timer.start("BDDC solve");
       resNorm.push_back(bddcSolver.solve());      
       timer.stop("BDDC solve");
-      if(false)
+      if(true)
       {
         for (int subIdx=0; subIdx<n_subdomains; ++subIdx)
         {

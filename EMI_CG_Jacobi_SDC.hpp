@@ -119,7 +119,8 @@ void computeRHS(int step,
   using std::chrono::milliseconds;
 
   using namespace boost::fusion;
-  typedef typename Eq::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;  
+  // typedef typename Eq::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;  
+  typedef typename Eq::OriginVars::template CoefficientVector<0,1> CoefficientVectorsU;
   typedef SemiLinearizationAtInner<SemiImplicitEulerStep<Eq> >  SemiLinearization;
   size_t const nrDofs = expandedIndices.size();
   
@@ -218,7 +219,8 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
   typedef typename Equation::OriginVars::VariableSet State;
   typedef typename boost::fusion::result_of::value_at_c<typename State::Sequence,0>::type StateUe;
   
-  typedef typename Equation::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;
+  // typedef typename Equation::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;
+  typedef typename Equation::OriginVars::template CoefficientVector<0,1> CoefficientVectorsU;
   // --------------------------------------------------------------------------------------------
   // assembler
   // --------------------------------------------------------------------------------------------

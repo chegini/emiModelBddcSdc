@@ -58,7 +58,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi(	GridManager<Grid>& gri
 	constexpr int nvars = Functional::AnsatzVars::noOfVariables;
 	constexpr int neq = Functional::TestVars::noOfVariables;
 
-  typedef typename Functional::OriginVars::template CoefficientVectorRepresentation<0,neq>::type LinearSpace;
+  // typedef typename Functional::OriginVars::template CoefficientVectorRepresentation<0,neq>::type LinearSpace;
 
   size_t  nnz = assembler.nnz(0,neq,0,nvars,false);
   size_t  size = variableSet.degreesOfFreedom(0,nvars);

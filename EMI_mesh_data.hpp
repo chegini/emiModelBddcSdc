@@ -17,7 +17,7 @@ using namespace Kaskade::BDDC;
 using namespace std;
 
 typedef pair<int, int> row_col;
-
+#include "linalg/matrixOps.hh"
 #include <fstream>
 #include <vector>
 
@@ -1422,6 +1422,7 @@ void exctract_petsc_stiffness_blocks_moreExtracellular( std::vector<int> sequenc
   int tag = sequenceOfTags[subIdx];
   std::vector<int> Interior(map_II[tag].begin(), map_II[tag].end());
   std::vector<int> Interface(map_GammaGamma[tag].begin(), map_GammaGamma[tag].end());
+
 
   auto A_II_block = K_(Interior,Interior);
   insertMatrixBlock_extra(A_II_block, map_indices, Interior, Interior, Ks_);

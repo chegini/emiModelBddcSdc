@@ -69,7 +69,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
 	constexpr int nvars = Functional::AnsatzVars::noOfVariables;
 	constexpr int neq = Functional::TestVars::noOfVariables;
 
-  typedef typename Functional::OriginVars::template CoefficientVectorRepresentation<0,neq>::type LinearSpace;
+  // typedef typename Functional::OriginVars::CoefficientVector<0,neq> LinearSpace;
+  // using LinearSpace = VariableSetDesc::CoefficientVector<0,neq>;
 
   size_t  nnz = assembler.nnz(0,neq,0,nvars,false);
   size_t  size = variableSet.degreesOfFreedom(0,nvars);
@@ -116,8 +117,10 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   
   using TransmissionScalar = double;
+  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
   std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
-  using BddcSubdomain = Subdomain<1,double,double,SpaceTransferCompressedData<1,double,TransmissionScalar>>;
+
   //using BddcSubdomain = Subdomain<1>;
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
   std::vector<int> activeIds(n_subdomains);
@@ -223,7 +226,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   
     timer.start("bddc creation");
     BDDCSolver<BddcSubdomain> bddcSolver(subs,ifa.coarseConstraints(),activeIds,cg_solver,BDDC_verbose );
-    bddcSolver.update_rhs(Fs);
+    bddcSolver.setRhs(Fs);
     timer.stop("bddc creation");
 
     // ------------------------------------------------------------------------------------

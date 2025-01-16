@@ -242,11 +242,11 @@ int main(int argc, char* argv[])
   ("onlyLowerTriangle",        onlyLowerTriangle,                   true, "onlyLowerTriangle")
   ("interfacetypes",           interfaceTypes,                      7,"bit flags for coarse interfaces to include: 1 corner 2 edge 3 face")
   ("vtk",                      vtk_,                                true,"write VTK output")
-  ("iter_cg_bddc",             iter_cg_with_bddc,                   2,"number of BDDC iterations")
+  ("iter_cg_bddc",             iter_cg_with_bddc,                   1,"number of BDDC iterations")
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
-  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 false, "run linearly semi-implicit method + CG + Jacobi + SDC")
+  ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
@@ -264,7 +264,7 @@ int main(int argc, char* argv[])
   ("dt",                       options.dt,                          0.01,  "time step size[ms]")
   ("orderU",                   options.order,                       1,  "FE ansatz order for transmembrane voltage & action potential")
   ("atol",                     options.aTol,                        1e-15,  "absolute L^2 tolerance")
-  ("stol",                     options.tolSelect,                   1e-5,  "L^inf tol for DoF selection")
+  ("stol",                     options.tolSelect,                   0.0,  "L^inf tol for DoF selection")
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
@@ -461,7 +461,8 @@ int main(int argc, char* argv[])
   constexpr int nvars = Functional::AnsatzVars::noOfVariables;
   constexpr int neq = Functional::TestVars::noOfVariables;
 
-  using LinearSpace = VariableSetDesc::CoefficientVectorRepresentation<0,neq>::type;
+  // using LinearSpace = VariableSetDesc::CoefficientVectorRepresentation<0,neq>::type;
+  using LinearSpace = VariableSetDesc::CoefficientVector<0,neq>;
 
   //construct Galerkin representation
   using SemiLinearization = SemiLinearizationAtInner<SemiImplicitEulerStep<Functional>>;
@@ -497,82 +498,82 @@ int main(int argc, char* argv[])
   std::cout << "END: assembler.assemble(SemiLinearization "<<std::endl;
   auto rhs_oiginal = assembler.rhs();
 
-  // ------------------------------------------------------------------------------------
-  // semi implicit + CG methods
-  // ------------------------------------------------------------------------------------
-  // {
-  //   if(run_implicit_CG){
+  // // ------------------------------------------------------------------------------------
+  // // semi implicit + CG methods
+  // // ------------------------------------------------------------------------------------
+  // // {
+  // //   if(run_implicit_CG){
 
-  //     std::vector<int> sequenceOfTags(10);//n_subdomains);
-  //     std::map<int, int> map_indices;
-  //     std::map<int,std::set<int>> map_II;                            // II
-  //     std::map<int,std::set<int>> map_GammaGamma_noDuplicate;        // GammaGamma_nodup
+  // //     std::vector<int> sequenceOfTags(10);//n_subdomains);
+  // //     std::map<int, int> map_indices;
+  // //     std::map<int,std::set<int>> map_II;                            // II
+  // //     std::map<int,std::set<int>> map_GammaGamma_noDuplicate;        // GammaGamma_nodup
 
-  //     Vector sol_semi(nDofs);
-  //     Functional F_semi( material,
-  //                 gridManager.grid(),
-  //                 spaces,
-  //                 penalty,
-  //                 sigma_i,
-  //                 sigma_e,
-  //                 C_m,  
-  //                 R,
-  //                 R_extra);
-  //     F_semi.extracellular_materials(arr_extra);
-  //     F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
-  //     uAll = component<0>(u);
-  //     if(options.plot) writeVTK(uAll,out+"/initialSemiF",
-  //              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
-  //     timer.start("linearly semi implicit method");
-  //     std::cout << "---------------------------------------------" << std::endl;
-  //     std::cout << "semi implict approach" << std::endl;
-  //     std::cout << "---------------------------------------------" << std::endl;
+  // //     Vector sol_semi(nDofs);
+  // //     Functional F_semi( material,
+  // //                 gridManager.grid(),
+  // //                 spaces,
+  // //                 penalty,
+  // //                 sigma_i,
+  // //                 sigma_e,
+  // //                 C_m,  
+  // //                 R,
+  // //                 R_extra);
+  // //     F_semi.extracellular_materials(arr_extra);
+  // //     F_semi.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+  // //     uAll = component<0>(u);
+  // //     if(options.plot) writeVTK(uAll,out+"/initialSemiF",
+  // //              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+  // //     timer.start("linearly semi implicit method");
+  // //     std::cout << "---------------------------------------------" << std::endl;
+  // //     std::cout << "semi implict approach" << std::endl;
+  // //     std::cout << "---------------------------------------------" << std::endl;
 
 
-  //     uAll = component<0>(u);
-  //     u = semiImplicit_CG_Jacobi( gridManager,
-  //                                 F_semi,
-  //                                 variableSetDesc,
-  //                                 spaces,
-  //                                 gridManager.grid(),
-  //                                 options,
-  //                                 out,
-  //                                 cg_semi, 
-  //                                 direct,
-  //                                 u,
-  //                                 uAll,
-  //                                 sol_semi,
-  //                                 matlab_dir,
-  //                                 sequenceOfTags, 
-  //                                 map_indices, 
-  //                                 map_II, 
-  //                                 map_GammaGamma_noDuplicate);  
-  //     timer.stop("linearly semi implicit method");
+  // //     uAll = component<0>(u);
+  // //     u = semiImplicit_CG_Jacobi( gridManager,
+  // //                                 F_semi,
+  // //                                 variableSetDesc,
+  // //                                 spaces,
+  // //                                 gridManager.grid(),
+  // //                                 options,
+  // //                                 out,
+  // //                                 cg_semi, 
+  // //                                 direct,
+  // //                                 u,
+  // //                                 uAll,
+  // //                                 sol_semi,
+  // //                                 matlab_dir,
+  // //                                 sequenceOfTags, 
+  // //                                 map_indices, 
+  // //                                 map_II, 
+  // //                                 map_GammaGamma_noDuplicate);  
+  // //     timer.stop("linearly semi implicit method");
 
-  //     // {
-  //     //   Vector sol_semi_to_petsc(sol_semi);
-  //     //   sol_semi_to_petsc = 0;
-  //     //    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
-  //     //   if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
-  //     // }
-  //   }
-  // }
-  // return 0;
+  // //     // {
+  // //     //   Vector sol_semi_to_petsc(sol_semi);
+  // //     //   sol_semi_to_petsc = 0;
+  // //     //    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_semi,sol_semi_to_petsc);
+  // //     //   if(write_to_file) writeSolution(sol_semi_to_petsc,matlab_dir+"/sol");
+  // //     // }
+  // //   }
+  // // }
+  // // return 0;
 
-  // ------------------------------------------------------------------------------------
-  // Extract the mesh data
-  // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequenceOfsubdomains 
-  // - e2i
-  // - i2e
-  // - i2i
-  // - icoord
-  // - itT
-  // - map_t2l
-  // - map_sT2l
-  // - map_II
-  // - map_IGamma
-  // - map_GammaGamma
-  // ------------------------------------------------------------------------------------
+  // // ------------------------------------------------------------------------------------
+  // // Extract the mesh data
+  // // - II, GammaGamma, IGamma, GammaGamma_W_Nbr, gamma_nbrs, sequenceOfsubdomains 
+  // // - e2i
+  // // - i2e
+  // // - i2i
+  // // - icoord
+  // // - itT
+  // // - map_t2l
+  // // - map_sT2l
+  // // - map_II
+  // // - map_IGamma
+  // // - map_GammaGamma
+  // // ------------------------------------------------------------------------------------
 
   std::vector<std::vector<int>> e2i(gridManager.grid().size(0)); //element to indices
   std::vector<std::set<int>> e2e(gridManager.grid().size(0));    //element to element

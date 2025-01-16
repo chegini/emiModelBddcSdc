@@ -62,12 +62,15 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool reass
     tmp_bddc[subIndx] = tmp;
   }
 
-  std::vector<int> activeIds;
-  activeIds.resize(n_subdomains);
-  parallelFor(0,n_subdomains,[&](int subIdx)
-  {
-    activeIds[subIdx] = subIdx;
-  });
+  std::vector<int> activeIds(n_subdomains);
+  std::iota(activeIds.begin(), activeIds.end(), 0);
+
+  // std::vector<int> activeIds;
+  // activeIds.resize(n_subdomains);
+  // parallelFor(0,n_subdomains,[&](int subIdx)
+  // {
+  //   activeIds[subIdx] = subIdx;
+  // });
 
   Vector initial(A.N()), initial_temp(A.N());
   initial *= 0;
@@ -176,7 +179,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once(bool reass
     }
 
     BDDCSolver<BddcSubdomain> bddcSolver(subs_all[i-1],interfaces.coarseConstraints(),activeIds,cg_solver, BDDC_SDC_verbose);
-    bddcSolver.update_rhs(rhs_bddc);
+    bddcSolver.setRhs(rhs_bddc);
 
     std::vector<double> resNorm;
     for (int k=0; k<iter_cg_with_bddc; ++k)
@@ -245,7 +248,7 @@ void computeRHS_BDDC_allCollocations_once(int step,
   using std::chrono::milliseconds;
 
   using namespace boost::fusion;
-  typedef typename Eq::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;  
+  typedef typename Eq::OriginVars::template CoefficientVector<0,1> CoefficientVectorsU;  
   typedef SemiLinearizationAtInner<SemiImplicitEulerStep<Eq> >  SemiLinearization;
   size_t const nrSelectedDofs = expandedIndices.size();
   
@@ -441,7 +444,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
   typedef typename Equation::OriginVars::VariableSet State;
   typedef typename boost::fusion::result_of::value_at_c<typename State::Sequence,0>::type StateUe;
   
-  typedef typename Equation::OriginVars::template CoefficientVectorRepresentation<0,1>::type CoefficientVectorsU;
+  typedef typename Equation::OriginVars::template CoefficientVector<0,1> CoefficientVectorsU;
   // --------------------------------------------------------------------------------------------
   // assembler
   // --------------------------------------------------------------------------------------------

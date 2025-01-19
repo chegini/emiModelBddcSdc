@@ -20,6 +20,30 @@
 #include <thread>
 
 
+#include <iostream>
+#include <cmath>
+#include <cstdint>
+
+// Quantize a single element
+template <typename T>
+void quantize(double value, T &quantizedData, double scale, double minVal, double typeMin, double typeMax) {
+    static_assert(std::is_arithmetic<T>::value, "Quantized type must be numeric.");
+
+    // Quantize the value
+    double normalized = (value - minVal) * scale + typeMin;
+    quantizedData = static_cast<T>(std::min(typeMax, std::max(typeMin, std::round(normalized))));
+}
+
+// Dequantize a single element
+template <typename T>
+void dequantize(T quantizedValue, double &data, double scale, double minVal, double typeMin) {
+    static_assert(std::is_arithmetic<T>::value, "Quantized type must be numeric.");
+
+    // Dequantize the value
+    data = ((quantizedValue - typeMin) / scale) + minVal;
+}
+
+
 int main(int argc, char* argv[])
 {
   using namespace Kaskade::BDDC;
@@ -307,6 +331,90 @@ int main(int argc, char* argv[])
 
   auto& timer = Timings::instance();
 
+  // ---------------------------------------------------------------------------------------
+  // REMOVE!!!
+  // ---------------------------------------------------------------------------------------
+
+  {
+
+    // Example data
+    // std::vector<double> originalData = {0,0,0,0,-0.000504016,0,0, 0.005, 0.196021};
+    // std::vector<double> originalData = {0,0,0,0,-0.000504016,0,0,0.00196021};
+    // std::vector<double> originalData = {-0.00201606,-0.000902728,0,0,-0.000504016,-0.00168578,0.000986353,0.00054886};
+    // std::vector<double> originalData = {-0.00422983,0.00148852,-0.0106323,0.000688577,-0.00491841,-0.000114703,-0.00045881,-0.000334709,0.00196021,0.00704538,0.00392043};
+    std::vector<double> originalData = {0,0,0.00491841,0.0106323,0.00491841,0,0,-0.000114703,-0.00168578,-0.00704538,-0.00392043};
+
+
+    // Example data
+    // std::vector<double> originalData = {0, 0, 0, 0, -0.000504016, 0, 0, 0.005, 0.196021};
+    // std::vector<double> originalData = {-0.00201606,-0.000902728,0,0,-0.000504016,-0.00168578,0.000986353,0.00054886};
+
+    double minVal = *std::min_element(originalData.begin(), originalData.end());
+    double maxVal = *std::max_element(originalData.begin(), originalData.end());
+    double range = maxVal - minVal;
+
+    std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
+
+    using TransmissionScalar = int32_t;
+
+    // Correct typeMin and typeMax for int8_t
+    double typeMin = static_cast<double>(std::numeric_limits<TransmissionScalar>::min()); // -128
+    double typeMax = static_cast<double>(std::numeric_limits<TransmissionScalar>::max()); // 127
+    std::cout << "typeMin: " << typeMin << " typeMax: " << typeMax << std::endl;
+    // Ensure range and scale are valid
+    if (range < 1e-8) {
+        std::cerr << "Warning: Data range too small for reliable quantization. Using fallback values.\n";
+        range = 1.0;
+    }
+    double scale = (typeMax - typeMin) / range;
+    if (!std::isfinite(scale)) {
+        throw std::runtime_error("Scale is not finite. Check data and parameters.");
+    }
+
+    std::cout << "typeMin: " << typeMin << "\ttypeMax: " << typeMax << "\trange: " << range << "\tscale: " << scale << std::endl;
+
+    // Quantized and dequantized data
+    std::vector<TransmissionScalar> quantizedData;
+    std::vector<double> dequantizedData;
+
+    for (const auto &value : originalData) {
+        TransmissionScalar quantizedValue;
+        quantize(value, quantizedValue, scale, minVal, typeMin, typeMax);
+        quantizedData.push_back(quantizedValue);
+    }
+
+    for (const auto &qValue : quantizedData) {
+        double dequantizedValue;
+        dequantize(qValue, dequantizedValue, scale, minVal, typeMin);
+        dequantizedData.push_back(dequantizedValue);
+    }
+
+    // Print quantized values
+    std::cout << "Quantized Data: ";
+    for (auto q : quantizedData) {
+        std::cout << static_cast<int>(q) << " "; // Cast to int to display correctly
+    }
+    std::cout << std::endl;
+
+    // Print dequantized values
+    std::cout << "originalData vs Dequantized Data: ";
+    // for (auto d : dequantizedData) {
+    //     std::cout << d << " ";
+    // }
+
+    for (int i = 0; i < dequantizedData.size(); ++i)
+    {
+      std::cout << originalData[i] <<"\t"<< dequantizedData[i]<<std::endl;
+    }
+    std::cout << std::endl;
+
+
+  }
+
+  return 0;
+
+std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.22507e-308) /0.00246423 <<std::endl;
+// return 0;
   // ---------------------------------------------------------------------------------------
   // REMOVE!!!
   // ---------------------------------------------------------------------------------------

@@ -35,6 +35,18 @@ typename Matrix::field_type sdcIterationStepJacobi(SDCTimeGrid const& grid, SDCT
   auto const& S = grid.integrationMatrix();
 
 
+  // std::cout << "***********************************\n";
+  // std::cout << "S\n";
+  // for (int i = 0; i < S.size(); ++i)
+  // {
+  //   for (int j = 0; j < S[i].size(); ++j)
+  //   {
+  //     std::cout << S[i][j] << " ";
+  //   }
+  //   std::cout << "\n";
+  // }
+  // std::cout << "***********************************\n";
+
   // initialize correction at starting point to zero
   du[0] = 0.0; 
 
@@ -292,6 +304,10 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
   duration<double, std::milli> ms_double_ass;
   auto recordTime1 = high_resolution_clock::now();
 
+  std::vector<int> s_vec;
+  s_vec.resize(gridManager.grid().size(0));std::iota(s_vec.begin(),s_vec.end(),0);
+  std::set<int> elementIdx(s_vec.begin(),s_vec.end());
+  
   for (steps=0; !done && steps<maxSteps; ++steps) // maxSteps
   {
 
@@ -319,7 +335,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
     // spectral time grid for defect correction methods with Radau points
     // --------------------------------------------------------------------------------------------
     RadauTimeGrid grid(options.nCollocUstart,eq.time(),end_T); // start sweep with 
-    // std::cerr << "time points are: " << grid.points() << '\n';
+   
     // --------------------------------------------------------------------------------------------
     // # size of all varialbles & size of variable u
     // --------------------------------------------------------------------------------------------
@@ -329,7 +345,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
 
     size_t     size_adaptivity = size;
     size_t     size_e_adaptivity= size_e;
-    
+    // std::cerr << "time points are: " << grid.points() << "size:  " << size << " size_e: " << size_e  << " grid.points(): " << grid.points().size()<< '\n';
     // --------------------------------------------------------------------------------------------
     // subgrid selection on new time step: everything (new game)
     // --------------------------------------------------------------------------------------------
@@ -364,13 +380,13 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
     bool debug = false;
 
     // std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";  
-    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"\n"; 
+    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"cells\t\t"<<"dofs\t\t"<<"\n"; 
 
-    std::set<int> s_temp;
-    for (int i = 0; i < gridManager.grid().size(0); ++i)
-    {
-      s_temp.insert(i);
-    }
+    // std::set<int> s_temp;
+    // for (int i = 0; i < gridManager.grid().size(0); ++i)
+    // {
+    //   s_temp.insert(i);
+    // }
 
     do
     {
@@ -381,7 +397,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       sweep++; 
       if (sweep==0)   
       { 
-        Cellfltr.set_cells(s_temp);
+        Cellfltr.set_cells(elementIdx);
       }     
       // --------------------------------------------------------------------------------------------
       // set the time step
@@ -460,6 +476,18 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         case 1: luIntegrationMatrix(grid, Shat); break;
         default: abort();
       }
+
+      // std::cout << "***********************************\n";
+      // std::cout << "Shat\n";
+      // for (int i = 0; i < Shat.size(); ++i)
+      // {
+      //   for (int j = 0; j < Shat[i].size(); ++j)
+      //   {
+      //     std::cout << Shat[i][j] << " ";
+      //   }
+      //   std::cout << "\n";
+      // }
+      // std::cout << "***********************************\n";
      
       // -------------------------------------------------------------------------------------------- 
       // perform one SDC sweep for transmembrane voltage, gating variables, and active stress independently
@@ -534,7 +562,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       // compute restricted rhs contributions. Note that we need the WHOLE residual, hence working with the restricted
       // matMuu would not work. Hence we implement the matrix-vector multiplication (with all columns but a row subset)
       // on our own: M*(u_i-u_{i+1})
-
+      // std::cout<< "duVec.size(): " << duVec.size() << " duVec.back().size(): " << duVec.back().size()  << " duVec[0].size(): " << duVec[0].size() <<std::endl;
       for (int j=0; j<expandedIndices.size(); ++j)
       {
         for (int i=0; i<collocationUe.size()-1; ++i){
@@ -645,7 +673,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       }
 
       //std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm.back() << "\t"<< std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";  
-      std::cerr << sweep <<"\t"<< sweepNorm.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t" << Cellfltr.get_size()<<"\n";  
+      std::cerr << sweep <<"\t"<< sweepNorm.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()  << "\t\t" << expandedIndices.size()<<"\n";  
 
       // // --------------------------------------------------------------------------------------------
       // // plot du 
@@ -685,11 +713,13 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
 
         // select the dof for the next sweep
-        for (int ii=0; ii<duVec.back().size(); ++ii)
+        for (int ii=0; ii<duVec.back().size(); ++ii) 
         {
           double duMax = 0;
-          for (auto const& duj: duVec)
+          for (auto const& duj: duVec){
             duMax = std::max(duMax,std::abs(duj[ii]));
+            // std::cout << "duVec.size(): " << duVec.size() << " duVec.back().size(): " << duVec.back().size() << " duj[ii] " << duj[ii] <<std::endl;
+          }
 
           //if(sdcContraction>=1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
           if(sdcContraction>1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
@@ -704,13 +734,10 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         }
         
         // collect the the dof for the next sweep
-        std::set<size_t>::iterator it;
-        for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
-          newExpandedIndices.push_back(*it);
-          // std::cout <<*it << " ";
-        }
-        std::cout <<"\n";
-        std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;
+        newExpandedIndices.assign(set_ExpandedIndices.begin(),set_ExpandedIndices.end());
+
+        // std::cout <<"\n";
+        // std::cout << "set_ExpandedIndices.size() => "<<set_ExpandedIndices.size() << std::endl;
 
         size_e_adaptivity = 0;
 

@@ -44,10 +44,14 @@ void dequantize(T quantizedValue, double &data, double scale, double minVal, dou
 }
 
 
+
+
 int main(int argc, char* argv[])
 {
   using namespace Kaskade::BDDC;
   using namespace boost::fusion;
+
+  Kaskade::NumaThreadPool::instance (1); 
 
   std::cout << "Start subdomain tutorial program" << std::endl;
   
@@ -55,7 +59,8 @@ int main(int argc, char* argv[])
   int refinements, order, solver, refinements_sol, interfaceTypes, iter_cg_with_bddc;
   double penalty, sigma_i, sigma_e, C_m, R, R_extra, tol, dt;
   bool  direct, onlyLowerTriangle, vtk_, timing, test_newCof;
-  bool run_implicit_CG, run_implicit_CG_SDC, run_implicit_CG_BDDC, run_implicit_CG_SDC_BDDC, run_implicit_CG_BDDC_Fused, run_implicit_CG_SDC_BDDC_first_Sweep;
+  bool run_implicit_CG, run_implicit_CG_SDC, run_implicit_CG_BDDC, run_implicit_CG_SDC_BDDC, run_implicit_CG_BDDC_Fused;
+  bool run_implicit_CG_SDC_BDDC_SPLIT;
   bool run_implicit_CG_SDC_BDDC_all_collocation_once;
   bool run_implicit_CG_SDC_BDDC_smallest_collocation;
   bool run_implicit_CG_SDC_BDDC_all_collocation_once_update;
@@ -64,6 +69,7 @@ int main(int argc, char* argv[])
   bool test_mesh_data, write_to_file;
   bool BDDC_SDC_with_initial, BDDC_verbose, BDDC_SDC_verbose;
   int verbose, assemblyThreads;
+
   CardiacIntegrationOptions options;
   if (getKaskadeOptions(argc,argv,Options
   // ("input",                    inputfile,                           "./input/coarse_4elem.vtu","subdomain definition")
@@ -90,7 +96,7 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition")
+  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition") // this
   ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
   ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
   ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
@@ -209,6 +215,14 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/40Cells3d_40extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40Cells3d_40extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/40Cells3d_40extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/40Cells3d_40extra_mesh.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/40Cells3d_40extra_mesh_new_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/40Cells3d_40extra_mesh_new_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/40Cells3d_40extra_mesh_new_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/block2.vtu","subdomain definition")
+  // ("extra_set",                extra_set,                           "./input/block2_extra.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/block2_intra.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/block2_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_intracellular.txt","subdomain definition")
@@ -217,20 +231,20 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/40cells3D_early_excitedtxt.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40cells3D_list_extracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/40cells3D_list_intracellular.txt","subdomain definition")
- // ("input",                    inputfile,                           "./input/pepe_combi_domi.vtu","subdomain definition")
-// //("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
-//   // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_combi_domi.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/pepe_combi_domi_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/pepe_combi_domi_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/pepe_combi_domi_excited.txt","subdomain definition")
-  //  ("input",                    inputfile,                           "./input/pepe_sep_domi.vtu","subdomain definition")
-  // // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
-  // // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/pepe_sep_domi_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/pepe_sep_domi_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/pepe_sep_domi_excited.txt","subdomain definition")
-//  ("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
-//  ("input",                    inputfile,                           "./input/robin_combi_domi_smaller.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_sep_domi.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/pepe_combi_domi_smaller_more.vtu","subdomain definition")
+  //("extra_set",                extra_set,                           "./input/pepe_sep_domi_extracellular.txt","subdomain definition")
+  //("intra_set",                intra_set,                           "./input/pepe_sep_domi_intracellular.txt","subdomain definition")
+  //("excited",                  early_excited,                       "./input/pepe_sep_domi_excited.txt","subdomain definition")
+  //("input",                    inputfile,                           "./input/robin_combi_domi.vtu","subdomain definition")
+  //("input",                    inputfile,                           "./input/robin_combi_domi_smaller.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/robin_combi_domi_smaller_more.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/robin_combi_domi_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/robin_combi_domi_intracellular.txt","subdomain definition")
@@ -266,18 +280,17 @@ int main(int argc, char* argv[])
   ("onlyLowerTriangle",        onlyLowerTriangle,                   true, "onlyLowerTriangle")
   ("interfacetypes",           interfaceTypes,                      7,"bit flags for coarse interfaces to include: 1 corner 2 edge 3 face")
   ("vtk",                      vtk_,                                true,"write VTK output")
-  ("iter_cg_bddc",             iter_cg_with_bddc,                   1,"number of BDDC iterations")
+  ("iter_cg_bddc",             iter_cg_with_bddc,                   3000,"number of BDDC iterations")
   ("timing",                   timing,                              true,"whether to write timing info")
   ("test",                     test_mesh_data,                      false,"debug mode")
   ("run_implicit_CG",          run_implicit_CG,                     true, "run linearly semi-implicit method + CG")
   ("run_implicit_CG_SDC",      run_implicit_CG_SDC,                 true, "run linearly semi-implicit method + CG + Jacobi + SDC")
   ("run_implicit_CG_BDDC",     run_implicit_CG_BDDC,                true, "run linearly semi-implicit method + CG + Jacobi + SDC ")
-  ("run_implicit_CG_BDDC_Fused",run_implicit_CG_BDDC_Fused,         false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
+  ("run_implicit_CG_BDDC_split",run_implicit_CG_SDC_BDDC_SPLIT,     false, "run linearly semi-implicit method + CG + Jacobi + SDC ")
   ("run_implicit_CG_SDC_BDDC", run_implicit_CG_SDC_BDDC,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once_update,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
+  ("run_implicit_CG_SDC_BDDC_all_collocation_once_update", run_implicit_CG_SDC_BDDC_all_collocation_once_update,            true, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_all_collocation_once", run_implicit_CG_SDC_BDDC_all_collocation_once,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("run_implicit_CG_SDC_BDDC_smallest_collocation", run_implicit_CG_SDC_BDDC_smallest_collocation,            false, "run linearly semi-implicit method + CG + BDDC + SDC " )
-  ("run_implicit_CG_SDC_BDDC_first_Sweep", run_implicit_CG_SDC_BDDC_first_Sweep,false, "run linearly semi-implicit method + CG + BDDC + SDC " )
   ("test_newCof",              test_newCof,                         false,"to test the coefficients")
   ("withSplitFace",            withSplitFace,                       false,"split faces in BDDC")  
   ("cg_solver",                cg_solver,                           true,"split faces in BDDC")  
@@ -292,10 +305,10 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   5,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   5,  "maximal number of SDC sweeps")
+  ("sweeps",                   options.minSweeps,                   3,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   3,  "maximal number of SDC sweeps")
   ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
-  ("nCollocStart",             options.nCollocUstart,               1,  "start sweeps with that many collocation points")
+  ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
   ("sweepType",                options.sweepType,                   1,  "0: Euler, 1: LU")
   ("nReactionSweeps",          options.nReactionSweeps,             0,  "number of post-sweep Euler steps for reaction nonlinearity")
@@ -331,111 +344,30 @@ int main(int argc, char* argv[])
 
   auto& timer = Timings::instance();
 
+
+  std::cout << "interfacetypes " << interfaceTypes << std::endl;
+  // return 0;
   // ---------------------------------------------------------------------------------------
   // REMOVE!!!
   // ---------------------------------------------------------------------------------------
+  // Sequential execution
+  auto sequentialStart = std::chrono::high_resolution_clock::now();
 
-  {
+  auto sequentialEnd = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> sequentialDuration = sequentialEnd - sequentialStart;
+  std::cout << "Sequential execution took: " << sequentialDuration.count() << " seconds.\n";
 
-    // Example data
-    // std::vector<double> originalData = {0,0,0,0,-0.000504016,0,0, 0.005, 0.196021};
-    // std::vector<double> originalData = {0,0,0,0,-0.000504016,0,0,0.00196021};
-    // std::vector<double> originalData = {-0.00201606,-0.000902728,0,0,-0.000504016,-0.00168578,0.000986353,0.00054886};
-    // std::vector<double> originalData = {-0.00422983,0.00148852,-0.0106323,0.000688577,-0.00491841,-0.000114703,-0.00045881,-0.000334709,0.00196021,0.00704538,0.00392043};
-    std::vector<double> originalData = {0,0,0.00491841,0.0106323,0.00491841,0,0,-0.000114703,-0.00168578,-0.00704538,-0.00392043};
-
-
-    // Example data
-    // std::vector<double> originalData = {0, 0, 0, 0, -0.000504016, 0, 0, 0.005, 0.196021};
-    // std::vector<double> originalData = {-0.00201606,-0.000902728,0,0,-0.000504016,-0.00168578,0.000986353,0.00054886};
-
-    double minVal = *std::min_element(originalData.begin(), originalData.end());
-    double maxVal = *std::max_element(originalData.begin(), originalData.end());
-    double range = maxVal - minVal;
-
-    std::cout << "minVal: " << minVal << " maxVal: " << maxVal << std::endl;
-
-    using TransmissionScalar = int32_t;
-
-    // Correct typeMin and typeMax for int8_t
-    double typeMin = static_cast<double>(std::numeric_limits<TransmissionScalar>::min()); // -128
-    double typeMax = static_cast<double>(std::numeric_limits<TransmissionScalar>::max()); // 127
-    std::cout << "typeMin: " << typeMin << " typeMax: " << typeMax << std::endl;
-    // Ensure range and scale are valid
-    if (range < 1e-8) {
-        std::cerr << "Warning: Data range too small for reliable quantization. Using fallback values.\n";
-        range = 1.0;
-    }
-    double scale = (typeMax - typeMin) / range;
-    if (!std::isfinite(scale)) {
-        throw std::runtime_error("Scale is not finite. Check data and parameters.");
-    }
-
-    std::cout << "typeMin: " << typeMin << "\ttypeMax: " << typeMax << "\trange: " << range << "\tscale: " << scale << std::endl;
-
-    // Quantized and dequantized data
-    std::vector<TransmissionScalar> quantizedData;
-    std::vector<double> dequantizedData;
-
-    for (const auto &value : originalData) {
-        TransmissionScalar quantizedValue;
-        quantize(value, quantizedValue, scale, minVal, typeMin, typeMax);
-        quantizedData.push_back(quantizedValue);
-    }
-
-    for (const auto &qValue : quantizedData) {
-        double dequantizedValue;
-        dequantize(qValue, dequantizedValue, scale, minVal, typeMin);
-        dequantizedData.push_back(dequantizedValue);
-    }
-
-    // Print quantized values
-    std::cout << "Quantized Data: ";
-    for (auto q : quantizedData) {
-        std::cout << static_cast<int>(q) << " "; // Cast to int to display correctly
-    }
-    std::cout << std::endl;
-
-    // Print dequantized values
-    std::cout << "originalData vs Dequantized Data: ";
-    // for (auto d : dequantizedData) {
-    //     std::cout << d << " ";
-    // }
-
-    for (int i = 0; i < dequantizedData.size(); ++i)
-    {
-      std::cout << originalData[i] <<"\t"<< dequantizedData[i]<<std::endl;
-    }
-    std::cout << std::endl;
+  // Multithreaded execution
+  auto parallelStart = std::chrono::high_resolution_clock::now();
 
 
-  }
+  auto parallelEnd = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> parallelDuration = parallelEnd - parallelStart;
+  std::cout << "Parallel execution took: " << parallelDuration.count() << " seconds.\n";
 
-  return 0;
-
-std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.22507e-308) /0.00246423 <<std::endl;
-// return 0;
-  // ---------------------------------------------------------------------------------------
-  // REMOVE!!!
-  // ---------------------------------------------------------------------------------------
-  // // Sequential execution
-  // auto sequentialStart = std::chrono::high_resolution_clock::now();
-
-  // auto sequentialEnd = std::chrono::high_resolution_clock::now();
-  // std::chrono::duration<double> sequentialDuration = sequentialEnd - sequentialStart;
-  // std::cout << "Sequential execution took: " << sequentialDuration.count() << " seconds.\n";
-
-  // // Multithreaded execution
-  // auto parallelStart = std::chrono::high_resolution_clock::now();
-
-
-  // auto parallelEnd = std::chrono::high_resolution_clock::now();
-  // std::chrono::duration<double> parallelDuration = parallelEnd - parallelStart;
-  // std::cout << "Parallel execution took: " << parallelDuration.count() << " seconds.\n";
-
-  // // Comparing results
-  // double speedup = sequentialDuration.count() / parallelDuration.count();
-  // std::cout << "Speedup: " << speedup << "x\n";
+  // Comparing results
+  double speedup = sequentialDuration.count() / parallelDuration.count();
+  std::cout << "Speedup: " << speedup << "x\n";
 
   // ------------------------------------------------------------------------------------------------------------
   // get the material from the mesh  
@@ -505,7 +437,7 @@ std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.
     for (int t = 0; t < numThreads; ++t) {
         int start = t * chunkSize;
         int end = std::min(start + chunkSize, n_subdomains);
-        std::cout << "start: " << start << " end :"<< end << "\n";
+        // std::cout << "start: " << start << " end :"<< end << "\n";
     }
   }
   // ------------------------------------------------------------------------------------------------------------
@@ -988,7 +920,7 @@ std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.
       std::string path = std::to_string(subIdx);
       // writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+path,matlab_dir, true);      
     }  
-    std::cout << "A_.N() = " <<A_.N() << " max_subdomain "<< max_subdomain<< " max_subdomain "<< min_subdomain<< std::endl;
+    std::cout << "A_.N() = " <<A_.N() << " max_subdomain "<< max_subdomain<< " min_subdomain "<< min_subdomain<< std::endl;
   }
 
   // ------------------------------------------------------------------------------------
@@ -1152,8 +1084,8 @@ std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.
                                 BDDC_verbose,
                                 IG_seq,
                                 matlab_dir,
-                                write_to_file
-                                );  
+                                write_to_file, inputfile); 
+
         Vector sol_bddc_to_petsc(sol_BDDC);
         sol_bddc_to_petsc = 0; 
         petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC,sol_bddc_to_petsc);
@@ -1195,6 +1127,93 @@ std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.
 
       CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
       u = semiImplicit_CG_BDDC_SDC( gridManager,
+                                    F_BDDC_SDC,
+                                    Cellfltr,
+                                    variableSetDesc,
+                                    spaces,
+                                    gridManager.grid(),
+                                    u,
+                                    i2e,
+                                    options,
+                                    statistics,
+                                    out,
+                                    uAll,
+                                    i2i,
+                                    cg_semi,
+                                    direct,
+                                    matlab_dir,
+                                    sol_BDDC_SDC,
+                                    sharedDofsKaskade,
+                                    interfaceTypes,
+                                    n_subdomains,
+                                    A_,
+                                    M_,
+                                    K_,
+                                    As,
+                                    Ms,
+                                    Ks,
+                                    IG_seq,
+                                    map_IGamma,
+                                    sequenceOfTags,
+                                    map_II, 
+                                    map_GammaGamma_noDuplicate, 
+                                    weights,
+                                    Fs_petcs,
+                                    cg_solver,
+                                    iter_cg_with_bddc,
+                                    local2Global,
+                                    global2Local,
+                                    map_index_to_subdomain,
+                                    tol,
+                                    map_t2l, 
+                                    map_indices,
+                                    BDDC_SDC_with_initial,
+                                    BDDC_verbose,
+                                    BDDC_SDC_verbose);
+
+    Vector sol_bddc_sdc_step(sol_BDDC_SDC);
+    sol_bddc_sdc_step = 0; 
+    petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_BDDC_SDC,sol_bddc_sdc_step);
+    if(write_to_file) writeSolution(sol_bddc_sdc_step,matlab_dir+"/sol_bddc_sdc"); 
+
+
+    }  
+  }
+
+    // ------------------------------------------------------------------------------------
+  // semi implicit + CG + SDC + BDDC methods
+  // ------------------------------------------------------------------------------------
+  {
+    if(run_implicit_CG_SDC_BDDC_SPLIT)
+    {
+      std::cout << "---------------------------------------------" << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG  Split         " << std::endl;
+      std::cout << "---------------------------------------------" << std::endl;
+      Vector sol_BDDC_SDC(nDofs);
+      Functional F_BDDC_SDC(material,
+                            gridManager.grid(),
+                            spaces,
+                            penalty,
+                            sigma_i,
+                            sigma_e,
+                            C_m,  
+                            R,
+                            R_extra);
+      F_BDDC_SDC.extracellular_materials(arr_extra);
+      CardiacIntegrationStatistics statistics;
+      F_BDDC_SDC.scaleInitialValue<0>(InitialValue(0,material,arr_excited_region),u);
+      uAll = component<0>(u);
+
+      if(options.plot) writeVTK(uAll,out+"/emiSDCBDDCInitial",
+               IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+
+      std::cout <<" test CellFilter!!!!\n";
+      std::set<int> s_temp;
+      for (int i = 0; i < gridManager.grid().size(0); ++i) 
+        s_temp.insert(i);
+
+      CellFilter Cellfltr(boost::fusion::at_c<0>(u.data), cells_set, tags,material); 
+      u = semiImplicit_CG_BDDC_SDC_SPLIT( gridManager,
                                     F_BDDC_SDC,
                                     Cellfltr,
                                     variableSetDesc,
@@ -1343,7 +1362,7 @@ std::cout << "(1.79769e+308 - 2.22507e-308) /0.00246423:  "<< (1.79769e+308 - 2.
     if(run_implicit_CG_SDC_BDDC_all_collocation_once)
     {
       std::cout << "---------------------------------------------" << std::endl;
-      std::cout << "semi implicit with SDC + BDDC + CG  all collocations         " << std::endl;
+      std::cout << "semi implicit with SDC + BDDC + CG all collocation once         " << std::endl;
       std::cout << "---------------------------------------------" << std::endl;
       Vector sol_BDDC_SDC_all_coll(nDofs);
       Functional F_BDDC_SDC(material,

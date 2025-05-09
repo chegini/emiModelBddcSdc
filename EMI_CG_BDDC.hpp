@@ -48,8 +48,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
                                                         bool BDDC_verbose,
                                                         std::map<int,std::vector<int>> IG_seq,
                                                         std::string matlab_dir,
-                                                        bool write_to_file
-                                                        )
+                                                        bool write_to_file,
+                                                        std::string inputfile)
 {
 
   double dt = options.dt;
@@ -116,8 +116,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   // using TransmissionScalar = double;
   // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
   
-  using TransmissionScalar = double;
-  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  using TransmissionScalar = uint32_t;//int16_t;
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
   std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
 
@@ -137,16 +136,19 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   for (int subIdx = 0; subIdx < n_subdomains; ++subIdx)
   {
     int tag = sequenceOfTags[subIdx];
-    std::cout << subIdx << " -> " << tag << " -> "<< activeIds[subIdx] << std::endl;
+    // std::cout << subIdx << " -> " << tag << " -> "<< activeIds[subIdx] << std::endl;
     subsptr[subIdx] = std::make_unique<BddcSubdomain>(subIdx,As[subIdx],ifa);
-    //activeIds[subIdx] = subIdx;
+
+    //if(subIdx<5) activeIds.push_back(subIdx);
   }
   
-  // parallelFor(0,n_subdomains,[&](int subIdx)
-  // {
-  //   activeIds.push_back(subIdx);
-  // });
 
+
+
+  std::vector<double> condition_number;
+  std::vector<int> bddc_iteration_number;
+
+  auto start_time0 = std::chrono::high_resolution_clock::now();
   for (int time_step=0; time_step<maxSteps; ++time_step) 
   {
     std::cout << "\n ---------- itr "<< time_step << " ---------- "<< std::endl;
@@ -179,7 +181,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     rhs.write(rhs_petsc_test.begin());
 
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, rhs_vec_test, rhs_petsc_test);
-    writeSolution_sol(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
+    if(false) writeSolution_sol(rhs_petsc_test,matlab_dir+"/rhs_bddc_"+std::to_string(time_step)); 
     std::vector<Vector> Fs(n_subdomains);
         // -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     // fill the sub matrices for kaskade format
@@ -209,7 +211,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       for (int subIdx = 0; subIdx < sequenceOfTags.size(); ++subIdx)
       {
         std::string path = std::to_string(subIdx);
-        writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+subIdx,matlab_dir, true);      
+        if(false) writeToMatlabPath(As[subIdx],Fs[subIdx],"A_kaskade_shrinked"+subIdx,matlab_dir, true);      
       }  
     }
     
@@ -234,12 +236,14 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     // ------------------------------------------------------------------------------------
     std::cout << "\n\n";
     std::vector<double> resNorm;
+    // Start time
+    auto start = std::chrono::high_resolution_clock::now();
     for (int k=0; k<iter_cg_with_bddc; ++k)
     {
       timer.start("BDDC solve");
       resNorm.push_back(bddcSolver.solve());      
       timer.stop("BDDC solve");
-      if(true)
+      if(false)
       {
         for (int subIdx=0; subIdx<n_subdomains; ++subIdx)
         {
@@ -283,9 +287,18 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
       }
 
 
-      if(resNorm.back()<tol)
+      if(resNorm.back()<tol){
+        bddc_iteration_number.push_back(k);
         break;
+      }
     } 
+     // End time
+    auto end = std::chrono::high_resolution_clock::now();
+    // Calculate duration in milliseconds
+    std::chrono::duration<double, std::milli> duration = end - start;
+    
+    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
+
     // ------------------------------------------------------------------------------------
     // update solution
     // ------------------------------------------------------------------------------------
@@ -306,13 +319,14 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     sol_bddc *= 0;
     step_test.write(sol_bddc.begin());
 
-    uAll = component<0>(u);
+  
 
     component<0>(u) +=component<0>(step_test);
-
+    uAll = component<0>(u);
     Vector sol_petsc_test(nDofs);
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_bddc, sol_petsc_test);
-    if(false) writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_bddc_"+std::to_string(time_step)); 
+
+    if(time_step == maxSteps-1) writeSolution_sol(sol_petsc_test,matlab_dir+"/sol_bddc_"+inputfile + "_64bits_"+std::to_string(time_step)); 
 
 
     sol_bddc *= 0;
@@ -323,15 +337,42 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
     petsc_structure_rhs(sequenceOfTags, map_indices, map_II, map_GammaGamma_noDuplicate, sol_bddc, u_petsc_test);
     if(false) writeSolution_sol(sol_petsc_test,matlab_dir+"/u_bddc_"+std::to_string(time_step)); 
 
-    if(options.plot) writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
+    if(options.plot) writeVTK(uAll,out+"/emiBDDC_"+paddedString(time_step,2),
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
 
-    writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
-             IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
+    // writeVTK(uAll,out+"/emiBDDC"+paddedString(time_step,2),
+    //          IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
     int lookback = std::min(10,iter_cg_with_bddc-1);
     double contraction = std::pow(resNorm.back()/resNorm[resNorm.size()-lookback],1.0/lookback);
     std::cout << "Estimated contraction factor: " << contraction << ". (kappa ~ " << (1+contraction)/(1-contraction) << ").\n";
+    double cond = (1+contraction)/(1-contraction);
+    condition_number.push_back(cond);
   }
+
+     // End time
+  auto end = std::chrono::high_resolution_clock::now();
+  // Calculate duration in milliseconds
+  std::chrono::duration<double, std::milli> duration = end - start_time0;
+  
+  std::cout << "total Execution time: " << duration.count() << " ms" << std::endl;
+
+  std::cout<< "=======================================" << std::endl;
+  std::cout<< "bddc_iteration_number:" << std::endl;
+  std::cout<< "=======================================" << std::endl;
+  for (int i = 0; i < bddc_iteration_number.size(); ++i)
+  {
+    std::cout<< i <<" "<<bddc_iteration_number[i] << std::endl;
+  }
+  std::cout<< "=======================================" << std::endl;
+
+  std::cout<< "=======================================" << std::endl;
+  std::cout<< "condition_number:" << std::endl;
+  std::cout<< "=======================================" << std::endl;
+  for (int i = 0; i < condition_number.size(); ++i)
+  {
+    std::cout<< i <<" "<<condition_number[i] << std::endl;
+  }
+  std::cout<< "=======================================" << std::endl;
   writeVTK(uAll,out+"/emiBDDCLast",
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
 	return u;

@@ -1449,7 +1449,7 @@ void weight_and_rhs(int subIdx,
 
   int tag = sequenceOfTags[subIdx]; 
   std::string path = std::to_string(subIdx+1);
-  std::cout << "tag: " << tag <<" path: " << path << " subIdx: " << subIdx << std::endl;
+  // std::cout << "tag: " << tag <<" path: " << path << " subIdx: " << subIdx << std::endl;
   Vector Fs_petcs_sub =  rhs_petsc_test;
   Vector weights_sub(subMatrix.N()); 
   // optimize it by iterating only on the interfaces
@@ -1592,14 +1592,14 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
           int endIdx = std::min(startIdx + chunkSize, n_subs);
 
           futures.push_back(std::async(std::launch::async, [startIdx, endIdx, &sequenceOfTags, &map_GammaNbr, &Fs_petcs, 
-                                                           &subMatrices, dt, &F, &assembler, &map_indices, 
+                                                           &subMatrices, &subMatrices_M, &subMatrices_K, dt, &F, &assembler, &map_indices, 
                                                            &Cellfltr, write_to_file, &matlab_dir,&sequenceOfsubdomains,&cells_set,&tags,&subMatricesMutex,&matrixMutex, &creator,&u, &K_, &map_II, &map_GammaGamma, &material, &gridManager, &spaces, &penalty,&arr_extra,
                                                            &sigma_i,&sigma_e,&C_m,&R,&R_extra]() 
           {
     
                 for (int subIdx = startIdx; subIdx < endIdx; ++subIdx) 
                 {
-                  std::cout << "startIdx: " << startIdx << " endIdx: " << endIdx << " by thread " << std::this_thread::get_id() << std::endl;
+                  // std::cout << "startIdx: " << startIdx << " endIdx: " << endIdx << " by thread " << std::this_thread::get_id() << std::endl;
                   int tag = sequenceOfTags[subIdx];
                   std::string path = std::to_string(subIdx);
                   auto du = u;
@@ -1732,6 +1732,8 @@ typename VariableSet::VariableSet  construct_submatrices_petsc_parallel( std::ve
                   {
                     std::lock_guard<std::mutex> lock(matrixMutex); // Lock for thread-safe access to shared resources
                     subMatrices[subIdx] = subMatrix;
+                    subMatrices_M[subIdx] = subMatrix_mass;
+                    subMatrices_K[subIdx] = subMatrix_stiffness;
                   }
 
                   // Optional: Write to file if needed
@@ -2307,7 +2309,7 @@ void construct_As_parallel(std::vector<int> arr_extra,
         sharedDofsKaskade.push_back(tmp);
 
         //if(values.size()>1 and write_to_file and !extra_cellular_shared and !extra_cellular_shared_dirichlet){
-        if(values.size()>1){  
+        if(values.size()>1 and false){  
           //if(write_to_file){
           f << key << "-> ";
           for (const auto& value : values) {

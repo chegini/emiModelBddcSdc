@@ -1,20 +1,20 @@
 #!/bin/bash
 #  Job name is myjob, this will be displayed in the list of running jobs
-#PBS -N r4
+#PBS -N r0
 #  stdout (console output) and stderr (error messages) are passed together into one output textfile
 #PBS -j sol
 #  One node and 56 processor cores are requested on this node (maximum 128 processor cores are possible).
 ##PBS -l nodes=1:ppn=rTB
 #PBS -l nodes=1:ppn=128
 #  Maximum computing time of the job in hours:minutes:seconds.
-##PBS -l walltime=29-23:00:00
+#PBS -l walltime=01:00:00
 ##PBS -l walltime=1-23:00:00
-#PBS -l walltime=10-23:00:00
+##PBS -l walltime=23:00:00
 # It is assumed that the program is called myfile and is located in the directory /home/htc/myname/myfolder.
-#####SBATCH --mem=32768 ls -l
-#SBATCH --mem=102400
-##SBATCH --mem=1000000
+##SBATCH --mem=32768 #ls -l
+## SBATCH --mem=102400
 #SBATCH --partition=big 
+#SBATCH --mem=1000000
 ##SBATCH --partition=high-mem
 ##SBATCH --nodelist=htc-cmp023
 ##SBATCH --partition=cno
@@ -26,7 +26,21 @@ pwd
 cd "${jobdir}"
 pwd
 
+srun -B *:*:* -n1 ./emiModel
+
 #monday test
+
+# ./emiModel --input "./input/mesh2myocytes.vtu" --extra_set "./input/mesh2myocytes_extra.txt" --intra_set "./input/mesh2myocytes_intra.txt" --excited "./input/mesh2myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh4myocytes.vtu" --extra_set "./input/mesh4myocytes_extra.txt" --intra_set "./input/mesh4myocytes_intra.txt" --excited "./input/mesh4myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh8myocytes.vtu" --extra_set "./input/mesh8myocytes_extra.txt" --intra_set "./input/mesh8myocytes_intra.txt" --excited "./input/mesh8myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh16myocytes.vtu" --extra_set "./input/mesh16myocytes_extra.txt" --intra_set "./input/mesh16myocytes_intra.txt" --excited "./input/mesh16myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh32myocytes.vtu" --extra_set "./input/mesh32myocytes_extra.txt" --intra_set "./input/mesh32myocytes_intra.txt" --excited "./input/mesh32myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh64myocytes.vtu" --extra_set "./input/mesh64myocytes_extra.txt" --intra_set "./input/mesh64myocytes_intra.txt" --excited "./input/mesh64myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh128myocytes.vtu" --extra_set "./input/mesh128myocytes_extra.txt" --intra_set "./input/mesh128myocytes_intra.txt" --excited "./input/mesh128myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh256myocytes.vtu" --extra_set "./input/mesh256myocytes_extra.txt" --intra_set "./input/mesh256myocytes_intra.txt" --excited "./input/mesh256myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh512myocytes.vtu" --extra_set "./input/mesh512myocytes_extra.txt" --intra_set "./input/mesh512myocytes_intra.txt" --excited "./input/mesh512myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh1024myocytes.vtu" --extra_set "./input/mesh1024myocytes_extra.txt" --intra_set "./input/mesh1024myocytes_intra.txt" --excited "./input/mesh1024myocytes_early_excited.txt" 
+
 
 # srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_mesh.vtu" --extra_set "./input/8Cells3d_list_extracellular.txt" --intra_set "./input/8Cells3d_list_intracellular.txt" --excited "./input/8Cells3d_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r0/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r0/matlab_dir" --interfacetypes 7 --T 0.01 --refine 0
 # srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_mesh.vtu" --extra_set "./input/8Cells3d_list_extracellular.txt" --intra_set "./input/8Cells3d_list_intracellular.txt" --excited "./input/8Cells3d_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r1/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r1/matlab_dir" --interfacetypes 7 --T 0.01 --refine 1
@@ -39,7 +53,7 @@ pwd
 # srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r1/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r1/matlab_dir" --interfacetypes 7 --T 0.01 --refine 1
 # srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r2/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r2/matlab_dir" --interfacetypes 7 --T 0.01 --refine 2
 # srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r3/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r3/matlab_dir" --interfacetypes 7 --T 0.01 --refine 3
- srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r4/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r4/matlab_dir" --interfacetypes 7 --T 0.01 --refine 4
+# srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r4/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r4/matlab_dir" --interfacetypes 7 --T 0.01 --refine 4
 #srun -B *:*:* -n1 ./emiModel --input "./input/8Cells3d_8extra_mesh.vtu" --extra_set "./input/8Cells3d_8extra_list_extracellular.txt" --intra_set "./input/8Cells3d_8extra_list_intracellular.txt" --excited "./input/8Cells3d_8extra_early_excited.txt" --dir "/scratch/htc/fchegini/cell8/cell8r5/output" --matlab_dir "/scratch/htc/fchegini/cell8/cell8r5/matlab_dir" --interfacetypes 7 --T 0.01 --refine 5
 
 
@@ -72,7 +86,23 @@ pwd
 # srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid8nx8ny8nz.vtu" --extra_set "./input/extracellular8nx8ny8nz.txt" --intra_set "./input/intracellular8nx8ny8nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube8nx8ny8nz_mass_stiffness_diff_time/output" --matlab_dir "/scratch/htc/fchegini/cube8nx8ny8nz_mass_stiffness_diff_time/matlab_dir" --interfacetypes 7 --T 0.02
 
 
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny1nz.vtu" --extra_set "./input/extracellular3nx3ny1nz.txt" --intra_set "./input/intracellular3nx3ny1nz.txt" --excited "./input/emiGrid_earlyExited.txt" --refine 4
 
+
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "output_refine_1" --matlab_dir "matlab_dir_refine_1" --refine 1 #-T 2.0
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "output_refine_2" --matlab_dir "matlab_dir_refine_2"  --refine 2 #-T 2.0
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "output_refine_3" --matlab_dir "matlab_dir_refine_3"  --refine 3 #-T 2.0
+#srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "output_refine_4" --matlab_dir "matlab_dir_refine_4" --refine 4
+
+
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --interfacetypes 5
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --interfacetypes 5
+# srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --interfacetypes 3
+
+# ./emiModel --input "./input/mesh128myocytes.vtu" --extra_set "./input/mesh128myocytes_extra.txt" --intra_set "./input/mesh128myocytes_intra.txt" --excited "./input/mesh128myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh256myocytes.vtu" --extra_set "./input/mesh256myocytes_extra.txt" --intra_set "./input/mesh256myocytes_intra.txt" --excited "./input/mesh256myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh512myocytes.vtu" --extra_set "./input/mesh512myocytes_extra.txt" --intra_set "./input/mesh512myocytes_intra.txt" --excited "./input/mesh512myocytes_early_excited.txt" 
+# ./emiModel --input "./input/mesh1024myocytes.vtu" --extra_set "./input/mesh1024myocytes_extra.txt" --intra_set "./input/mesh1024myocytes_intra.txt" --excited "./input/mesh1024myocytes_early_excited.txt" 
 
 # new mesh weak scability solution for T
 #srun -B *:*:* -n1 ./emiModel --input "./input/emiGrid3nx3ny3nz_new.vtu" --extra_set "./input/extracellular3nx3ny3nz.txt" --intra_set "./input/intracellular3nx3ny3nz.txt" --excited "./input/emiGrid_earlyExited.txt" --dir "/scratch/htc/fchegini/cube3nx3ny1nz_solution/output" --matlab_dir "/scratch/htc/fchegini/cube3nx3ny1nz_solution/matlab_dir" --interfacetypes 7 --T 1.0

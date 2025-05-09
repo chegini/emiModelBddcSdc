@@ -25,7 +25,7 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once_update( bo
                                                                               double dt,
                                                                               std::map<int, int> map_index_to_subdomain,
                                                                               std::vector<int> sequenceOfTags,
-                                                                              std::set<int> BDDCSubIdx,
+                                                                              std::vector<int> activeIds,
                                                                               std::map<int,std::unordered_map<int, int>> global2Local,
                                                                               std::map<int,std::vector<int>> IG_seq,
                                                                               std::vector<Matrix> const& M_bddc,                //matMuu_bddc
@@ -59,24 +59,6 @@ typename Matrix::field_type sdcIterationStepBDDC_allCollocations_once_update( bo
     rhs_bddc[subIndx] = rhs;
     tmp_bddc[subIndx] = tmp;
   }
-
-  if(sweep>0)
-    iter_cg_with_bddc = 3;
-
-  // BDDCSubIdx.insert(0);
-  // BDDCSubIdx.insert(1);
-  // std::vector<int> activeIds(BDDCSubIdx.begin(),BDDCSubIdx.end());
-  std::vector<int> activeIds(n_subdomains);
-  std::iota(activeIds.begin(), activeIds.end(), 0);
-  // activeIds.clear();
-  // activeIds.push_back(0);
-  // activeIds.push_back(1);
-  // activeIds.push_back(2);
-  // activeIds.push_back(3);
-  // for (int i = 0; i < activeIds.size(); ++i)
-  // {
-  //   if(sweep!=0) std::cout<< activeIds[i] <<std::endl;
-  // }
 
   Vector initial(A.N()), initial_temp(A.N());
   initial *= 0;
@@ -497,9 +479,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   }
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
-  using TransmissionScalar = double;
-  using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  // using TransmissionScalar = double;
+  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
 
+  using TransmissionScalar = uint32_t;//int16_t;
+  using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
+  std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
+  
   // --------------------------------------------------------------------------------------------
   // time stepping loop
   // --------------------------------------------------------------------------------------------
@@ -594,14 +580,13 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
     std::vector<double> sweepNorm;
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
-    std::set<int> BDDCSubIdx;
+
     std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcCon\t\t"<< "||u||\t\t" <<"#coll\t\t"<<"#dofs\t\t"<<"#cells\t\t"<<"\n";   
     Vector rhs_petsc_sweep_0;
-    for (int i = 0; i < sequenceOfTags.size(); ++i)
-    {
-      BDDCSubIdx.insert(i);
-    }
 
+
+    std::vector<int> activeIds(n_subdomains);
+    std::iota(activeIds.begin(), activeIds.end(), 0);
     do
     {
       // --------------------------------------------------------------------------------------------
@@ -611,20 +596,16 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       sweep++;
       if (sweep==0)   
       { 
-        std::cout<<" selected_cell_idx.size() " << selected_cell_idx.size() <<" BDDCSubIdx.size() " << BDDCSubIdx.size() << " sweep: " << sweep<<std::endl;
+        std::cout<<" selected_cell_idx.size() " << selected_cell_idx.size() <<" activeIds.size() " << activeIds.size() << " sweep: " << sweep<<std::endl;
         Cellfltr.set_cells(elementIdx);
       }
       else{
-        std::cout<<" selected_cell_idx.size() " << selected_cell_idx.size() <<" BDDCSubIdx.size() " << BDDCSubIdx.size() << " sweep: " << sweep<<std::endl;
+        std::cout<<" selected_cell_idx.size() " << selected_cell_idx.size() <<" activeIds.size() " << activeIds.size() << " sweep: " << sweep<<std::endl;
         // Cellfltr.set_cells(elementIdx);
         Cellfltr.set_cells(selected_cell_idx);
         // Cellfltr.get_cells();
       }
-      // BDDCSubIdx.clear();
-      // for (int i = 0; i < sequenceOfTags.size(); ++i)
-      // {
-      //   BDDCSubIdx.insert(i);
-      // }
+
       // --------------------------------------------------------------------------------------------
       // set the time step
       // --------------------------------------------------------------------------------------------  
@@ -737,7 +718,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
         SparseMatrix matMuu_sub = Ms[subIndx];
         SparseMatrix matStiffuu_sub = Ks[subIndx]; 
         matMuu_bddc[subIndx] = matMuu_sub;
-        matStiffuu_sub *=(-1.0/options.dt); // cancle out the dt coeffient -dt
+        matStiffuu_sub *=(-1.0/options.dt); // cancel out the dt coefficient -dt
         matStiffuu_bddc[subIndx] = matStiffuu_sub;
       }
 
@@ -764,7 +745,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
         // ---------------------------------------------------------------------
         // matrix J = M - Shat_i-1,i*(A+f_u)
         // ---------------------------------------------------------------------
-        int n_grid = grid.points().N()-1;
+        int n_grid = grid.points().size()-1;
         JJ_all.resize(n_grid);
         subs_all.resize(n_grid); 
         for (int i=1; i<=n_grid; i++)
@@ -811,7 +792,15 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
           parallelFor(0,n_subdomains,[&](int subIndx)
           {
             subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
+            // subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,As[subIndx],ifa);
           });
+          // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          // {
+          //   subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
+          //   // subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,As[subIndx],ifa);
+          //   std::cout << "subsptr[subIndx] = " << subIndx <<std::endl;
+          // }
+
           // subsptr_coll[i-1] = subsptr;
           std::vector<BddcSubdomain> subs;
           for (auto& sp: subsptr){
@@ -840,7 +829,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
                                                                                   options.dt,
                                                                                   map_index_to_subdomain,
                                                                                   sequenceOfTags,
-                                                                                  BDDCSubIdx,
+                                                                                  activeIds,
                                                                                   global2Local,
                                                                                   IG_seq,
                                                                                   matMuu_bddc,
@@ -923,93 +912,110 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       // // --------------------------------------------------------------------------------------------  
       int count = 0;
       int discount = 0;
+      std::set<int> activeIds_set(activeIds.begin(), activeIds.end());
+
       if (options.tolSelect > 0)
       {
-        BDDCSubIdx.clear();
 
-        State markSelectedDOF(x);
-        markSelectedDOF*=0;
-
-        std::vector<size_t> newExpandedIndices;
-        std::vector<size_t> newCompressedIndex;
-        std::set<size_t> set_ExpandedIndices;
-      
-        expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
-
-        newCompressedIndex.resize(compressedIndex.size(),compressedIndex.size());
-        compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
-
-        for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-        {
-          int size_of_subdomain = map_II[subIndx].size()+map_GammaGamma_noDuplicate[subIndx].size();
-
-  
-          // for (int i=0; i<duVec_bddc[subIndx].back().size(); ++i)
-          for (int i=0; i<size_of_subdomain; ++i)
-          {
-            double duMax = 0;
-            for (auto const& duj: duVec_bddc[subIndx]){
-              duMax = std::max(duMax,std::abs(duj[i]));
-            }
-
-            if(sdcContraction>1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
-            {
-              BDDCSubIdx.insert(subIndx);
-              size_t ej = expandedIndices[i];
-              std::set<int> s = index2IndexsSet[local2Global[subIndx][ej]];
-              std::set<int>::iterator it;
-              for (it = s.begin(); it != s.end(); ++it) {
-                set_ExpandedIndices.insert(*it);
-              }
-            }
-          }
-        }
-        
-        std::set<size_t>::iterator it;
-        for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
-          newExpandedIndices.push_back(*it);
-        }
-
-        std::set<int>::iterator it_;
-        for (it_=BDDCSubIdx.begin(); it_!=BDDCSubIdx.end(); ++it_){
-
-          //if(sweep==0) std::cout<< *it_<< std::endl; 
-        }
-        std::cout << "BDDCSubIdx.size() " << BDDCSubIdx.size()<<std::endl;
-  
-        size_e_adaptivity = 0;
-
-        selected_cell_idx.clear();
-        for (int i = 0; i < newExpandedIndices.size(); ++i)
-        {          
-          size_t ej_next = newExpandedIndices[i];
-        
-          std::set<int> cell_set = index2Cells_new[ej_next];
-          std::set<int>::iterator itr; 
-         for (itr=cell_set.begin(); itr!=cell_set.end(); ++itr){
-          selected_cell_idx.insert(*itr);
-         }
-
-          at_c<0>(markSelectedDOF.data).coefficients()[ej_next] = 1.0;
-          size_e_adaptivity++;
-        }
-
-        expandedIndices.assign(newExpandedIndices.begin(),newExpandedIndices.end());
-
-        for (int i = 0; i < expandedIndices.size(); ++i)
-        {
-          compressedIndex[expandedIndices[i]] = i;
-        }
-        count = expandedIndices.size();
-        discount = compressedIndex.size()-expandedIndices.size();
-      
-
-        if(options.plot and compressedIndex.size()!=expandedIndices.size()) printuAll(markSelectedDOF,uAll,options.order, output + "/Selected-steps_"+paddedString(steps)+"-sweep_"+paddedString(sweep),"SelectedDOF");
-
-        expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
-
-        std::cout << "size_e_adaptivity " << size_e_adaptivity <<std::endl;
+      }   
+      std::vector<int> activeIds_new(activeIds_set.begin(), activeIds_set.end()); 
+      activeIds = activeIds_new;
+      for (int i = 0; i < activeIds.size(); ++i)
+      {
+          std::cout <<activeIds[i] <<" ";
       }
+      std::cout<<"\n";
+
+      // activeIds(activeIds_set.begin(), activeIds_set.end());
+      // if (options.tolSelect > 0)
+      // {
+      //   BDDCSubIdx.clear();
+      //   State markSelectedDOF(x);
+      //   markSelectedDOF*=0;
+
+      //   std::vector<size_t> newExpandedIndices;
+      //   std::vector<size_t> newCompressedIndex;
+      //   std::set<size_t> set_ExpandedIndices;
+      
+      //   expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
+
+      //   newCompressedIndex.resize(compressedIndex.size(),compressedIndex.size());
+      //   compressedIndex.assign(newCompressedIndex.begin(),newCompressedIndex.end());
+
+      //   for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+      //   {
+      //     int size_of_subdomain = map_II[subIndx].size()+map_GammaGamma_noDuplicate[subIndx].size();
+
+  
+      //     // for (int i=0; i<duVec_bddc[subIndx].back().size(); ++i)
+      //     for (int i=0; i<size_of_subdomain; ++i)
+      //     {
+      //       double duMax = 0;
+      //       for (auto const& duj: duVec_bddc[subIndx]){
+      //         duMax = std::max(duMax,std::abs(duj[i]));
+      //       }
+
+      //       if(sdcContraction>1 || sdcContraction*duMax/(1-sdcContraction) > options.tolSelect)
+      //       {
+      //         BDDCSubIdx.insert(subIndx);
+      //         size_t ej = expandedIndices[i];
+      //         std::set<int> s = index2IndexsSet[local2Global[subIndx][ej]];
+      //         std::set<int>::iterator it;
+      //         for (it = s.begin(); it != s.end(); ++it) {
+      //           set_ExpandedIndices.insert(*it);
+      //         }
+      //       }
+      //     }
+      //   }
+        
+      //   std::set<size_t>::iterator it;
+      //   for (it=set_ExpandedIndices.begin(); it!=set_ExpandedIndices.end(); ++it){
+      //     newExpandedIndices.push_back(*it);
+      //   }
+
+      //   std::set<int>::iterator it_;
+      //   for (it_=BDDCSubIdx.begin(); it_!=BDDCSubIdx.end(); ++it_){
+
+      //     //if(sweep==0) std::cout<< *it_<< std::endl; 
+      //   }
+      //   std::cout << "BDDCSubIdx.size() " << BDDCSubIdx.size()<<std::endl;
+  
+      //   size_e_adaptivity = 0;
+
+      //   selected_cell_idx.clear();
+      //   for (int i = 0; i < newExpandedIndices.size(); ++i)
+      //   {          
+      //     size_t ej_next = newExpandedIndices[i];
+        
+      //     std::set<int> cell_set = index2Cells_new[ej_next];
+      //     std::set<int>::iterator itr; 
+      //    for (itr=cell_set.begin(); itr!=cell_set.end(); ++itr){
+      //     selected_cell_idx.insert(*itr);
+      //    }
+
+      //     at_c<0>(markSelectedDOF.data).coefficients()[ej_next] = 1.0;
+      //     size_e_adaptivity++;
+      //   }
+      //   std::cout<< "newExpandedIndices.size() "<<newExpandedIndices.size() << " expandedIndices: " << expandedIndices.size() <<std::endl;
+      //   // commented temp to test
+      //   //expandedIndices.assign(newExpandedIndices.begin(),newExpandedIndices.end());
+
+      //   for (int i = 0; i < expandedIndices.size(); ++i)
+      //   {
+      //   //  compressedIndex[expandedIndices[i]] = i;
+      //   }
+      //   count = expandedIndices.size();
+      //   discount = compressedIndex.size()-expandedIndices.size();
+      
+
+      //   if(options.plot and compressedIndex.size()!=expandedIndices.size()) printuAll(markSelectedDOF,uAll,options.order, output + "/Selected-steps_"+paddedString(steps)+"-sweep_"+paddedString(sweep),"SelectedDOF");
+
+      //   //expandedIndices_pre.assign(expandedIndices.begin(),expandedIndices.end());
+
+      //   std::cout << "size_e_adaptivity " << size_e_adaptivity <<std::endl;
+      // }
+
+      
       eq.time(t+dt);
 
       // --------------------------------------------------------------------------------------------  

@@ -53,6 +53,7 @@ using namespace Kaskade;
 // #include "EMI_CG_BDDC_fused.hpp"
 #include "EMI_CG_BDDC_SDC.hpp"
 #include "EMI_CG_Jacobi_SDC.hpp"
+#include "EMI_CG_BDDC_SDC_split.hpp"
 #include "EMI_CG_BDDC_SDC_allCollocations_once.hpp"
 #include "EMI_CG_BDDC_SDC_allCollocations_once_update.hpp"
 #include "EMI_CG_BDDC_SDC_smallest_collocation.hpp"

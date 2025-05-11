@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   using namespace Kaskade::BDDC;
   using namespace boost::fusion;
 
-  Kaskade::NumaThreadPool::instance (1); 
+  // Kaskade::NumaThreadPool::instance (1); 
 
   std::cout << "Start subdomain tutorial program" << std::endl;
   
@@ -96,10 +96,10 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/example4subc_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/example4subc_early_excited.txt","subdomain definition")
-  ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition") // this
-  ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
-  ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
-  ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
+  // ("input",                    inputfile,                           "./input/example4subc_2extra_mesh.vtu","subdomain definition") // this
+  // ("extra_set",                extra_set,                           "./input/example4subc_2extra_list_extracellular.txt","subdomain definition")
+  // ("intra_set",                intra_set,                           "./input/example4subc_2extra_list_intracellular.txt","subdomain definition")
+  // ("excited",                  early_excited,                       "./input/example4subc_2extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/example4subc_join_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/example4subc_join_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/example4subc_join_list_intracellular.txt","subdomain definition")
@@ -199,10 +199,10 @@ int main(int argc, char* argv[])
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
-  // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
-  // ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
-  // ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
-  // ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
+  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
+  ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
+  ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
   // ("input",                    inputfile,                           "./input/10Cells3d_mesh.vtu","subdomain definition")
   // ("extra_set",                extra_set,                           "./input/10Cells3d_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/10Cells3d_list_intracellular.txt","subdomain definition")

@@ -702,7 +702,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         cellsMarked.clear();
         State markSelectedDOF(x);
         markSelectedDOF*=0;
-
+        // std::cout << "set_ExpandedIndices: " << "\n";
         std::vector<size_t> newExpandedIndices;
         std::vector<size_t> newCompressedIndex;
         std::set<size_t> set_ExpandedIndices;
@@ -744,7 +744,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
         for (int i = 0; i < newExpandedIndices.size(); ++i)
         {          
           size_t ej_next = newExpandedIndices[i];
-        
+          // std::cout << ej_next << " ";
           std::set<int> cell_set = index2Cells_new[ej_next];
           std::set<int> selected_cell_idx;
           selected_cell_idx.insert(cell_set.begin(), cell_set.end());
@@ -757,6 +757,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
           at_c<0>(markSelectedDOF.data).coefficients()[ej_next] = 1.0;
           size_e_adaptivity++;
         }
+        // std::cout << "\n";
 
         std::set<int> s_temp_al(cellsMarked.begin(), cellsMarked.end()); 
 

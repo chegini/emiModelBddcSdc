@@ -856,7 +856,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
             subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
           });
         }
-        // reassemble = false;
       }
 
       for (int i=1; i<=grid.points().N()-1; i++) // for each collocation points
@@ -868,12 +867,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
         subs_all[i-1] = subs;
       }
 
-      // // subsptr_coll[i-1] = subsptr;
-      //   std::vector<BddcSubdomain> subs;
-      //   for (auto& sp: subsptr){
-      //     subs.push_back(*sp);
-      //   }
-      //   subs_all[i-1] = subs;
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
       // -------------------------------------------------------------------------------------------- 
@@ -925,7 +918,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once(
           int tag =  sequenceOfTags[subIndx];
           collocationU[ii].coefficients()[ej] += duVec_bddc[subIndx][ii][global2Local[tag][ej]]; // FIX ME sinec the du is shrinked!!!
 
-          // std::cout << "global: " << ej << ":" << "subIndx: "<< subIndx << " =>  " << global2Local[subIndx][ej] << " value " << duVec_bddc[subIndx][ii][global2Local[subIndx][ej]]<< std::endl;
           at_c<0>(du.data).coefficients()[ej] = duVec_bddc[subIndx][ii][j];
           if(duVec_bddc[subIndx][ii][j]!=0) at_c<0>(du_mark.data).coefficients()[ej] = 1.0;    
         }

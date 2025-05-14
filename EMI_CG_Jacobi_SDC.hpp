@@ -380,7 +380,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
     bool debug = false;
 
     // std::cerr <<"sweep\t"<<"ndof\t" <<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t" <<"number of cells"<<"\n";  
-    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcContraction\t\t"<<"cells\t\t"<<"dofs\t\t"<<"\n"; 
+    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcCon\t\t"<<"cells\t\t"<<"dofs\t\t"<<"\n"; 
 
     // std::set<int> s_temp;
     // for (int i = 0; i < gridManager.grid().size(0); ++i)
@@ -673,7 +673,10 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       }
 
       //std::cerr << sweep <<"\t"<< expandedIndices.size()  <<"\t"<< sweepNorm.back() << "\t"<< std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()<<"\n";  
-      std::cerr << sweep <<"\t"<< sweepNorm.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()  << "\t\t" << expandedIndices.size()<<"\n";  
+      if(sweep==0)
+        std::cerr << sweep <<"\t"<< sweepNorm.back() << "\t" <<std::sqrt(normU2) << "\t\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()  << "\t\t" << expandedIndices.size()<<"\n";  
+      else
+        std::cerr << sweep <<"\t"<< sweepNorm.back() << "\t" <<std::sqrt(normU2) << "\t"<<sdcContraction << "\t\t" << Cellfltr.get_size()  << "\t\t" << expandedIndices.size()<<"\n";  
 
       // // --------------------------------------------------------------------------------------------
       // // plot du 

@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   using namespace Kaskade::BDDC;
   using namespace boost::fusion;
 
-  // Kaskade::NumaThreadPool::instance (1); 
+  Kaskade::NumaThreadPool::instance (1); 
 
   std::cout << "Start subdomain tutorial program" << std::endl;
   
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_rescaled.vtu","subdomain definition")
   //("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_unconstructed.vtu","subdomain definition")
   // ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh_refine2.vtu","subdomain definition")
-  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition")
+  ("input",                    inputfile,                           "./input/10Cells3d_10extra_mesh.vtu","subdomain definition") //this 3D
   ("extra_set",                extra_set,                           "./input/10Cells3d_10extra_list_extracellular.txt","subdomain definition")
   ("intra_set",                intra_set,                           "./input/10Cells3d_10extra_list_intracellular.txt","subdomain definition")
   ("excited",                  early_excited,                       "./input/10Cells3d_10extra_early_excited.txt","subdomain definition")
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
   // ("extra_set",                extra_set,                           "./input/20Cells3d_20extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/20Cells3d_20extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/20Cells3d_20extra_early_excited.txt","subdomain definition")
-  // ("input",                    inputfile,                           "./input/40Cells3d_40extra_mesh.vtu","subdomain definition")
+  // ("input",                    inputfile,                           "./input/40Cells3d_40extra_mesh.vtu","subdomain definition") //this 3D
   // ("extra_set",                extra_set,                           "./input/40Cells3d_40extra_list_extracellular.txt","subdomain definition")
   // ("intra_set",                intra_set,                           "./input/40Cells3d_40extra_list_intracellular.txt","subdomain definition")
   // ("excited",                  early_excited,                       "./input/40Cells3d_40extra_early_excited.txt","subdomain definition")
@@ -305,8 +305,8 @@ int main(int argc, char* argv[])
   ("maxCGIter",                options.maxCGIter,                   10000,  "maximum number of IterateType::CG iterations in linear solver (0=direct solver)")
   ("cgTol",                    options.cgTol,                       1e-8,  "absolute IterateType::CG energy error tolerance")
   ("adapt",                    options.adapt,                       false,  "do adaptivity or not")
-  ("sweeps",                   options.minSweeps,                   3,  "minimal number of SDC sweeps")
-  ("maxSweeps",                options.maxSweeps,                   3,  "maximal number of SDC sweeps")
+  ("sweeps",                   options.minSweeps,                   4,  "minimal number of SDC sweeps")
+  ("maxSweeps",                options.maxSweeps,                   4,  "maximal number of SDC sweeps")
   ("nColloc",                  options.nCollocU,                    3,  "number of collocation points in time")
   ("nCollocStart",             options.nCollocUstart,               3,  "start sweeps with that many collocation points")
   ("verbose",                  options.verbosity,                   1,  "output density")
@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
   ("sdc_contraction",          options.sdc_contraction,             0.2,  "SDC constraction")  
   ("BDDC_SDC_with_initial",    BDDC_SDC_with_initial,               true,  "BDDC with initial guess from previous collocation sol") 
   ("BDDC_verbose",             BDDC_verbose,                        true,  "SDC tolerance") 
-  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    true,  "SDC tolerance") 
+  ("BDDC_SDC_verbose",         BDDC_SDC_verbose,                    false,  "SDC tolerance") 
   )) return 0;
   tol =  options.cgTol;
   if (mkdir("output", 0777) == -1)
@@ -533,11 +533,11 @@ int main(int argc, char* argv[])
   eq.setTau(tau);
   auto du(u);
   du *= 0;
-  std::cout << "Start: assembler.assemble(SemiLinearization "<<std::endl;
+  std::cout << "Start: assembler.assemble(SemiLinearization) "<<std::endl;
   assembler.assemble(SemiLinearization(eq,u,u,du),Assembler::RHS,options.assemblyThreads);
   std::cout << "END: assembler.assemble(SemiLinearization "<<std::endl;
   auto rhs_oiginal = assembler.rhs();
-
+  std::cout << "TEST!!!"<<std::endl;
   // // ------------------------------------------------------------------------------------
   // // semi implicit + CG methods
   // // ------------------------------------------------------------------------------------

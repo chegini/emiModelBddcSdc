@@ -358,6 +358,10 @@ public:
     Dune::FieldVector<Scalar,1>
     d1(Kaskade::VariationalArg<Scalar,dim> const& argT) const
     {
+      // if (row != cellDomain) {
+      //   std::cerr << "Assertion failed: row = " << row << ", but cellDomain = " << cellDomain << std::endl;
+      //   abort();
+      // }
       // Test function support is limited to the own subdomain, i.e. in the extracellular domain,
       // there are no intracellular test function degrees of freedom - check this.
       assert(row==cellDomain);

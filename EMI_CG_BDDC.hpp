@@ -356,23 +356,23 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC(	GridManager<Grid>& gridM
   
   std::cout << "total Execution time: " << duration.count() << " ms" << std::endl;
 
-  std::cout<< "=======================================" << std::endl;
-  std::cout<< "bddc_iteration_number:" << std::endl;
-  std::cout<< "=======================================" << std::endl;
-  for (int i = 0; i < bddc_iteration_number.size(); ++i)
-  {
-    std::cout<< i <<" "<<bddc_iteration_number[i] << std::endl;
-  }
-  std::cout<< "=======================================" << std::endl;
+  // std::cout<< "=======================================" << std::endl;
+  // std::cout<< "bddc_iteration_number:" << std::endl;
+  // std::cout<< "=======================================" << std::endl;
+  // for (int i = 0; i < bddc_iteration_number.size(); ++i)
+  // {
+  //   std::cout<< i <<" "<<bddc_iteration_number[i] << std::endl;
+  // }
+  // std::cout<< "=======================================" << std::endl;
 
-  std::cout<< "=======================================" << std::endl;
-  std::cout<< "condition_number:" << std::endl;
-  std::cout<< "=======================================" << std::endl;
-  for (int i = 0; i < condition_number.size(); ++i)
-  {
-    std::cout<< i <<" "<<condition_number[i] << std::endl;
-  }
-  std::cout<< "=======================================" << std::endl;
+  // std::cout<< "=======================================" << std::endl;
+  // std::cout<< "condition_number:" << std::endl;
+  // std::cout<< "=======================================" << std::endl;
+  // for (int i = 0; i < condition_number.size(); ++i)
+  // {
+  //   std::cout<< i <<" "<<condition_number[i] << std::endl;
+  // }
+  // std::cout<< "=======================================" << std::endl;
   writeVTK(uAll,out+"/emiBDDCLast",
              IoOptions().setOrder(order).setPrecision(7).setDataMode(IoOptions::nonconforming),"u");
 	return u;

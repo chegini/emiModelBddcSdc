@@ -689,7 +689,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
       //     du = 0;
       //     for (int j=0; j<expandedIndices.size(); ++j) {
       //       du.coefficients()[expandedIndices[j]] += duVec[ii][j];
-      //     }
+      //     }  
       //     //writeVTK(du,output+"/aliev-du-sweep="+paddedString(sweep)+"-col="+paddedString(ii)+"-step="+paddedString(steps),IoOptions().setOrder(2),"du");
       //   }
       // }

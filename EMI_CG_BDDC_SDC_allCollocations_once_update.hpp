@@ -787,31 +787,29 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
             }
           }
 
-          // std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-          // for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-          // {
+          std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
           parallelFor(0,n_subdomains,[&](int subIndx)
           {
             subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
           });
 
-          // std::vector<BddcSubdomain> subs;
-          // for (auto& sp: subsptr){
-          //   subs.push_back(*sp);
-          // }
-          // subs_all[i-1] = subs;
+          std::vector<BddcSubdomain> subs;
+          for (auto& sp: subsptr){
+            subs.push_back(*sp);
+          }
+          subs_all[i-1] = subs;
         }
-        reassemble = false;
+        //reassemble = false;
       }
 
-      for (int i=1; i<=grid.points().N()-1; i++) // for each collocation points
-      { 
-        std::vector<BddcSubdomain> subs;
-        for (auto& sp: subsptr){
-          subs.push_back(*sp);
-        }
-        subs_all[i-1] = subs;
-      }
+      // for (int i=1; i<=grid.points().N()-1; i++) // for each collocation points
+      // { 
+      //   std::vector<BddcSubdomain> subs;
+      //   for (auto& sp: subsptr){
+      //     subs.push_back(*sp);
+      //   }
+      //   subs_all[i-1] = subs;
+      // }
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
       // -------------------------------------------------------------------------------------------- 
@@ -849,16 +847,21 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       // --------------------------------------------------------------------------------------------
       for (int ii=1; ii<collocationU.size(); ii++) // start loop at 1 as initial values is not changed
       {
-        for (int j=0; j<A_.N(); ++j)
+        for (int id = 0; id < activeIds.size(); ++id)
         {
-          int subIndx =  map_index_to_subdomain[j];
+          int subIndx =  activeIds[id];
           int tag =  sequenceOfTags[subIndx];
-          collocationU[ii].coefficients()[j] += duVec_bddc[subIndx][ii][global2Local[tag][j]];
-        }
 
-        State updated_val(x); 
-        component<0>(updated_val) = collocationU[ii];
+          int size_of_inner = map_II[tag].size();
+          int size_of_Gamma = map_GammaGamma_noDuplicate[tag].size();
+
+          for (int i = 0; i < size_of_inner+size_of_Gamma; ++i)
+          {
+            collocationU[ii].coefficients()[local2Global[tag][i]] += duVec_bddc[subIndx][ii][i];
+          }
+        }
       }
+
 
       // --------------------------------------------------------------------------------------------
       // sdcContraction
@@ -882,8 +885,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
         double c = sweepNorm_bddc.back()/sweepNorm_bddc[sweepNorm_bddc.size()-2];
         sdcContraction = std::sqrt(c*sdcContraction);
       }
-      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t\t"<<sdcContraction << "\t\t" << activeIds.size() << "\t\t" << Cellfltr.get_size() <<"\t\t"<< size_adaptivity <<" \n";   
+      // std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<< std::setprecision(7) << sdcContraction << "\t\t"<< std::setprecision(2) << activeIds.size() << "\t\t" << std::setprecision(2) << Cellfltr.get_size() <<"\t\t" << std::setprecision(2) << size_adaptivity <<" \n";   
 
+      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t\t" <<std::sqrt(normU2) << "\t"<< sdcContraction << "\t\t"<< activeIds.size() << "\t\t" << Cellfltr.get_size() << "\t\t" << size_adaptivity <<" \n";   
       // // --------------------------------------------------------------------------------------------  
       // // select degrees of freedom to take into account in the next sweep. This is a 
       // // further reduction of the up to now used dofs
@@ -895,8 +899,9 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
         std::set<int> set_active_tag;        
         cellsMarked.clear();
         // iterate over activated subdomain
-        for (int subIndx = 0; subIndx < activeIds.size(); ++subIndx)
+        for (int id = 0; id < activeIds.size(); ++id)
         {
+          int subIndx = activeIds[id];
           int tag = sequenceOfTags[subIndx];
           int size_of_inner = map_II[tag].size();
           int size_of_Gamma = map_GammaGamma_noDuplicate[tag].size();
@@ -958,7 +963,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
 
           int  subIndx = Tag2IndexSub[tag];
           activeIds_set.insert(subIndx);
-          // std::cout<< subIndx << ":" << tag << " ";
           int size_of_inner = map_II[tag].size();
           int size_of_Gamma = map_GammaGamma_noDuplicate[tag].size();
           size_adaptivity +=(size_of_inner+size_of_Gamma);
@@ -972,7 +976,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
             } 
           }
         }     
-        // std::cout<< "\n";   
         std::set<int> s_temp_al(cellsMarked.begin(), cellsMarked.end()); 
         Cellfltr.set_cells(s_temp_al);
         selected_cell_idx = s_temp_al;

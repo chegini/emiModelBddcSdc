@@ -314,7 +314,7 @@ typename VariableSet::VariableSet semiImplicit_CG_Jacobi_SDC( GridManager<Grid>&
     std::cout << "****************************************************************************************** " <<std::endl; 
     std::cout << "\t\t\t\t step: " << steps << "\t t: "  << eq.time() <<std::endl; 
     std::cout << "****************************************************************************************** " <<std::endl; 
-    std::cout << " \t\t\t\t\t steps "<< steps <<std::endl;
+    // std::cout << " \t\t\t\t\t steps "<< steps <<std::endl;
     eq.Mass_stiff(0);
     // --------------------------------------------------------------------------------------------
     // last time step

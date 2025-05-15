@@ -482,11 +482,11 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   std::cout << "\n";
 
   InterfaceAverages<1,int> ifa(sharedDofsKaskade,subdomSize,interfaceTypes);
-  using TransmissionScalar = double;
-  using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
+  // using TransmissionScalar = double;
+  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransfer<1,double,TransmissionScalar>>;
 
-  // using TransmissionScalar = uint32_t;//int16_t;
-  // using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
+  using TransmissionScalar = uint32_t;//int16_t;
+  using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
   std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
   
   // --------------------------------------------------------------------------------------------
@@ -499,6 +499,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   double end_T = 0;
   eq.time(0);
   std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
+  // std::vector<std::vector<BddcSubdomain>> subs_all(options.nCollocUstart-1);
   size_t nDofs = variableSet.degreesOfFreedom(0,1);
   duration<double, std::milli> ms_double_ass;
   auto recordTime1 = high_resolution_clock::now();
@@ -507,7 +508,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
     std::cout << "****************************************************************************************** " <<std::endl; 
     std::cout << "\t\t\t\t step: " << steps << "\t t: "  << eq.time() <<std::endl; 
     std::cout << "****************************************************************************************** " <<std::endl; 
-    std::cout << " \t\t\t\t\t steps "<< steps <<std::endl;
     eq.Mass_stiff(0);
     // --------------------------------------------------------------------------------------------
     // last time step
@@ -799,7 +799,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
           }
           subs_all[i-1] = subs;
         }
-        //reassemble = false;
+        // reassemble = false;
       }
 
       // for (int i=1; i<=grid.points().N()-1; i++) // for each collocation points

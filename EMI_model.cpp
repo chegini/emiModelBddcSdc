@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   using namespace Kaskade::BDDC;
   using namespace boost::fusion;
 
-  Kaskade::NumaThreadPool::instance (1); 
+  // Kaskade::NumaThreadPool::instance (1); 
 
   std::cout << "Start subdomain tutorial program" << std::endl;
   

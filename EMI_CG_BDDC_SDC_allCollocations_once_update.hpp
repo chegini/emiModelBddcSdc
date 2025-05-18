@@ -498,7 +498,11 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   bool done = false;
   double end_T = 0;
   eq.time(0);
-  std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
+  std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_colloc(3);
+      
+  // std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_colloc(options.nCollocUstart-1);
+
+  //std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
   // std::vector<std::vector<BddcSubdomain>> subs_all(options.nCollocUstart-1);
   size_t nDofs = variableSet.degreesOfFreedom(0,1);
   duration<double, std::milli> ms_double_ass;
@@ -590,6 +594,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
 
     std::vector<int> activeIds(n_subdomains);
     std::iota(activeIds.begin(), activeIds.end(), 0);
+
 
     std::vector<int> cellsMarked;
     do
@@ -740,15 +745,16 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
       // -------------------------------------------------------------------------------------------- 
-
+      int n_grid = grid.points().size()-1;
       if (reassemble)
       {
         // ---------------------------------------------------------------------
         // matrix J = M - Shat_i-1,i*(A+f_u)
         // ---------------------------------------------------------------------
-        int n_grid = grid.points().size()-1;
+        
         JJ_all.resize(n_grid);
         subs_all.resize(n_grid); 
+
         for (int i=1; i<=n_grid; i++)
         {
           std::vector<Matrix> JJ(n_subdomains);
@@ -787,29 +793,29 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
             }
           }
 
-          std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-          parallelFor(0,n_subdomains,[&](int subIndx)
-          {
-            subsptr[subIndx] = std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa);
-          });
+          std::vector<std::unique_ptr<BddcSubdomain>> subsptr_tmp;
+          subsptr_tmp.reserve(n_subdomains);
 
-          std::vector<BddcSubdomain> subs;
-          for (auto& sp: subsptr){
-            subs.push_back(*sp);
+          for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
+          {
+            // Create a new BddcSubdomain and wrap it in a unique_ptr
+            subsptr_tmp.emplace_back(std::make_unique<BddcSubdomain>(subIndx,JJ_all[i-1][subIndx],ifa));
           }
-          subs_all[i-1] = subs;
+
+          subsptr_colloc[i-1] = std::move(subsptr_tmp);  // move it into the outer vector
         }
-        // reassemble = false;
+        reassemble = false;
       }
 
-      // for (int i=1; i<=grid.points().N()-1; i++) // for each collocation points
-      // { 
-      //   std::vector<BddcSubdomain> subs;
-      //   for (auto& sp: subsptr){
-      //     subs.push_back(*sp);
-      //   }
-      //   subs_all[i-1] = subs;
-      // }
+      for (int i=1; i<=n_grid; i++)
+      {
+        std::vector<BddcSubdomain> subs;
+        for (auto& sp: subsptr_colloc[i-1]){
+          subs.push_back(*sp);
+        }
+        subs_all[i-1] = std::move(subs);  // move is optional but a bit more efficient //subs;
+      }
+
       // -------------------------------------------------------------------------------------------- 
       // perform SDC sweep
       // -------------------------------------------------------------------------------------------- 

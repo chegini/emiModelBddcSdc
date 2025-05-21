@@ -13,6 +13,8 @@
 #ifndef INTEGRATE_CG_BDDC_SDC_all_dt_UPDATE_HH
 #define INTEGRATE_CG_BDDC_SDC_all_dt_UPDATE_HH
 
+#include "benchmark.hpp"
+
 using namespace Kaskade;
 
 template <class Interfaces, class Matrix, class Vectors, class Vector, class ReactionDerivatives, class BddcSubdomain>
@@ -488,7 +490,20 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   using TransmissionScalar = uint32_t;//int16_t;
   using BddcSubdomain = Subdomain<1,double,double,SpaceTransferDataCompression<1,double,TransmissionScalar>>;
   std::cout <<"sizeof(TransmissionScalar): " << sizeof(TransmissionScalar) << " sizeof(double): "<< sizeof(double) << std::endl;
+
+  // --------------------------------------------------------------------------------------------
+  // test benchmark
+  // --------------------------------------------------------------------------------------------
+  // Generate data. Use ten million symbols with Poisson distribution
+  int const nn = 100000000; // 100000000; 
+  std::vector<unsigned int> data(nn);
   
+  std::random_device rr;
+  std::default_random_engine re(rr());
+  std::poisson_distribution<int> poisson(10.0);
+
+  // prefixBenchmark<uint8_t,uint64_t>(data,0);
+
   // --------------------------------------------------------------------------------------------
   // time stepping loop
   // --------------------------------------------------------------------------------------------
@@ -498,12 +513,8 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
   bool done = false;
   double end_T = 0;
   eq.time(0);
-  std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_colloc(3);
+  std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_colloc(options.nCollocUstart);
       
-  // std::vector<std::vector<std::unique_ptr<BddcSubdomain>>> subsptr_colloc(options.nCollocUstart-1);
-
-  //std::vector<std::unique_ptr<BddcSubdomain>> subsptr(n_subdomains);
-  // std::vector<std::vector<BddcSubdomain>> subs_all(options.nCollocUstart-1);
   size_t nDofs = variableSet.degreesOfFreedom(0,1);
   duration<double, std::milli> ms_double_ass;
   auto recordTime1 = high_resolution_clock::now();
@@ -588,7 +599,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
     std::vector<double> sweepNorm_bddc;
     bool debug = false;
 
-    std::cerr <<"sweep\t"<<"||du||\t\t" << "||u||\t\t" <<"sdcCon\t\t"<<"#active_sub\t\t"<<"#dofs\t\t"<<"#cells\t\t"<<"\n";   
+    std::cerr <<"sweep\t"<<"||du||\t\t\t" << "||u||\t\t" <<"sdcCon\t\t"<<"#active_sub\t\t"<<"#cells\t\t"<<"#dofs\t\t"<<"\n";   
     Vector rhs_petsc_sweep_0;
 
 
@@ -893,7 +904,7 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       }
       // std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t" <<std::sqrt(normU2) << "\t"<< std::setprecision(7) << sdcContraction << "\t\t"<< std::setprecision(2) << activeIds.size() << "\t\t" << std::setprecision(2) << Cellfltr.get_size() <<"\t\t" << std::setprecision(2) << size_adaptivity <<" \n";   
 
-      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t\t" <<std::sqrt(normU2) << "\t"<< sdcContraction << "\t\t"<< activeIds.size() << "\t\t" << Cellfltr.get_size() << "\t\t" << size_adaptivity <<" \n";   
+      std::cerr << sweep <<"\t"<< sweepNorm_bddc.back() << "\t\t" <<std::sqrt(normU2) << "\t"<< sdcContraction << "\t\t"<< activeIds.size() <<"\t\t"<< Cellfltr.get_size()<< "\t\t" << size_adaptivity <<" \n";   
       // // --------------------------------------------------------------------------------------------  
       // // select degrees of freedom to take into account in the next sweep. This is a 
       // // further reduction of the up to now used dofs
@@ -993,34 +1004,6 @@ typename VariableSet::VariableSet semiImplicit_CG_BDDC_SDC_allCollocations_once_
       }
       
       eq.time(t+dt);
-
-      // --------------------------------------------------------------------------------------------  
-      // Ladder method: Refine time grid for next sweep if nominal value not reached. Perform interpolation of coefficients.
-      // --------------------------------------------------------------------------------------------  
-      if (grid.points().N() < options.nCollocU+1)
-      {
-        SDCTimeGrid::RealMatrix p;
-        grid.refine(p);
-        std::vector<StateUe> newUe(collocationU.size()+1,collocationU[0]);
-        for (int i=0; i<newUe.size(); ++i)
-        {
-          newUe[i] = 0;
-          for (int j=0; j<collocationU.size(); ++j)
-          {
-            newUe[i].axpy(p[i][j],collocationU[j]);
-          }
-        }
-        collocationU.swap(newUe);
-
-        for (int subIndx = 0; subIndx < n_subdomains; ++subIndx)
-        {
-          ru_bddc[subIndx].push_back(ru_bddc[subIndx].front()); 
-          allMatFu_bddc[subIndx].push_back(allMatFu_bddc[subIndx].front()); 
-          matMdiffu_bddc[subIndx].push_back(matMdiffu_bddc[subIndx].front());
-          duVec_bddc[subIndx].push_back(duVec_bddc[subIndx].front());
-          initial_bddc[subIndx].push_back(initial_bddc[subIndx].front()); 
-        }
-      }
 
       if(sweepNorm_bddc.back() < options.SDC_TOL){
         std::cout << "options.SDC_TOL"<<std::endl;
